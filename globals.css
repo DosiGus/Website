@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #ffffff;
+  --fg: #0f172a;
+}
+html, body {
+  height: 100%;
+  scroll-behavior: smooth;
+  background: var(--bg);
+  color: var(--fg);
+}
