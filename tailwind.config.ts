@@ -8,9 +8,9 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: "#6366F1", // placeholder brand color (indigo-500)
-          dark: "#4F46E5",
-          light: "#A5B4FC"
+          DEFAULT: "#3769FF",
+          dark: "#1e4fe8",
+          light: "#8fb2ff"
         }
       },
       borderRadius: {

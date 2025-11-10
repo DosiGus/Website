@@ -4,22 +4,26 @@ import Footer from "../components/Footer";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Conwix — Conversations made simple",
-  description: "Placeholder website for Conwix. Replace with your real content.",
+  title: "Wesponde – Smart Conversations for Service Businesses",
+  description:
+    "Automatisiere Reservierungen, Kundenchats und Buchungen mit Wesponde. Gebaut für Restaurants, Salons und Praxen, die Instagram, Facebook und WhatsApp effizient nutzen wollen.",
+  keywords:
+    "chatbot, restaurant booking tool, automated reservations, instagram business bot, messenger automation, friseur online termin, AI assistant for service business",
   openGraph: {
-    title: "Conwix — Conversations made simple",
-    description: "Placeholder website for Conwix.",
+    title: "Wesponde – Smart Conversations for Service Businesses",
+    description:
+      "Automatisierte Messenger-Flows für moderne Dienstleistungsunternehmen. Verbinde Instagram, Facebook und WhatsApp in Minuten.",
     url: "https://example.com",
-    siteName: "Conwix",
+    siteName: "Wesponde",
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen flex flex-col">
+    <html lang="de">
+      <body className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
         <Navbar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 bg-white text-slate-900">{children}</main>
         <Footer />
       </body>
     </html>

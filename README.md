@@ -1,5 +1,6 @@
-# Conwix Website (Placeholder)
-Minimal Next.js 14 + Tailwind CSS project with placeholder content.
+# Wesponde Website
+
+Next.js 14 + Tailwind-Projekt für die Wesponde-Landingpage inkl. Beta-Warteliste, Login- und Info-Seiten.
 
 ## Quick Start
 1. Upload all files to your GitHub repository.
