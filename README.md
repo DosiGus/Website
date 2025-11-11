@@ -26,3 +26,9 @@ Next.js 14 + Tailwind-Projekt für die Wesponde-Landingpage inkl. Beta-Wartelist
 ## Notes
 - All content is placeholder. Replace with real info before launch.
 - For German legal compliance, ensure the Impressum & Privacy are correct.
+- Supabase Auth:  
+  1. Projekt in Supabase anlegen und URL + Keys kopieren.  
+  2. `.env.local` anhand `.env.local.example` ausfüllen (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_REDIRECT_URL`).  
+  3. Lokal `npm install` ausführen (enthält `@supabase/supabase-js`).  
+  4. `npm run dev` starten und `/login` testen. Email-/Passwort-Login läuft über `components/PartnerLoginForm.tsx` (nutzt `lib/supabaseBrowserClient.ts`).  
+  5. Für serverseitige Logik (z. B. spätere Chatflow-APIs) steht `lib/supabaseServerClient.ts` bereit.

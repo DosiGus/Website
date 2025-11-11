@@ -1,13 +1,10 @@
+import PartnerLoginForm from "../../components/PartnerLoginForm";
+
 export const metadata = {
   title: "Wesponde Login",
   description:
     "Melde dich mit deiner Wesponde-ID oder via Meta OAuth an, um das Dashboard zu öffnen.",
 };
-
-const providers = [
-  { label: "Mit E-Mail anmelden", type: "email" },
-  { label: "Mit Meta verbinden", type: "meta" },
-];
 
 export default function LoginPage() {
   return (
@@ -24,17 +21,10 @@ export default function LoginPage() {
           Nach dem Login wirst du zur App{" "}
           <span className="font-semibold">app.wesponde.com</span> weitergeleitet.
         </p>
-        <div className="mt-10 space-y-4 rounded-3xl border border-slate-200 bg-white p-6">
-          {providers.map((provider) => (
-            <button
-              key={provider.type}
-              className="w-full rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-brand hover:text-brand"
-            >
-              {provider.label}
-            </button>
-          ))}
-          <p className="text-xs text-slate-500">
-            Neukund:innen erhalten Zugang über unser Success-Team.{" "}
+        <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+          <p className="font-semibold text-slate-900">Noch kein Zugang?</p>
+          <p className="mt-2">
+            Unser Success-Team schaltet dich nach einem kurzen Onboarding frei.{" "}
             <a className="font-semibold text-brand-dark hover:text-brand" href="/contact">
               Kontakt aufnehmen
             </a>
@@ -43,44 +33,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <form className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-brand/10">
-        <div>
-          <label className="block text-sm font-semibold text-slate-600">
-            Geschäfts-E-Mail
-          </label>
-          <input
-            type="email"
-            className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-            placeholder="team@restaurant.co"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-slate-600">Passwort</label>
-          <input
-            type="password"
-            className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-            placeholder="••••••••"
-          />
-        </div>
-        <div className="flex items-center justify-between text-sm text-slate-600">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-slate-300" /> Angemeldet bleiben
-          </label>
-          <a className="font-semibold text-brand-dark hover:text-brand" href="/contact">
-            Passwort vergessen?
-          </a>
-        </div>
-        <button className="w-full rounded-2xl bg-brand px-5 py-3 text-base font-semibold text-white shadow-lg shadow-brand/30 transition hover:bg-brand-dark">
-          Login (Platzhalter)
-        </button>
-        <div className="text-center text-xs text-slate-500">
-          Kein Zugang? Wende dich an{" "}
-          <a className="font-semibold text-brand-dark hover:text-brand" href="mailto:support@wesponde.com">
-            support@wesponde.com
-          </a>
-          .
-        </div>
-      </form>
+      <PartnerLoginForm />
     </section>
   );
 }
