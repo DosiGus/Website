@@ -12,6 +12,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   Connection,
+  MarkerType,
 } from "reactflow";
 import FlowBuilderCanvas from "./FlowBuilderCanvas";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
@@ -99,7 +100,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           {
             ...connection,
             markerEnd: {
-              type: "arrow",
+              type: MarkerType.ArrowClosed,
             },
           },
           eds,
