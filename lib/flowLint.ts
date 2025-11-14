@@ -1,15 +1,43 @@
 import { Edge, Node } from "reactflow";
 
-export type FlowLintResult = {
-  warnings: string[];
+export type FlowLintSeverity = "info" | "warning";
+
+export type FlowLintWarning = {
+  id: string;
+  message: string;
+  severity: FlowLintSeverity;
+  nodeId?: string;
+  suggestion?: string;
 };
 
+export type FlowLintResult = {
+  warnings: FlowLintWarning[];
+};
+
+function buildWarning(
+  message: string,
+  nodeId?: string,
+  suggestion?: string,
+  severity: FlowLintSeverity = "warning",
+): FlowLintWarning {
+  return {
+    id: `${nodeId ?? "flow"}-${message.slice(0, 24)}-${severity}`.replace(/\s+/g, "-"),
+    message,
+    severity,
+    nodeId,
+    suggestion,
+  };
+}
+
 export function lintFlow(nodes: Node[], edges: Edge[]): FlowLintResult {
-  const warnings: string[] = [];
+  const warnings: FlowLintWarning[] = [];
   if (nodes.length === 0) {
-    warnings.push("Flow enthält keine Nodes.");
+    warnings.push(
+      buildWarning("Flow enthält keine Nodes. Bitte starte mit einer Nachricht."),
+    );
     return { warnings };
   }
+
   const outgoingMap = new Map<string, number>();
   edges.forEach((edge) => {
     outgoingMap.set(edge.source, (outgoingMap.get(edge.source) ?? 0) + 1);
@@ -17,7 +45,23 @@ export function lintFlow(nodes: Node[], edges: Edge[]): FlowLintResult {
 
   nodes.forEach((node) => {
     if (!outgoingMap.get(node.id) && node.type !== "output") {
-      warnings.push(`Node "${node.data?.label ?? node.id}" endet ohne Verbindung.`);
+      warnings.push(
+        buildWarning(
+          `Node "${node.data?.label ?? node.id}" endet ohne Verbindung.`,
+          node.id,
+          "Verbinde ihn mit einer Bestätigung oder zurück zum Start.",
+        ),
+      );
+    }
+    const outgoingCount = outgoingMap.get(node.id) ?? 0;
+    if (node.data?.variant === "choice" && outgoingCount > 3) {
+      warnings.push(
+        buildWarning(
+          `Node "${node.data?.label ?? node.id}" hat ${outgoingCount} Antworten.`,
+          node.id,
+          "Reduziere auf maximal drei Quick Replies für bessere UX.",
+        ),
+      );
     }
   });
 
@@ -37,9 +81,27 @@ export function lintFlow(nodes: Node[], edges: Edge[]): FlowLintResult {
     }
     nodes.forEach((node) => {
       if (!visited.has(node.id)) {
-        warnings.push(`Node "${node.data?.label ?? node.id}" ist nicht erreichbar.`);
+        warnings.push(
+          buildWarning(
+            `Node "${node.data?.label ?? node.id}" ist nicht erreichbar.`,
+            node.id,
+            "Verbinde ihn vom Start oder einem vorherigen Schritt.",
+          ),
+        );
       }
     });
+  }
+
+  const unlabeledEdge = edges.find((edge) => !edge.data?.condition);
+  if (unlabeledEdge) {
+    warnings.push(
+      buildWarning(
+        "Mindestens eine Verbindung hat kein Label. Vermerke 'Ja/Nein' oder Bedingungen.",
+        unlabeledEdge.id,
+        "Vergib ein Label unter \"Kanten\" im Editor.",
+        "info",
+      ),
+    );
   }
 
   return { warnings };

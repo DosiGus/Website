@@ -20,6 +20,18 @@ export const defaultNodes: Node[] = [
 ];
 
 export const defaultEdges: Edge[] = [
-  { id: "e-start-res", source: "start", target: "option-reservation" },
-  { id: "e-start-faq", source: "start", target: "option-faq" },
+  {
+    id: "e-start-res",
+    source: "start",
+    target: "option-reservation",
+    data: { tone: "positive", condition: "Reservieren" },
+    label: "Reservieren",
+  },
+  {
+    id: "e-start-faq",
+    source: "start",
+    target: "option-faq",
+    data: { tone: "neutral", condition: "Fragen" },
+    label: "Fragen",
+  },
 ];
