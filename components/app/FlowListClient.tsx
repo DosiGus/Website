@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 
 type FlowSummary = {
@@ -16,7 +16,7 @@ type Props = {
 };
 
 export default function FlowListClient({ variant }: Props) {
-  const supabase = createSupabaseBrowserClient();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [userId, setUserId] = useState<string | null>(null);
   const [flows, setFlows] = useState<FlowSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,19 @@ export default function FlowListClient({ variant }: Props) {
     if (!userId) return;
     async function loadFlows() {
       setLoading(true);
-      const response = await fetch(`/api/flows?userId=${userId}`);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setFlows([]);
+        setLoading(false);
+        return;
+      }
+      const response = await fetch(`/api/flows`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
       if (!response.ok) {
         setFlows([]);
         setLoading(false);
@@ -47,7 +59,7 @@ export default function FlowListClient({ variant }: Props) {
       setLoading(false);
     }
     loadFlows();
-  }, [userId]);
+  }, [userId, supabase]);
 
   if (loading) {
     return (

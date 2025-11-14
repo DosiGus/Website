@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuid } from "uuid";
 import {
@@ -18,6 +18,7 @@ import FlowBuilderCanvas from "./FlowBuilderCanvas";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { defaultNodes, defaultEdges } from "../../lib/defaultFlow";
 import { CheckCircle2, Plus, Shapes, TriangleAlert } from "lucide-react";
+import { lintFlow } from "../../lib/flowLint";
 
 type FlowResponse = {
   id: string;
@@ -31,9 +32,10 @@ type FlowResponse = {
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 export default function FlowBuilderClient({ flowId }: { flowId: string }) {
-  const supabase = createSupabaseBrowserClient();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [nodes, setNodes] = useState<Node[]>(defaultNodes);
   const [edges, setEdges] = useState<Edge[]>(defaultEdges);
@@ -41,6 +43,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [status, setStatus] = useState<"Entwurf" | "Aktiv">("Entwurf");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [lintWarnings, setLintWarnings] = useState<string[]>([]);
+  const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const selectedNode = useMemo(
@@ -58,15 +62,27 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         return;
       }
       setUserId(user.id);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        router.replace("/login");
+        return;
+      }
+      setAccessToken(session.access_token);
     }
     loadUser();
   }, [router, supabase]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !accessToken) return;
     async function fetchFlow() {
       setLoading(true);
-      const response = await fetch(`/api/flows/${flowId}?userId=${userId}`);
+      const response = await fetch(`/api/flows/${flowId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
       if (response.status === 404) {
         setErrorMessage("Flow wurde nicht gefunden oder du hast keinen Zugriff.");
         setLoading(false);
@@ -81,7 +97,11 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       setErrorMessage(null);
     }
     fetchFlow();
-  }, [flowId, userId]);
+  }, [flowId, userId, accessToken]);
+
+  useEffect(() => {
+    setLintWarnings(lintFlow(nodes, edges).warnings);
+  }, [nodes, edges]);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -155,31 +175,48 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setSelectedNodeId(null);
   };
 
-  const handleSave = async () => {
-    if (!userId) return;
-    setSaveState("saving");
-    const response = await fetch(`/api/flows/${flowId}?userId=${userId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: flowName,
-        status,
-        nodes,
-        edges,
-      }),
-    });
-    if (response.ok) {
-      setSaveState("saved");
-      setTimeout(() => setSaveState("idle"), 2000);
-    } else {
-      const error = await response.json();
-      setErrorMessage(error.error ?? "Speichern fehlgeschlagen");
-      setSaveState("error");
-      setTimeout(() => setSaveState("idle"), 4000);
-    }
-  };
+  const handleSave = useCallback(
+    async (silent = false) => {
+      if (!accessToken || loading) return;
+      if (!silent) setSaveState("saving");
+      const response = await fetch(`/api/flows/${flowId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          name: flowName,
+          status,
+          nodes,
+          edges,
+        }),
+      });
+      if (response.ok) {
+        if (!silent) {
+          setSaveState("saved");
+          setTimeout(() => setSaveState("idle"), 2000);
+        }
+      } else {
+        const error = await response.json();
+        setErrorMessage(error.error ?? "Speichern fehlgeschlagen");
+        setSaveState("error");
+        setTimeout(() => setSaveState("idle"), 4000);
+      }
+    },
+    [accessToken, loading, flowId, flowName, status, nodes, edges],
+  );
+
+  useEffect(() => {
+    if (!accessToken || loading) return;
+    if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(() => {
+      handleSave(true);
+    }, 1500);
+    return () => {
+      if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    };
+  }, [nodes, edges, flowName, status, accessToken, loading, handleSave]);
 
   if (loading || !userId) {
     return (
@@ -197,6 +234,17 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     );
   }
 
+  const warningBadge =
+    lintWarnings.length > 0 ? (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+        <TriangleAlert className="h-3 w-3" /> {lintWarnings.length} Warnungen
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+        <CheckCircle2 className="h-3 w-3" /> Flow valide
+      </span>
+    );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -211,6 +259,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {warningBadge}
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value as "Entwurf" | "Aktiv")}
@@ -220,7 +269,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
             <option value="Aktiv">Aktiv</option>
           </select>
           <button
-            onClick={handleSave}
+            onClick={() => handleSave()}
             className="rounded-full bg-brand px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-brand/30"
             disabled={saveState === "saving"}
           >

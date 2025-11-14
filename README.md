@@ -43,7 +43,8 @@ Next.js 14 + Tailwind-Projekt für die Wesponde-Landingpage inkl. Beta-Wartelist
 - Auth-Gate: `components/AppAuthGate.tsx` prüft Supabase-Sessions und leitet sonst nach `/login`.
 - Flow Builder:
   - API-Routen: `app/api/flows` & `app/api/flows/[id]` (CRUD via Supabase Service Client)
-  - Client-Komponenten: `components/app/FlowBuilderClient.tsx` & `components/app/FlowListClient.tsx`
+  - Client-Komponenten: `components/app/FlowBuilderClient.tsx` (mit Autosave & Linting) & `components/app/FlowListClient.tsx`
   - Flow-Daten werden als JSON (`nodes`, `edges`) in der Tabelle `flows` gespeichert.
-  - Standard-Setup: siehe `supabase/schema.sql` – bitte im Supabase SQL-Editor ausführen und Policies aktivieren.
-- React Flow Canvas: `components/app/FlowBuilderCanvas.tsx` wird von `FlowBuilderClient` kontrolliert (Nodes hinzufügen, Eigenschaften bearbeiten, Speichern).
+  - Templates: Tabelle `flow_templates` (+ Fallbacks) und Route `app/api/templates` → Auswahl in `/app/flows/new`
+  - Standard-Setup: siehe `supabase/schema.sql` – bitte im Supabase SQL-Editor ausführen (flows + flow_templates) und Policies aktivieren.
+- React Flow Canvas: `components/app/FlowBuilderCanvas.tsx` wird von `FlowBuilderClient` kontrolliert (Nodes hinzufügen, Eigenschaften bearbeiten, Autosave, Publish/Draft Select, Warnungs-Badge).
