@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
-import { defaultNodes, defaultEdges } from "../../../lib/defaultFlow";
+import {
+  defaultNodes,
+  defaultEdges,
+  defaultTriggers,
+  defaultMetadata,
+} from "../../../lib/defaultFlow";
 import { requireUser } from "../../../lib/apiAuth";
 import { fallbackTemplates } from "../../../lib/flowTemplates";
 
@@ -10,7 +15,7 @@ export async function GET(request: Request) {
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from("flows")
-      .select("id, name, status, updated_at, nodes, edges")
+      .select("id, name, status, updated_at, nodes, edges, triggers, metadata")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
 
@@ -32,9 +37,13 @@ export async function POST(request: Request) {
     const templateId: string | undefined = body.templateId;
     const customNodes = body.nodes;
     const customEdges = body.edges;
+    const customTriggers = body.triggers;
+    const customMetadata = body.metadata;
     const supabase = createSupabaseServerClient();
     let nodesToUse = defaultNodes;
     let edgesToUse = defaultEdges;
+    let triggersToUse = defaultTriggers;
+    let metadataToUse = defaultMetadata;
 
     if (templateId) {
       const { data: template, error: templateError } = await supabase
@@ -46,16 +55,31 @@ export async function POST(request: Request) {
       if (template && !templateError) {
         nodesToUse = template.nodes as any;
         edgesToUse = template.edges as any;
+        triggersToUse =
+          (template.triggers as any) && Array.isArray(template.triggers)
+            ? (template.triggers as any)
+            : defaultTriggers;
+        metadataToUse = (template.metadata as any) ?? defaultMetadata;
       } else {
         const fallback = fallbackTemplates.find((tpl) => tpl.id === templateId);
         if (fallback) {
           nodesToUse = fallback.nodes as any;
           edgesToUse = fallback.edges as any;
+          triggersToUse = fallback.triggers as any;
+          metadataToUse = fallback.metadata ?? defaultMetadata;
         }
       }
-    } else if (customNodes && customEdges) {
-      nodesToUse = customNodes;
-      edgesToUse = customEdges;
+    } else {
+      if (customNodes && customEdges) {
+        nodesToUse = customNodes;
+        edgesToUse = customEdges;
+      }
+      if (customTriggers) {
+        triggersToUse = customTriggers;
+      }
+      if (customMetadata) {
+        metadataToUse = customMetadata;
+      }
     }
 
     const { data, error } = await supabase
@@ -65,6 +89,8 @@ export async function POST(request: Request) {
         name,
         nodes: nodesToUse,
         edges: edgesToUse,
+        triggers: triggersToUse,
+        metadata: metadataToUse,
         status: "Entwurf",
       })
       .select("id")

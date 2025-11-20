@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
 import { requireUser } from "../../../../lib/apiAuth";
+import { defaultMetadata } from "../../../../lib/defaultFlow";
 
 export async function GET(
   request: Request,
@@ -41,6 +42,8 @@ export async function PUT(
         status: body.status,
         nodes: body.nodes,
         edges: body.edges,
+        triggers: body.triggers ?? [],
+        metadata: body.metadata ?? defaultMetadata,
         updated_at: new Date().toISOString(),
       })
       .eq("id", params.id)

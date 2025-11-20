@@ -1,21 +1,53 @@
 import { Edge, Node } from "reactflow";
+import type { FlowTrigger, FlowMetadata, FlowQuickReply } from "./flowTypes";
+
+const makeQuickReply = (
+  id: string,
+  label: string,
+  targetNodeId: string,
+): FlowQuickReply => ({
+  id,
+  label,
+  payload: label.toUpperCase().replace(/\s+/g, "_"),
+  targetNodeId,
+});
 
 export const defaultNodes: Node[] = [
   {
     id: "start",
     position: { x: 120, y: 80 },
-    type: "input",
-    data: { label: "Willkommen bei Wesponde! Wie kann ich dir helfen?", variant: "message" },
+    type: "wesponde",
+    data: {
+      label: "Willkommen bei Wesponde! Wie kann ich dir helfen?",
+      text: "Willkommen bei Wesponde! Wie kann ich dir helfen?",
+      variant: "message",
+      quickReplies: [
+        makeQuickReply("qr-reservieren", "Reservieren", "option-reservation"),
+        makeQuickReply("qr-fragen", "Fragen", "option-faq"),
+      ],
+    },
   },
   {
     id: "option-reservation",
     position: { x: 380, y: 40 },
-    data: { label: "Reservierung anstoßen", variant: "choice" },
+    type: "wesponde",
+    data: {
+      label: "Reservierung anstoßen",
+      text: "Reservierung anstoßen",
+      variant: "choice",
+      quickReplies: [],
+    },
   },
   {
     id: "option-faq",
     position: { x: 380, y: 140 },
-    data: { label: "Fragen beantworten", variant: "choice" },
+    type: "wesponde",
+    data: {
+      label: "Fragen beantworten",
+      text: "Fragen beantworten",
+      variant: "choice",
+      quickReplies: [],
+    },
   },
 ];
 
@@ -35,3 +67,19 @@ export const defaultEdges: Edge[] = [
     label: "Fragen",
   },
 ];
+
+export const defaultTriggers: FlowTrigger[] = [
+  {
+    id: "trigger-start",
+    type: "KEYWORD",
+    config: {
+      keywords: ["reservieren", "tisch", "start"],
+      matchType: "CONTAINS",
+    },
+    startNodeId: "start",
+  },
+];
+
+export const defaultMetadata: FlowMetadata = {
+  version: "1.0",
+};

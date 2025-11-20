@@ -7,6 +7,7 @@ import { Copy, Filter, Star } from "lucide-react";
 import type { Edge, Node } from "reactflow";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { lintFlow } from "../../lib/flowLint";
+import type { FlowMetadata, FlowTrigger } from "../../lib/flowTypes";
 
 type FlowSummary = {
   id: string;
@@ -15,6 +16,8 @@ type FlowSummary = {
   updated_at: string;
   nodes: Node[];
   edges: Edge[];
+  triggers?: FlowTrigger[];
+  metadata?: FlowMetadata;
 };
 
 type Props = {
@@ -89,7 +92,7 @@ export default function FlowListClient({ variant }: Props) {
   const flowsWithWarnings = useMemo(
     () =>
       flows.map((flow) => {
-        const lint = lintFlow(flow.nodes ?? [], flow.edges ?? []);
+        const lint = lintFlow(flow.nodes ?? [], flow.edges ?? [], flow.triggers ?? []);
         return {
           ...flow,
           warningCount: lint.warnings.length,
@@ -149,6 +152,8 @@ export default function FlowListClient({ variant }: Props) {
         name: `${baseFlow.name} Kopie`,
         nodes: baseFlow.nodes,
         edges: baseFlow.edges,
+        triggers: baseFlow.triggers,
+        metadata: baseFlow.metadata,
       }),
     });
     setPendingAction(null);

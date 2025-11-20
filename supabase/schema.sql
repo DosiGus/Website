@@ -6,6 +6,8 @@ create table if not exists public.flows (
   status text not null default 'Entwurf',
   nodes jsonb not null,
   edges jsonb not null,
+  triggers jsonb not null default '[]'::jsonb,
+  metadata jsonb not null default jsonb_build_object('version', '1.0'),
   channels text[] not null default array['Instagram DM'],
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -16,6 +18,12 @@ alter table public.flows
   foreign key (user_id)
   references auth.users(id)
   on delete cascade;
+
+alter table if exists public.flows
+  add column if not exists triggers jsonb not null default '[]'::jsonb;
+
+alter table if exists public.flows
+  add column if not exists metadata jsonb not null default jsonb_build_object('version', '1.0');
 
 alter table public.flows enable row level security;
 
@@ -44,33 +52,44 @@ create table if not exists public.flow_templates (
   description text,
   nodes jsonb not null,
   edges jsonb not null,
+  triggers jsonb not null default '[]'::jsonb,
+  metadata jsonb not null default jsonb_build_object('version', '1.0'),
   created_at timestamptz default now()
 );
 
-insert into public.flow_templates (slug, name, vertical, description, nodes, edges)
+alter table if exists public.flow_templates
+  add column if not exists triggers jsonb not null default '[]'::jsonb;
+
+alter table if exists public.flow_templates
+  add column if not exists metadata jsonb not null default jsonb_build_object('version', '1.0');
+
+insert into public.flow_templates (slug, name, vertical, description, nodes, edges, triggers)
 values
   (
     'restaurant-reservation',
     'Restaurant — Reservierung',
     'Restaurant & Bar',
     'Begrüßung → Datum/Uhrzeit → Personenanzahl → Bestätigung',
-    '[{"id":"start","type":"input","position":{"x":100,"y":60},"data":{"label":"Ciao! Möchtest du einen Tisch reservieren?","variant":"message"}},{"id":"ask-date","position":{"x":380,"y":20},"data":{"label":"An welchem Datum möchtest du kommen?","variant":"message"}},{"id":"ask-size","position":{"x":380,"y":120},"data":{"label":"Für wie viele Personen planst du?","variant":"message"}},{"id":"confirm","position":{"x":640,"y":70},"data":{"label":"Danke! Wir bestätigen dir die Reservierung gleich.","variant":"message"}}]',
-    '[{"id":"e1","source":"start","target":"ask-date"},{"id":"e2","source":"ask-date","target":"ask-size"},{"id":"e3","source":"ask-size","target":"confirm"}]'
+    '[{"id":"start","type":"input","position":{"x":100,"y":60},"data":{"label":"Ciao! Möchtest du einen Tisch reservieren?","text":"Ciao! Möchtest du einen Tisch reservieren?","variant":"message","quickReplies":[]}},{"id":"ask-date","position":{"x":380,"y":20},"data":{"label":"An welchem Datum möchtest du kommen?","text":"An welchem Datum möchtest du kommen?","variant":"message","quickReplies":[]}},{"id":"ask-size","position":{"x":380,"y":120},"data":{"label":"Für wie viele Personen planst du?","text":"Für wie viele Personen planst du?","variant":"message","quickReplies":[]}},{"id":"confirm","position":{"x":640,"y":70},"data":{"label":"Danke! Wir bestätigen dir die Reservierung gleich.","text":"Danke! Wir bestätigen dir die Reservierung gleich.","variant":"message","quickReplies":[]}}]',
+    '[{"id":"e1","source":"start","target":"ask-date"},{"id":"e2","source":"ask-date","target":"ask-size"},{"id":"e3","source":"ask-size","target":"confirm"}]',
+    '[{"id":"trigger-restaurant","type":"KEYWORD","config":{"keywords":["reservierung","tisch","essen"],"matchType":"CONTAINS"},"startNodeId":"start"}]'
   ),
   (
     'salon-appointment',
     'Salon — Terminbuchung',
     'Friseur & Beauty',
     'Behandlung wählen → Stylist → Terminoption → Kontakt',
-    '[{"id":"start","type":"input","position":{"x":80,"y":60},"data":{"label":"Hallo! Für welche Behandlung interessierst du dich?","variant":"message"}},{"id":"stylist","position":{"x":340,"y":40},"data":{"label":"Hast du eine bevorzugte Stylistin?","variant":"choice"}},{"id":"slot","position":{"x":340,"y":150},"data":{"label":"Wir hätten Dienstag 15 Uhr oder Donnerstag 11 Uhr frei.","variant":"message"}},{"id":"contact","position":{"x":620,"y":90},"data":{"label":"Danke! Wie erreichen wir dich für die Bestätigung?","variant":"message"}}]',
-    '[{"id":"e1","source":"start","target":"stylist"},{"id":"e2","source":"stylist","target":"slot"},{"id":"e3","source":"slot","target":"contact"}]'
+    '[{"id":"start","type":"input","position":{"x":80,"y":60},"data":{"label":"Hallo! Für welche Behandlung interessierst du dich?","text":"Hallo! Für welche Behandlung interessierst du dich?","variant":"message","quickReplies":[]}},{"id":"stylist","position":{"x":340,"y":40},"data":{"label":"Hast du eine bevorzugte Stylistin?","text":"Hast du eine bevorzugte Stylistin?","variant":"choice","quickReplies":[]}},{"id":"slot","position":{"x":340,"y":150},"data":{"label":"Wir hätten Dienstag 15 Uhr oder Donnerstag 11 Uhr frei.","text":"Wir hätten Dienstag 15 Uhr oder Donnerstag 11 Uhr frei.","variant":"message","quickReplies":[]}},{"id":"contact","position":{"x":620,"y":90},"data":{"label":"Danke! Wie erreichen wir dich für die Bestätigung?","text":"Danke! Wie erreichen wir dich für die Bestätigung?","variant":"message","quickReplies":[]}}]',
+    '[{"id":"e1","source":"start","target":"stylist"},{"id":"e2","source":"stylist","target":"slot"},{"id":"e3","source":"slot","target":"contact"}]',
+    '[{"id":"trigger-salon","type":"KEYWORD","config":{"keywords":["termin","friseur","styling"],"matchType":"CONTAINS"},"startNodeId":"start"}]'
   ),
   (
     'medical-intake',
     'Praxis — Intake',
     'Medizin & Praxis',
     'Anliegen → Dringlichkeit → Terminoption → Kontakt',
-    '[{"id":"start","type":"input","position":{"x":90,"y":70},"data":{"label":"Willkommen in unserer Praxis! Worum geht es bei dir?","variant":"message"}},{"id":"urgency","position":{"x":360,"y":30},"data":{"label":"Wie dringend ist dein Anliegen?","variant":"choice"}},{"id":"availability","position":{"x":360,"y":140},"data":{"label":"Wir melden uns mit dem nächsten freien Termin.","variant":"message"}},{"id":"contact","position":{"x":600,"y":80},"data":{"label":"Bitte gib uns deine Telefonnummer oder E-Mail.","variant":"message"}}]',
-    '[{"id":"e1","source":"start","target":"urgency"},{"id":"e2","source":"urgency","target":"availability"},{"id":"e3","source":"availability","target":"contact"}]'
+    '[{"id":"start","type":"input","position":{"x":90,"y":70},"data":{"label":"Willkommen in unserer Praxis! Worum geht es bei dir?","text":"Willkommen in unserer Praxis! Worum geht es bei dir?","variant":"message","quickReplies":[]}},{"id":"urgency","position":{"x":360,"y":30},"data":{"label":"Wie dringend ist dein Anliegen?","text":"Wie dringend ist dein Anliegen?","variant":"choice","quickReplies":[]}},{"id":"availability","position":{"x":360,"y":140},"data":{"label":"Wir melden uns mit dem nächsten freien Termin.","text":"Wir melden uns mit dem nächsten freien Termin.","variant":"message","quickReplies":[]}},{"id":"contact","position":{"x":600,"y":80},"data":{"label":"Bitte gib uns deine Telefonnummer oder E-Mail.","text":"Bitte gib uns deine Telefonnummer oder E-Mail.","variant":"message","quickReplies":[]}}]',
+    '[{"id":"e1","source":"start","target":"urgency"},{"id":"e2","source":"urgency","target":"availability"},{"id":"e3","source":"availability","target":"contact"}]',
+    '[{"id":"trigger-medical","type":"KEYWORD","config":{"keywords":["termin","arzt","sprechstunde"],"matchType":"CONTAINS"},"startNodeId":"start"}]'
   )
 on conflict (slug) do nothing;

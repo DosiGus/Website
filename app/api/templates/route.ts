@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import { fallbackTemplates } from "../../../lib/flowTemplates";
 import { requireUser } from "../../../lib/apiAuth";
 import { slugify } from "../../../lib/slugify";
+import { defaultMetadata } from "../../../lib/defaultFlow";
 
 export async function GET() {
   const supabase = createSupabaseServerClient();
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     const supabase = createSupabaseServerClient();
     const { data: flow, error: flowError } = await supabase
       .from("flows")
-      .select("id, name, user_id, nodes, edges")
+      .select("id, name, user_id, nodes, edges, triggers, metadata")
       .eq("id", flowId)
       .single();
 
@@ -63,6 +64,8 @@ export async function POST(request: Request) {
         description,
         nodes: flow.nodes,
         edges: flow.edges,
+        triggers: flow.triggers ?? [],
+        metadata: flow.metadata ?? defaultMetadata,
       })
       .select("*")
       .single();

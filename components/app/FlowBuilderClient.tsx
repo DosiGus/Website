@@ -1,5 +1,6 @@
 'use client';
 
+import Image from "next/image";
 import {
   useCallback,
   useEffect,
@@ -24,16 +25,25 @@ import {
 } from "reactflow";
 import {
   CheckCircle2,
+  Edit2,
   Focus,
   Plus,
   Shapes,
   Sparkles,
+  Trash2,
   TriangleAlert,
+  X,
 } from "lucide-react";
 import FlowBuilderCanvas from "./FlowBuilderCanvas";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
-import { defaultNodes, defaultEdges } from "../../lib/defaultFlow";
+import {
+  defaultNodes,
+  defaultEdges,
+  defaultTriggers,
+  defaultMetadata,
+} from "../../lib/defaultFlow";
 import { lintFlow, FlowLintWarning } from "../../lib/flowLint";
+import type { FlowMetadata, FlowTrigger, FlowQuickReply } from "../../lib/flowTypes";
 
 type FlowResponse = {
   id: string;
@@ -42,6 +52,8 @@ type FlowResponse = {
   nodes: Node[];
   edges: Edge[];
   updated_at: string;
+  triggers?: FlowTrigger[];
+  metadata?: FlowMetadata;
 };
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -87,20 +99,42 @@ const decorateEdgeForCanvas = (edge: Edge): Edge => {
   };
 };
 
+const normalizeNode = (node: Node): Node => {
+  const data = node.data ?? {};
+  const quickReplies: FlowQuickReply[] = Array.isArray(data.quickReplies)
+    ? data.quickReplies
+    : [];
+  return {
+    ...node,
+    type: node.type ?? "wesponde",
+    data: {
+      ...data,
+      label: data.label ?? data.text ?? "Nachricht",
+      text: data.text ?? data.label ?? "",
+      variant: data.variant ?? "message",
+      imageUrl: data.imageUrl ?? null,
+      quickReplies,
+    },
+  };
+};
+
 export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [nodes, setNodes] = useState<Node[]>(defaultNodes);
+  const [nodes, setNodes] = useState<Node[]>(defaultNodes.map(normalizeNode));
   const initialEdges = useMemo(() => defaultEdges.map(ensureEdgeMeta), []);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
+  const [triggers, setTriggers] = useState<FlowTrigger[]>(defaultTriggers);
+  const [metadata, setMetadata] = useState<FlowMetadata>(defaultMetadata);
   const [flowName, setFlowName] = useState("Neuer Flow");
   const [status, setStatus] = useState<"Entwurf" | "Aktiv">("Entwurf");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [exporting, setExporting] = useState(false);
   const [lintWarnings, setLintWarnings] = useState<FlowLintWarning[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
@@ -112,6 +146,10 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     nodes: [],
     edges: [],
   });
+  const [isTriggerModalOpen, setTriggerModalOpen] = useState(false);
+  const [editingTriggerId, setEditingTriggerId] = useState<string | null>(null);
+  const [triggerForm, setTriggerForm] = useState<FlowTrigger | null>(null);
+  const [keywordInput, setKeywordInput] = useState("");
   const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -133,6 +171,29 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     [],
   );
 
+  const startNodeIds = useMemo(
+    () =>
+      new Set(
+        triggers
+          .map((trigger) => trigger.startNodeId)
+          .filter((value): value is string => Boolean(value)),
+      ),
+    [triggers],
+  );
+
+  const displayNodes = useMemo(
+    () =>
+      nodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          quickReplies: node.data?.quickReplies ?? [],
+          isStart: startNodeIds.has(node.id),
+        },
+      })),
+    [nodes, startNodeIds],
+  );
+
   const decoratedEdges = useMemo(() => edges.map(decorateEdgeForCanvas), [edges]);
 
   const selectedNode = useMemo(
@@ -148,7 +209,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   useEffect(() => {
     if (!inlineEditNodeId) return;
     const node = nodes.find((n) => n.id === inlineEditNodeId);
-    setInlineEditValue(node?.data?.label ?? "");
+    setInlineEditValue(node?.data?.text ?? "");
   }, [inlineEditNodeId, nodes]);
 
   useEffect(() => {
@@ -190,12 +251,15 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       const data: FlowResponse = await response.json();
       setFlowName(data.name);
       setStatus((data.status as "Entwurf" | "Aktiv") ?? "Entwurf");
-      setNodes((data.nodes as Node[]) || defaultNodes);
+      const normalized = ((data.nodes as Node[]) || defaultNodes).map(normalizeNode);
+      setNodes(normalized);
       const incomingEdges =
         Array.isArray(data.edges) && data.edges.length > 0
           ? (data.edges as Edge[])
           : defaultEdges;
       setEdges(incomingEdges.map(ensureEdgeMeta));
+      setTriggers(Array.isArray(data.triggers) ? (data.triggers as FlowTrigger[]) : defaultTriggers);
+      setMetadata((data.metadata as FlowMetadata) ?? defaultMetadata);
       setLoading(false);
       setErrorMessage(null);
     }
@@ -203,8 +267,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   }, [flowId, userId, accessToken]);
 
   useEffect(() => {
-    setLintWarnings(lintFlow(nodes, edges).warnings);
-  }, [nodes, edges]);
+    setLintWarnings(lintFlow(nodes, edges, triggers).warnings);
+  }, [nodes, edges, triggers]);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -247,14 +311,16 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     const id = uuid();
     const newNode: Node = {
       id,
-      type: "default",
+      type: "wesponde",
       position: {
         x: 100 + Math.random() * 200,
         y: 100 + Math.random() * 200,
       },
       data: {
         label: presetLabel ?? (type === "message" ? "Neue Nachricht" : "Auswahl"),
+        text: presetLabel ?? (type === "message" ? "Neue Nachricht" : "Auswahl"),
         variant: type,
+        quickReplies: [],
       },
     };
     setNodes((prev) => [...prev, newNode]);
@@ -273,6 +339,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                 data: {
                   ...node.data,
                   [field]: value,
+                  ...(field === "label" ? { text: value } : {}),
+                  ...(field === "text" ? { label: value } : {}),
                 },
               }
             : node,
@@ -282,30 +350,231 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     [selectedNodeId],
   );
 
+  const syncEdgesForNode = useCallback(
+    (nodeId: string, replies: FlowQuickReply[]) => {
+      setEdges((prev) => {
+        let next = prev
+          .filter((edge) => {
+            if (edge.source === nodeId && (edge.data as any)?.quickReplyId) {
+              const reply = replies.find(
+                (quickReply) => quickReply.id === (edge.data as any)?.quickReplyId,
+              );
+              return Boolean(reply && reply.targetNodeId);
+            }
+            return true;
+          })
+          .map((edge) => {
+            if (edge.source === nodeId && (edge.data as any)?.quickReplyId) {
+              const reply = replies.find(
+                (quickReply) => quickReply.id === (edge.data as any)?.quickReplyId,
+              );
+              if (!reply || !reply.targetNodeId) {
+                return edge;
+              }
+              return {
+                ...edge,
+                target: reply.targetNodeId,
+                data: {
+                  ...(edge.data ?? {}),
+                  tone: ((edge.data as any)?.tone as EdgeTone) ?? "neutral",
+                  condition: reply.label,
+                  quickReplyId: reply.id,
+                },
+                label: reply.label,
+              };
+            }
+            return edge;
+          });
+        replies.forEach((reply) => {
+          if (!reply.targetNodeId) return;
+          const exists = next.some(
+            (edge) =>
+              edge.source === nodeId && (edge.data as any)?.quickReplyId === reply.id,
+          );
+          if (!exists) {
+            next.push({
+              id: `qr-${nodeId}-${reply.id}`,
+              source: nodeId,
+              target: reply.targetNodeId,
+              data: { tone: "neutral", condition: reply.label, quickReplyId: reply.id },
+              markerEnd: { type: MarkerType.ArrowClosed },
+              label: reply.label,
+            });
+          }
+        });
+        return next;
+      });
+    },
+    [],
+  );
+
+  const addQuickReply = useCallback(() => {
+    if (!selectedNodeId) return;
+    let updatedReplies: FlowQuickReply[] | null = null;
+    setNodes((prev) =>
+      prev.map((node) => {
+        if (node.id !== selectedNodeId) return node;
+        const currentReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
+        updatedReplies = [
+          ...currentReplies,
+          { id: uuid(), label: "Neue Option", payload: "", targetNodeId: null },
+        ];
+        return { ...node, data: { ...node.data, quickReplies: updatedReplies } };
+      }),
+    );
+    if (updatedReplies) {
+      syncEdgesForNode(selectedNodeId, updatedReplies);
+    }
+  }, [selectedNodeId, syncEdgesForNode]);
+
+  const updateQuickReply = useCallback(
+    (replyId: string, patch: Partial<FlowQuickReply>) => {
+      if (!selectedNodeId) return;
+      let updatedReplies: FlowQuickReply[] | null = null;
+      setNodes((prev) =>
+        prev.map((node) => {
+          if (node.id !== selectedNodeId) return node;
+          const currentReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
+          updatedReplies = currentReplies.map((reply) =>
+            reply.id === replyId ? { ...reply, ...patch } : reply,
+          );
+          return { ...node, data: { ...node.data, quickReplies: updatedReplies } };
+        }),
+      );
+      if (updatedReplies) {
+        syncEdgesForNode(selectedNodeId, updatedReplies);
+      }
+    },
+    [selectedNodeId, syncEdgesForNode],
+  );
+
+  const removeQuickReply = useCallback(
+    (replyId: string) => {
+      if (!selectedNodeId) return;
+      let updatedReplies: FlowQuickReply[] | null = null;
+      setNodes((prev) =>
+        prev.map((node) => {
+          if (node.id !== selectedNodeId) return node;
+          const currentReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
+          updatedReplies = currentReplies.filter((reply) => reply.id !== replyId);
+          return { ...node, data: { ...node.data, quickReplies: updatedReplies } };
+        }),
+      );
+      if (updatedReplies) {
+        syncEdgesForNode(selectedNodeId, updatedReplies);
+      }
+    },
+    [selectedNodeId, syncEdgesForNode],
+  );
+
+  const openTriggerModal = useCallback(
+    (trigger?: FlowTrigger) => {
+      if (trigger) {
+        setTriggerForm(trigger);
+        setEditingTriggerId(trigger.id);
+      } else {
+        setTriggerForm({
+          id: uuid(),
+          type: "KEYWORD",
+          config: { keywords: [], matchType: "CONTAINS" },
+          startNodeId: nodes[0]?.id ?? null,
+        });
+        setEditingTriggerId(null);
+      }
+      setKeywordInput("");
+      setTriggerModalOpen(true);
+    },
+    [nodes],
+  );
+
+  const closeTriggerModal = useCallback(() => {
+    setTriggerModalOpen(false);
+    setTriggerForm(null);
+    setEditingTriggerId(null);
+    setKeywordInput("");
+  }, []);
+
+  const saveTrigger = useCallback(() => {
+    if (!triggerForm) return;
+    setTriggers((prev) => {
+      if (editingTriggerId) {
+        return prev.map((trigger) => (trigger.id === editingTriggerId ? triggerForm : trigger));
+      }
+      return [...prev, triggerForm];
+    });
+    closeTriggerModal();
+  }, [triggerForm, editingTriggerId, closeTriggerModal]);
+
+  const deleteTrigger = useCallback((id: string) => {
+    setTriggers((prev) => prev.filter((trigger) => trigger.id !== id));
+  }, []);
+
+  const addKeywordToTrigger = useCallback(() => {
+    if (!keywordInput.trim()) return;
+    setTriggerForm((prev) => {
+      if (!prev) return prev;
+      const keyword = keywordInput.trim();
+      if (prev.config.keywords.includes(keyword)) return prev;
+      return {
+        ...prev,
+        config: {
+          ...prev.config,
+          keywords: [...prev.config.keywords, keyword],
+        },
+      };
+    });
+    setKeywordInput("");
+  }, [keywordInput]);
+
+  const removeKeywordFromTrigger = useCallback((keyword: string) => {
+    setTriggerForm((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        config: {
+          ...prev.config,
+          keywords: prev.config.keywords.filter((item) => item !== keyword),
+        },
+      };
+    });
+  }, []);
+
+  const getNodeLabel = useCallback(
+    (nodeId?: string | null) =>
+      nodes.find((node) => node.id === nodeId)?.data?.label ?? "Nicht gesetzt",
+    [nodes],
+  );
+
   const handleEdgeFieldChange = useCallback(
     (field: "condition" | "tone", value: string) => {
       if (!selectedEdgeId) return;
+      const edge = edges.find((item) => item.id === selectedEdgeId);
+      const quickReplyId = (edge?.data as any)?.quickReplyId;
+      if (field === "condition" && quickReplyId) {
+        updateQuickReply(quickReplyId, { label: value });
+        return;
+      }
       setEdges((prev) =>
-        prev.map((edge) =>
-          edge.id === selectedEdgeId
+        prev.map((item) =>
+          item.id === selectedEdgeId
             ? {
-                ...edge,
+                ...item,
                 data: {
-                  ...(edge.data ?? {}),
+                  ...(item.data ?? {}),
                   condition:
-                    field === "condition" ? value : (edge.data as any)?.condition ?? edge.label,
+                    field === "condition" ? value : (item.data as any)?.condition ?? item.label,
                   tone:
                     field === "tone"
                       ? (value as EdgeTone)
-                      : (((edge.data as any)?.tone ?? "neutral") as EdgeTone),
+                      : (((item.data as any)?.tone ?? "neutral") as EdgeTone),
                 },
-                label: field === "condition" ? value : edge.label,
+                label: field === "condition" ? value : item.label,
               }
-            : edge,
+            : item,
         ),
       );
     },
-    [selectedEdgeId],
+    [selectedEdgeId, edges, updateQuickReply],
   );
 
   const deleteSelection = useCallback(() => {
@@ -382,6 +651,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           status,
           nodes,
           edges,
+          triggers,
+          metadata,
         }),
       });
       if (response.ok) {
@@ -396,8 +667,39 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         setTimeout(() => setSaveState("idle"), 4000);
       }
     },
-    [accessToken, loading, flowId, flowName, status, nodes, edges],
+    [accessToken, loading, flowId, flowName, status, nodes, edges, triggers, metadata],
   );
+
+  const handleExport = useCallback(async () => {
+    if (!accessToken) return;
+    setExporting(true);
+    try {
+      const response = await fetch(`/api/flows/${flowId}/export`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+      const payload = await response.json();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `flow-${flowId}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setErrorMessage("Export fehlgeschlagen. Bitte später erneut versuchen.");
+    } finally {
+      setExporting(false);
+    }
+  }, [accessToken, flowId]);
 
   const duplicateSelectedNode = useCallback(() => {
     if (!selectedNode) return;
@@ -509,14 +811,14 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const applyInlineEdit = useCallback(() => {
     if (!inlineEditNodeId) return;
-    handleNodeFieldChange("label", inlineEditValue);
+    handleNodeFieldChange("text", inlineEditValue);
     setInlineEditNodeId(null);
   }, [handleNodeFieldChange, inlineEditNodeId, inlineEditValue]);
 
   const handleSnippetInsert = useCallback(
     (text: string) => {
       if (selectedNode) {
-        handleNodeFieldChange("label", text);
+        handleNodeFieldChange("text", text);
       } else {
         addNode("message", text);
       }
@@ -526,7 +828,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const handleSmartPrompt = useCallback(() => {
     if (!selectedNodeId || !smartPrompt.trim()) return;
-    handleNodeFieldChange("label", smartPrompt.trim());
+    handleNodeFieldChange("text", smartPrompt.trim());
     setSmartPrompt("");
   }, [selectedNodeId, smartPrompt, handleNodeFieldChange]);
 
@@ -574,6 +876,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       </span>
     );
 
+  const selectedNodeReplies =
+    ((selectedNode?.data?.quickReplies as FlowQuickReply[]) ?? []);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -608,10 +913,80 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               ? "Gespeichert"
               : "Speichern"}
           </button>
+          <button
+            onClick={handleExport}
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand"
+            disabled={exporting}
+          >
+            {exporting ? "Exportiert…" : "JSON exportieren"}
+          </button>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr,340px]">
+      <div className="grid gap-6 lg:grid-cols-[280px,1fr,340px]">
+        <aside className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Trigger</p>
+              <h2 className="text-lg font-semibold text-slate-900">Einstiegspunkte</h2>
+            </div>
+            <button
+              onClick={() => openTriggerModal()}
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-brand"
+            >
+              <Plus className="h-4 w-4" />
+              Neuer Trigger
+            </button>
+          </div>
+          {triggers.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-sm text-slate-500">
+              Noch keine Trigger angelegt. Lege Schlüsselwörter an, um deinen Flow zu starten.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {triggers.map((trigger) => (
+                <div key={trigger.id} className="rounded-2xl border border-slate-100 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">
+                    User sends a message
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {trigger.config.keywords.map((keyword) => (
+                      <span
+                        key={keyword}
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Match: {trigger.config.matchType === "CONTAINS" ? "enthält" : "exakt"}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    Startet bei: <span className="font-semibold">{getNodeLabel(trigger.startNodeId)}</span>
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => openTriggerModal(trigger)}
+                      className="flex flex-1 items-center justify-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600"
+                    >
+                      <Edit2 className="h-3 w-3" />
+                      Bearbeiten
+                    </button>
+                    <button
+                      onClick={() => deleteTrigger(trigger.id)}
+                      className="flex items-center justify-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-rose-600"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Löschen
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </aside>
+
         <div className="relative space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -643,7 +1018,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
             </button>
           </div>
           <FlowBuilderCanvas
-            nodes={nodes}
+            nodes={displayNodes}
             edges={decoratedEdges}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
@@ -725,15 +1100,94 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               {selectedNode ? (
                 <>
                   <div>
-                    <label className="text-sm font-semibold text-slate-500">
-                      Nachricht / Label
-                    </label>
+                    <label className="text-sm font-semibold text-slate-500">Textnachricht</label>
                     <textarea
-                      value={selectedNode.data?.label ?? ""}
-                      onChange={(event) => handleNodeFieldChange("label", event.target.value)}
+                      value={selectedNode.data?.text ?? ""}
+                      onChange={(event) => handleNodeFieldChange("text", event.target.value)}
                       className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
                       rows={4}
                     />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-slate-500">Bild (URL)</label>
+                    <input
+                      value={selectedNode.data?.imageUrl ?? ""}
+                      onChange={(event) => handleNodeFieldChange("imageUrl", event.target.value)}
+                      placeholder="https://..."
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
+                    />
+                  </div>
+                  <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-slate-600">Quick Replies</p>
+                      <button
+                        onClick={addQuickReply}
+                        className="text-xs font-semibold text-brand hover:text-brand-dark"
+                      >
+                        + Quick Reply
+                      </button>
+                    </div>
+                    {selectedNodeReplies.length === 0 ? (
+                      <p className="text-xs text-slate-500">
+                        Noch keine Buttons. Füge Quick Replies hinzu, um Antworten zu verlinken.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedNodeReplies.map((reply) => (
+                          <div
+                            key={reply.id}
+                            className="space-y-2 rounded-2xl border border-slate-200 bg-white p-3"
+                          >
+                            <div className="flex items-center justify-between text-xs text-slate-500">
+                              <span>Button</span>
+                              <button
+                                onClick={() => removeQuickReply(reply.id)}
+                                className="text-rose-500"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                            <input
+                              value={reply.label}
+                              onChange={(event) =>
+                                updateQuickReply(reply.id, { label: event.target.value })
+                              }
+                              placeholder="Button-Text"
+                              className="w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                            />
+                            <input
+                              value={reply.payload}
+                              onChange={(event) =>
+                                updateQuickReply(reply.id, { payload: event.target.value })
+                              }
+                              placeholder="Payload / interne Aktion"
+                              className="w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                            />
+                            <div>
+                              <label className="text-xs font-semibold text-slate-500">
+                                Weiterleiten zu
+                              </label>
+                              <select
+                                value={reply.targetNodeId ?? ""}
+                                onChange={(event) =>
+                                  updateQuickReply(reply.id, {
+                                    targetNodeId: event.target.value || null,
+                                  })
+                                }
+                                className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                              >
+                                <option value="">Node wählen …</option>
+                                {nodes.map((node) => (
+                                  <option key={node.id} value={node.id}>
+                                    {node.data?.label ?? node.id}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={deleteSelection}
@@ -828,15 +1282,42 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
             </div>
           )}
 
-  {inspectorTab === "preview" && (
+          {inspectorTab === "preview" && (
             <div className="space-y-3">
               <p className="text-sm text-slate-500">
-                Vorschau simuliert die aktuelle Nachricht mit Labels.
+                Vorschau simuliert die aktuelle Nachricht mit Buttons.
               </p>
               <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700">
-                {selectedNode
-                  ? selectedNode.data?.label
-                  : "Wähle einen Node, um die Ausgabe zu sehen."}
+                {selectedNode ? (
+                  <div className="space-y-3 rounded-2xl bg-slate-900 p-4 text-white">
+                    <p>{selectedNode.data?.text ?? "Keine Nachricht"}</p>
+                    {selectedNode.data?.imageUrl ? (
+                      <div className="relative mt-2 h-40 w-full overflow-hidden rounded-2xl border border-white/10">
+                        <Image
+                          src={selectedNode.data.imageUrl}
+                          alt="Preview"
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : null}
+                    {selectedNodeReplies.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedNodeReplies.map((reply) => (
+                          <span
+                            key={reply.id}
+                            className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold"
+                          >
+                            {reply.label || "Button"}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  "Wähle einen Node, um die Ausgabe zu sehen."
+                )}
               </div>
             </div>
           )}
@@ -885,6 +1366,115 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           )}
         </div>
       </div>
+
+      {isTriggerModalOpen && triggerForm ? (
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-slate-900">
+                {editingTriggerId ? "Trigger bearbeiten" : "Neuen Trigger anlegen"}
+              </h3>
+              <button onClick={closeTriggerModal} className="text-slate-400">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-5 space-y-5">
+              <div>
+                <p className="text-sm font-semibold text-slate-600">Keywords</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {triggerForm.config.keywords.map((keyword) => (
+                    <span
+                      key={keyword}
+                      className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
+                    >
+                      {keyword}
+                      <button
+                        onClick={() => removeKeywordFromTrigger(keyword)}
+                        className="text-slate-400"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    value={keywordInput}
+                    onChange={(event) => setKeywordInput(event.target.value)}
+                    placeholder="Keyword hinzufügen"
+                    className="flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                  />
+                  <button
+                    onClick={addKeywordToTrigger}
+                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+                  >
+                    Hinzufügen
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-slate-600">Match Type</label>
+                <select
+                  value={triggerForm.config.matchType}
+                  onChange={(event) =>
+                    setTriggerForm((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            config: {
+                              ...prev.config,
+                              matchType: event.target.value as FlowTrigger["config"]["matchType"],
+                            },
+                          }
+                        : prev,
+                    )
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                >
+                  <option value="CONTAINS">enthält Schlagwort</option>
+                  <option value="EXACT">exaktes Schlagwort</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-slate-600">Start Node</label>
+                <select
+                  value={triggerForm.startNodeId ?? ""}
+                  onChange={(event) =>
+                    setTriggerForm((prev) =>
+                      prev ? { ...prev, startNodeId: event.target.value || null } : prev,
+                    )
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                >
+                  <option value="">Node wählen …</option>
+                  {nodes.map((node) => (
+                    <option key={node.id} value={node.id}>
+                      {node.data?.label ?? node.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="mt-6 flex gap-2">
+              <button
+                onClick={saveTrigger}
+                className="flex-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
+                disabled={
+                  !triggerForm.config.keywords.length || !triggerForm.startNodeId
+                }
+              >
+                Speichern
+              </button>
+              <button
+                onClick={closeTriggerModal}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

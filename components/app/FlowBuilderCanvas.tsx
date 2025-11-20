@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import ReactFlow, {
   Background,
   Connection,
@@ -17,6 +17,7 @@ import ReactFlow, {
   ReactFlowInstance,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import FlowNode from "./FlowNode";
 
 type FlowBuilderCanvasProps = {
   nodes: Node[];
@@ -45,6 +46,8 @@ function Canvas({
   onInit,
   onFitView,
 }: FlowBuilderCanvasProps) {
+  const nodeTypes = useMemo(() => ({ wesponde: FlowNode }), []);
+
   return (
     <div className="relative h-[640px] rounded-3xl border border-slate-200 bg-white shadow-inner shadow-slate-200/70">
       <ReactFlow
@@ -59,6 +62,7 @@ function Canvas({
         onSelectionChange={onSelectionChange ?? undefined}
         onInit={onInit}
         fitView
+        nodeTypes={nodeTypes}
         nodesDraggable
         nodesConnectable
         panOnScroll
