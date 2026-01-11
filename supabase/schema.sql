@@ -93,3 +93,55 @@ values
     '[{"id":"trigger-medical","type":"KEYWORD","config":{"keywords":["termin","arzt","sprechstunde"],"matchType":"CONTAINS"},"startNodeId":"start"}]'
   )
 on conflict (slug) do nothing;
+
+-- Meta/Instagram integrations
+create table if not exists public.integrations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  provider text not null,
+  status text not null default 'disconnected',
+  access_token text,
+  refresh_token text,
+  expires_at timestamptz,
+  page_id text,
+  instagram_id text,
+  account_name text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.integrations
+  add constraint integrations_user_fk
+  foreign key (user_id)
+  references auth.users(id)
+  on delete cascade;
+
+alter table public.integrations enable row level security;
+
+create policy "Integrationen nur für Besitzer sichtbar"
+  on public.integrations
+  for select using (auth.uid() = user_id);
+
+create policy "Besitzer dürfen Integrationen bearbeiten"
+  on public.integrations
+  for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Besitzer dürfen Integrationen erstellen"
+  on public.integrations
+  for insert with check (auth.uid() = user_id);
+
+create index if not exists integrations_user_id_idx on public.integrations(user_id);
+create unique index if not exists integrations_user_provider_idx
+  on public.integrations(user_id, provider);
+
+-- OAuth state store (server-only usage)
+create table if not exists public.oauth_states (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  state text unique not null,
+  expires_at timestamptz not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists oauth_states_state_idx on public.oauth_states(state);
