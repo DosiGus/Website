@@ -12,6 +12,7 @@ export default function PartnerLoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     const formData = new FormData(event.currentTarget);
     const email = (formData.get("email") as string) || "";
     const password = (formData.get("password") as string) || "";
@@ -38,8 +39,8 @@ export default function PartnerLoginForm() {
         if (error) throw error;
         setStatus("success");
         setMessage("Check deine Inbox für den Bestätigungslink.");
+        form.reset();
       }
-      event.currentTarget.reset();
     } catch (error: any) {
       console.error(error);
       setStatus("error");
