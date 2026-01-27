@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     });
     const metaAppId = process.env.META_APP_ID;
     const metaRedirectUri = process.env.META_REDIRECT_URI;
+    const metaLoginConfigId = process.env.META_LOGIN_CONFIG_ID;
 
     if (!metaAppId || !metaRedirectUri) {
       await log.error("oauth", "Missing Meta OAuth environment variables", {
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
         metadata: {
           hasAppId: Boolean(metaAppId),
           hasRedirectUri: Boolean(metaRedirectUri),
+          hasConfigId: Boolean(metaLoginConfigId),
         },
       });
       return NextResponse.json(
@@ -66,12 +68,17 @@ export async function POST(request: Request) {
       state,
     });
 
+    if (metaLoginConfigId) {
+      params.set("config_id", metaLoginConfigId);
+    }
+
     await log.info("oauth", "Redirecting to Meta OAuth", {
       requestId,
       userId: user.id,
       metadata: {
         redirectUri: metaRedirectUri,
         scope,
+        configId: metaLoginConfigId ?? undefined,
       },
     });
 

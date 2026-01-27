@@ -37,6 +37,32 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const errorParam = searchParams.get("error");
+  const errorReason = searchParams.get("error_reason");
+  const errorDescription = searchParams.get("error_description");
+
+  // Log ALL query params Meta sends back for debugging
+  const allParams: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    allParams[key] = value;
+  });
+
+  if (errorParam) {
+    await log.error("oauth", "Meta returned an error in callback", {
+      requestId,
+      metadata: {
+        error: errorParam,
+        errorReason: errorReason ?? undefined,
+        errorDescription: errorDescription ?? undefined,
+        allParams,
+      },
+    });
+    const errorMsg = errorDescription ?? errorParam;
+    const redirectUrl = new URL(
+      `/app/integrations?error=${encodeURIComponent(errorMsg)}`,
+      request.url,
+    );
+    return NextResponse.redirect(redirectUrl);
+  }
 
   if (!code || !state) {
     await log.warn("oauth", "OAuth callback missing code or state", {
@@ -44,10 +70,14 @@ export async function GET(request: Request) {
       metadata: {
         hasCode: Boolean(code),
         hasState: Boolean(state),
-        error: errorParam || undefined,
+        allParams,
       },
     });
-    return NextResponse.json({ error: "Code oder State fehlt." }, { status: 400 });
+    const redirectUrl = new URL(
+      `/app/integrations?error=${encodeURIComponent("Verbindung fehlgeschlagen. Meta hat keine Autorisierung zurückgegeben.")}`,
+      request.url,
+    );
+    return NextResponse.redirect(redirectUrl);
   }
 
   const supabase = createSupabaseServerClient();
@@ -90,15 +120,21 @@ export async function GET(request: Request) {
       }),
   );
 
+  const tokenResponseBody = await tokenResponse.json();
+
   if (!tokenResponse.ok) {
     await log.error("oauth", "Token exchange failed", {
       requestId,
       userId: stateRow.user_id,
+      metadata: {
+        httpStatus: tokenResponse.status,
+        metaError: tokenResponseBody?.error ?? tokenResponseBody,
+      },
     });
     return NextResponse.json({ error: "Token-Tausch fehlgeschlagen." }, { status: 500 });
   }
 
-  const shortLivedToken = (await tokenResponse.json()) as MetaTokenResponse;
+  const shortLivedToken = tokenResponseBody as MetaTokenResponse;
 
   // Exchange short-lived token for long-lived token (60 days)
   const longLivedResponse = await fetch(
@@ -111,15 +147,21 @@ export async function GET(request: Request) {
       }),
   );
 
+  const longLivedBody = await longLivedResponse.json();
+
   if (!longLivedResponse.ok) {
     await log.error("oauth", "Long-lived token exchange failed", {
       requestId,
       userId: stateRow.user_id,
+      metadata: {
+        httpStatus: longLivedResponse.status,
+        metaError: longLivedBody?.error ?? longLivedBody,
+      },
     });
     return NextResponse.json({ error: "Long-lived Token-Tausch fehlgeschlagen." }, { status: 500 });
   }
 
-  const longLivedToken = (await longLivedResponse.json()) as MetaLongLivedTokenResponse;
+  const longLivedToken = longLivedBody as MetaLongLivedTokenResponse;
 
   // Fetch user's Facebook pages
   const pagesResponse = await fetch(
@@ -129,15 +171,21 @@ export async function GET(request: Request) {
       }),
   );
 
+  const pagesBody = await pagesResponse.json();
+
   if (!pagesResponse.ok) {
     await log.warn("oauth", "No Facebook pages returned", {
       requestId,
       userId: stateRow.user_id,
+      metadata: {
+        httpStatus: pagesResponse.status,
+        metaError: pagesBody?.error ?? pagesBody,
+      },
     });
     return NextResponse.json({ error: "Keine Facebook-Seiten gefunden." }, { status: 400 });
   }
 
-  const pagesData = (await pagesResponse.json()) as MetaAccountsResponse;
+  const pagesData = pagesBody as MetaAccountsResponse;
   await log.info("oauth", "Fetched Facebook pages", {
     requestId,
     userId: stateRow.user_id,
@@ -164,18 +212,22 @@ export async function GET(request: Request) {
       }),
   );
 
+  const igBody = await igResponse.json();
+
   if (!igResponse.ok) {
     await log.warn("oauth", "Instagram business account not found", {
       requestId,
       userId: stateRow.user_id,
       metadata: {
         pageId: firstPage.id,
+        httpStatus: igResponse.status,
+        metaError: igBody?.error ?? igBody,
       },
     });
     return NextResponse.json({ error: "Instagram Account nicht gefunden." }, { status: 400 });
   }
 
-  const igData = (await igResponse.json()) as MetaInstagramBusinessAccountResponse;
+  const igData = igBody as MetaInstagramBusinessAccountResponse;
   const instagramId = igData.instagram_business_account?.id ?? null;
 
   // Lookup Instagram username if we have the IG business account ID
