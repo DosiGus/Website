@@ -25,6 +25,10 @@ export default function IntegrationsClient() {
     () => searchParams?.get("account"),
     [searchParams],
   );
+  const errorParam = useMemo(
+    () => searchParams?.get("error"),
+    [searchParams],
+  );
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -151,6 +155,12 @@ export default function IntegrationsClient() {
             {accountParam
               ? `Meta/Instagram wurde erfolgreich verbunden: ${accountParam}`
               : "Meta/Instagram wurde erfolgreich verbunden."}
+          </div>
+        )}
+
+        {errorParam && (
+          <div className="mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            Verbindung fehlgeschlagen: {errorParam}
           </div>
         )}
 
