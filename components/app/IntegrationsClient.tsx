@@ -3,28 +3,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
+import type { IntegrationStatus } from "../../lib/meta/types";
 
-type MetaIntegration = {
-  provider?: string;
-  status?: string;
-  account_name?: string | null;
-  instagram_id?: string | null;
-  page_id?: string | null;
-  updated_at?: string | null;
+type IntegrationsResponse = {
+  integrations: IntegrationStatus[];
 };
-
-type StatusResponse = MetaIntegration | { status: "disconnected" };
 
 export default function IntegrationsClient() {
   const searchParams = useSearchParams();
-  const [metaIntegration, setMetaIntegration] = useState<MetaIntegration | null>(null);
+  const [metaIntegration, setMetaIntegration] = useState<IntegrationStatus | null>(null);
   const [status, setStatus] = useState<"loading" | "ready">("loading");
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  const connectedParam = useMemo(
-    () => searchParams?.get("connected"),
+  const successParam = useMemo(
+    () => searchParams?.get("success"),
+    [searchParams],
+  );
+  const accountParam = useMemo(
+    () => searchParams?.get("account"),
     [searchParams],
   );
 
@@ -44,17 +42,20 @@ export default function IntegrationsClient() {
         setStatus("ready");
         return;
       }
-      const response = await fetch("/api/integrations/meta/status", {
+      const response = await fetch("/api/integrations", {
         headers: { authorization: `Bearer ${token}` },
       });
-      const payload = (await response.json()) as StatusResponse;
       if (!response.ok) {
         setError("Status konnte nicht geladen werden.");
         setMetaIntegration(null);
-      } else if ("status" in payload && payload.status === "disconnected") {
-        setMetaIntegration({ status: "disconnected" });
+        return;
+      }
+      const payload = (await response.json()) as IntegrationsResponse;
+      const meta = payload.integrations.find((i) => i.provider === "meta") ?? null;
+      if (meta && meta.status !== "connected") {
+        setMetaIntegration({ ...meta, status: "disconnected" });
       } else {
-        setMetaIntegration(payload as MetaIntegration);
+        setMetaIntegration(meta);
       }
     } catch {
       setError("Status konnte nicht geladen werden.");
@@ -102,9 +103,13 @@ export default function IntegrationsClient() {
         setError("Bitte erneut anmelden, um fortzufahren.");
         return;
       }
-      const response = await fetch("/api/integrations/meta/disconnect", {
-        method: "POST",
-        headers: { authorization: `Bearer ${token}` },
+      const response = await fetch("/api/integrations", {
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ provider: "meta" }),
       });
       if (!response.ok) {
         setError("Trennen fehlgeschlagen.");
@@ -141,9 +146,11 @@ export default function IntegrationsClient() {
           </span>
         </div>
 
-        {connectedParam === "meta" && (
+        {successParam === "true" && (
           <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Meta/Instagram wurde erfolgreich verbunden.
+            {accountParam
+              ? `Meta/Instagram wurde erfolgreich verbunden: ${accountParam}`
+              : "Meta/Instagram wurde erfolgreich verbunden."}
           </div>
         )}
 
@@ -151,7 +158,12 @@ export default function IntegrationsClient() {
           <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             <div className="font-semibold text-slate-700">Verbundenes Konto</div>
             <div>{metaIntegration?.account_name ?? "Meta Account"}</div>
-            {metaIntegration?.instagram_id && (
+            {metaIntegration?.instagram_username && (
+              <div className="text-xs text-slate-400">
+                @{metaIntegration.instagram_username}
+              </div>
+            )}
+            {!metaIntegration?.instagram_username && metaIntegration?.instagram_id && (
               <div className="text-xs text-slate-400">
                 Instagram ID: {metaIntegration.instagram_id}
               </div>

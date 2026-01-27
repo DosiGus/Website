@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import IntegrationsClient from "../../../components/app/IntegrationsClient";
 
 export default function IntegrationsPage() {
@@ -10,7 +11,9 @@ export default function IntegrationsPage() {
           Steuere, welche Plattformen Zugriff auf deine Flows haben.
         </p>
       </div>
-      <IntegrationsClient />
+      <Suspense fallback={<div className="text-sm text-slate-400">Integrationen werden geladen…</div>}>
+        <IntegrationsClient />
+      </Suspense>
     </div>
   );
 }

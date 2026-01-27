@@ -1,3 +1,4 @@
+// DEPRECATED: Use DELETE /api/integrations instead
 import { NextResponse } from "next/server";
 import { requireUser } from "../../../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../../../lib/supabaseServerClient";
