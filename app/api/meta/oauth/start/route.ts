@@ -64,12 +64,15 @@ export async function POST(request: Request) {
       client_id: metaAppId,
       redirect_uri: metaRedirectUri,
       response_type: "code",
-      scope,
       state,
     });
 
+    // Facebook Login for Business: use config_id instead of scope
+    // The configuration defines the permissions, so scope must be omitted
     if (metaLoginConfigId) {
       params.set("config_id", metaLoginConfigId);
+    } else {
+      params.set("scope", scope);
     }
 
     await log.info("oauth", "Redirecting to Meta OAuth", {
@@ -77,7 +80,7 @@ export async function POST(request: Request) {
       userId: user.id,
       metadata: {
         redirectUri: metaRedirectUri,
-        scope,
+        scope: metaLoginConfigId ? undefined : scope,
         configId: metaLoginConfigId ?? undefined,
       },
     });
