@@ -145,3 +145,24 @@ create table if not exists public.oauth_states (
 );
 
 create index if not exists oauth_states_state_idx on public.oauth_states(state);
+
+-- Logging table for debugging and monitoring
+create table if not exists public.logs (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  level text not null check (level in ('debug', 'info', 'warn', 'error')),
+  source text not null,
+  message text not null,
+  user_id uuid references auth.users(id) on delete set null,
+  metadata jsonb default '{}'::jsonb,
+  request_id text,
+  duration_ms integer
+);
+
+create index if not exists logs_created_at_idx on public.logs(created_at desc);
+create index if not exists logs_level_idx on public.logs(level);
+create index if not exists logs_source_idx on public.logs(source);
+create index if not exists logs_user_id_idx on public.logs(user_id);
+create index if not exists logs_request_id_idx on public.logs(request_id);
+
+alter table public.logs enable row level security;
