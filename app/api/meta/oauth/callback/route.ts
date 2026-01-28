@@ -116,6 +116,9 @@ export async function GET(request: Request) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Consume state immediately to prevent double-callbacks using the same code
+  await supabase.from("oauth_states").delete().eq("state", state);
+
   // Exchange code for short-lived token
   const tokenResponse = await fetch(
     `${META_GRAPH_BASE}/oauth/access_token?` +
@@ -334,9 +337,6 @@ export async function GET(request: Request) {
       },
       { onConflict: "user_id,provider" },
     );
-
-  // Clean up used state
-  await supabase.from("oauth_states").delete().eq("state", state);
 
   if (integrationError) {
     await log.logError("oauth", integrationError, "Failed to save integration", {
