@@ -359,52 +359,66 @@ export async function GET(request: Request) {
     },
   });
 
-  // Upsert integration record
-  const { error: integrationError } = await supabase
-    .from("integrations")
-    .upsert(
-      {
-        user_id: stateRow.user_id,
-        provider: "meta",
-        status: "connected",
-        access_token: firstPage.access_token,
-        refresh_token: longLivedToken.access_token,
-        expires_at: new Date(Date.now() + longLivedToken.expires_in * 1000).toISOString(),
-        page_id: firstPage.id,
-        instagram_id: instagramId,
-        instagram_username: instagramUsername,
-        account_name: firstPage.name,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,provider" },
-    );
+  // Upsert integration record with explicit error handling
+  try {
+    const { error: integrationError } = await supabase
+      .from("integrations")
+      .upsert(
+        {
+          user_id: stateRow.user_id,
+          provider: "meta",
+          status: "connected",
+          access_token: firstPage.access_token,
+          refresh_token: longLivedToken.access_token,
+          expires_at: new Date(Date.now() + longLivedToken.expires_in * 1000).toISOString(),
+          page_id: firstPage.id,
+          instagram_id: instagramId,
+          instagram_username: instagramUsername,
+          account_name: firstPage.name,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,provider" },
+      );
 
-  if (integrationError) {
-    await log.logError("oauth", integrationError, "Failed to save integration", {
+    if (integrationError) {
+      await log.logError("oauth", integrationError, "Failed to save integration", {
+        requestId,
+        userId: stateRow.user_id,
+      });
+      return NextResponse.redirect(
+        new URL(
+          `/app/integrations?error=${encodeURIComponent("Integration konnte nicht gespeichert werden.")}`,
+          request.url,
+        ),
+      );
+    }
+
+    await log.info("oauth", "OAuth flow completed successfully", {
+      requestId,
+      userId: stateRow.user_id,
+      metadata: {
+        pageId: firstPage.id,
+        accountName: firstPage.name,
+        instagramUsername: instagramUsername ?? undefined,
+      },
+    });
+
+    const accountLabel = instagramUsername ?? firstPage.name;
+    const redirectUrl = new URL(
+      `/app/integrations?success=true&account=${encodeURIComponent(accountLabel)}`,
+      request.url,
+    );
+    return NextResponse.redirect(redirectUrl);
+  } catch (upsertError) {
+    await log.logError("oauth", upsertError, "Unexpected error during integration save", {
       requestId,
       userId: stateRow.user_id,
     });
     return NextResponse.redirect(
       new URL(
-        `/app/integrations?error=${encodeURIComponent("Integration konnte nicht gespeichert werden.")}`,
+        `/app/integrations?error=${encodeURIComponent("Unerwarteter Fehler beim Speichern.")}`,
         request.url,
       ),
     );
   }
-
-  await log.info("oauth", "OAuth flow completed", {
-    requestId,
-    userId: stateRow.user_id,
-    metadata: {
-      pageId: firstPage.id,
-      accountName: firstPage.name,
-    },
-  });
-
-  const accountLabel = instagramUsername ?? firstPage.name;
-  const redirectUrl = new URL(
-    `/app/integrations?success=true&account=${encodeURIComponent(accountLabel)}`,
-    request.url,
-  );
-  return NextResponse.redirect(redirectUrl);
 }
