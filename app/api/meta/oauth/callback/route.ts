@@ -91,11 +91,44 @@ export async function GET(request: Request) {
     .single();
 
   if (stateError || !stateRow) {
+    // State was already consumed - this is likely a duplicate callback
+    // Try to extract user_id from state (format: user_id.random)
+    const stateUserId = state.includes(".") ? state.split(".")[0] : null;
+
+    if (stateUserId) {
+      // Check if this user has a recently successful integration (within last 60 seconds)
+      const { data: recentIntegration } = await supabase
+        .from("integrations")
+        .select("status, account_name, instagram_username, updated_at")
+        .eq("user_id", stateUserId)
+        .eq("provider", "meta")
+        .eq("status", "connected")
+        .gte("updated_at", new Date(Date.now() - 60000).toISOString())
+        .maybeSingle();
+
+      if (recentIntegration) {
+        // A successful integration just happened for this user - redirect to success
+        await log.info("oauth", "Duplicate callback detected, integration already exists", {
+          requestId,
+          userId: stateUserId,
+          metadata: {
+            accountName: recentIntegration.account_name,
+            updatedAt: recentIntegration.updated_at,
+          },
+        });
+        const accountLabel = recentIntegration.instagram_username ?? recentIntegration.account_name ?? "Meta";
+        return NextResponse.redirect(
+          new URL(`/app/integrations?success=true&account=${encodeURIComponent(accountLabel)}`, request.url),
+        );
+      }
+    }
+
     await log.warn("oauth", "Invalid or expired OAuth state (already consumed or not found)", {
       requestId,
       metadata: {
         hasStateRow: Boolean(stateRow),
         error: stateError?.message,
+        stateUserId: stateUserId ?? undefined,
       },
     });
     const redirectUrl = new URL(
@@ -314,6 +347,15 @@ export async function GET(request: Request) {
     metadata: {
       instagramId: instagramId ?? undefined,
       instagramUsername: instagramUsername ?? undefined,
+    },
+  });
+
+  await log.info("oauth", "Saving integration to database", {
+    requestId,
+    userId: stateRow.user_id,
+    metadata: {
+      pageId: firstPage.id,
+      accountName: firstPage.name,
     },
   });
 
