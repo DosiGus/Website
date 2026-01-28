@@ -81,22 +81,25 @@ export async function GET(request: Request) {
 
   const supabase = createSupabaseServerClient();
 
-  // Validate CSRF state
+  // Atomically validate AND consume state to prevent race conditions
+  // DELETE ... RETURNING ensures only ONE request can succeed
   const { data: stateRow, error: stateError } = await supabase
     .from("oauth_states")
-    .select("*")
+    .delete()
     .eq("state", state)
+    .select("*")
     .single();
 
   if (stateError || !stateRow) {
-    await log.warn("oauth", "Invalid or expired OAuth state", {
+    await log.warn("oauth", "Invalid or expired OAuth state (already consumed or not found)", {
       requestId,
       metadata: {
         hasStateRow: Boolean(stateRow),
+        error: stateError?.message,
       },
     });
     const redirectUrl = new URL(
-      `/app/integrations?error=${encodeURIComponent("OAuth-Status ungültig oder abgelaufen.")}`,
+      `/app/integrations?error=${encodeURIComponent("OAuth-Status ungültig, abgelaufen oder bereits verwendet.")}`,
       request.url,
     );
     return NextResponse.redirect(redirectUrl);
@@ -104,7 +107,6 @@ export async function GET(request: Request) {
 
   // Check state expiry
   if (new Date(stateRow.expires_at) < new Date()) {
-    await supabase.from("oauth_states").delete().eq("state", state);
     await log.warn("oauth", "OAuth state expired", {
       requestId,
       userId: stateRow.user_id,
@@ -115,9 +117,6 @@ export async function GET(request: Request) {
     );
     return NextResponse.redirect(redirectUrl);
   }
-
-  // Consume state immediately to prevent double-callbacks using the same code
-  await supabase.from("oauth_states").delete().eq("state", state);
 
   // Exchange code for short-lived token
   const tokenResponse = await fetch(
