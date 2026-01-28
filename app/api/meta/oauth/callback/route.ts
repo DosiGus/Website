@@ -244,6 +244,16 @@ export async function GET(request: Request) {
 
   const longLivedToken = longLivedBody as MetaLongLivedTokenResponse;
 
+  await log.info("oauth", "Long-lived token obtained", {
+    requestId,
+    userId: stateRow.user_id,
+    metadata: {
+      hasAccessToken: Boolean(longLivedToken.access_token),
+      expiresIn: longLivedToken.expires_in,
+      expiresInType: typeof longLivedToken.expires_in,
+    },
+  });
+
   // Fetch user's Facebook pages
   const pagesResponse = await fetch(
     `${META_GRAPH_BASE}/me/accounts?` +
@@ -361,6 +371,12 @@ export async function GET(request: Request) {
 
   // Upsert integration record with explicit error handling
   try {
+    // Calculate expires_at safely - default to 60 days if expires_in is missing
+    const expiresInSeconds = typeof longLivedToken.expires_in === "number" && longLivedToken.expires_in > 0
+      ? longLivedToken.expires_in
+      : 60 * 24 * 60 * 60; // 60 days in seconds
+    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+
     const { error: integrationError } = await supabase
       .from("integrations")
       .upsert(
@@ -370,7 +386,7 @@ export async function GET(request: Request) {
           status: "connected",
           access_token: firstPage.access_token,
           refresh_token: longLivedToken.access_token,
-          expires_at: new Date(Date.now() + longLivedToken.expires_in * 1000).toISOString(),
+          expires_at: expiresAt,
           page_id: firstPage.id,
           instagram_id: instagramId,
           instagram_username: instagramUsername,
