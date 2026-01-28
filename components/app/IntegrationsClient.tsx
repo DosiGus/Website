@@ -26,10 +26,6 @@ export default function IntegrationsClient() {
     [searchParams],
   );
   const errorParam = useMemo(() => searchParams?.get("error"), [searchParams]);
-  const errorParam = useMemo(
-    () => searchParams?.get("error"),
-    [searchParams],
-  );
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
