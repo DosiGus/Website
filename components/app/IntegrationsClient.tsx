@@ -25,6 +25,7 @@ export default function IntegrationsClient() {
     () => searchParams?.get("account"),
     [searchParams],
   );
+  const errorParam = useMemo(() => searchParams?.get("error"), [searchParams]);
   const errorParam = useMemo(
     () => searchParams?.get("error"),
     [searchParams],

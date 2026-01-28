@@ -27,9 +27,8 @@ export async function GET(request: Request) {
         hasRedirectUri: Boolean(metaRedirectUri),
       },
     });
-    return NextResponse.json(
-      { error: "META_APP_ID, META_APP_SECRET oder META_REDIRECT_URI fehlt." },
-      { status: 500 },
+    return NextResponse.redirect(
+      new URL("/app/integrations?error=meta_config", request.url),
     );
   }
 
@@ -96,7 +95,11 @@ export async function GET(request: Request) {
         hasStateRow: Boolean(stateRow),
       },
     });
-    return NextResponse.json({ error: "State ungültig oder abgelaufen." }, { status: 400 });
+    const redirectUrl = new URL(
+      `/app/integrations?error=${encodeURIComponent("OAuth-Status ungültig oder abgelaufen.")}`,
+      request.url,
+    );
+    return NextResponse.redirect(redirectUrl);
   }
 
   // Check state expiry
@@ -106,7 +109,11 @@ export async function GET(request: Request) {
       requestId,
       userId: stateRow.user_id,
     });
-    return NextResponse.json({ error: "State abgelaufen." }, { status: 400 });
+    const redirectUrl = new URL(
+      `/app/integrations?error=${encodeURIComponent("OAuth-Status abgelaufen.")}`,
+      request.url,
+    );
+    return NextResponse.redirect(redirectUrl);
   }
 
   // Exchange code for short-lived token
@@ -131,7 +138,41 @@ export async function GET(request: Request) {
         metaError: tokenResponseBody?.error ?? tokenResponseBody,
       },
     });
-    return NextResponse.json({ error: "Token-Tausch fehlgeschlagen." }, { status: 500 });
+    const metaError = tokenResponseBody?.error ?? {};
+    const errorSubcode =
+      typeof metaError === "object" && metaError
+        ? (metaError as { error_subcode?: number }).error_subcode
+        : undefined;
+    if (errorSubcode === 36009) {
+      const { data: existingIntegration } = await supabase
+        .from("integrations")
+        .select("status,account_name,instagram_username")
+        .eq("user_id", stateRow.user_id)
+        .eq("provider", "meta")
+        .maybeSingle();
+
+      if (existingIntegration?.status === "connected") {
+        const accountLabel =
+          existingIntegration.instagram_username ??
+          existingIntegration.account_name ??
+          "Meta";
+        const redirectUrl = new URL(
+          `/app/integrations?success=true&account=${encodeURIComponent(accountLabel)}`,
+          request.url,
+        );
+        return NextResponse.redirect(redirectUrl);
+      }
+    }
+
+    const errorMessage =
+      errorSubcode === 36009
+        ? "OAuth-Code wurde bereits verwendet. Bitte erneut verbinden."
+        : "Token-Tausch fehlgeschlagen.";
+    const redirectUrl = new URL(
+      `/app/integrations?error=${encodeURIComponent(errorMessage)}`,
+      request.url,
+    );
+    return NextResponse.redirect(redirectUrl);
   }
 
   const shortLivedToken = tokenResponseBody as MetaTokenResponse;
@@ -158,7 +199,12 @@ export async function GET(request: Request) {
         metaError: longLivedBody?.error ?? longLivedBody,
       },
     });
-    return NextResponse.json({ error: "Long-lived Token-Tausch fehlgeschlagen." }, { status: 500 });
+    return NextResponse.redirect(
+      new URL(
+        `/app/integrations?error=${encodeURIComponent("Long-lived Token-Tausch fehlgeschlagen.")}`,
+        request.url,
+      ),
+    );
   }
 
   const longLivedToken = longLivedBody as MetaLongLivedTokenResponse;
@@ -182,7 +228,12 @@ export async function GET(request: Request) {
         metaError: pagesBody?.error ?? pagesBody,
       },
     });
-    return NextResponse.json({ error: "Keine Facebook-Seiten gefunden." }, { status: 400 });
+    return NextResponse.redirect(
+      new URL(
+        `/app/integrations?error=${encodeURIComponent("Keine Facebook-Seiten gefunden.")}`,
+        request.url,
+      ),
+    );
   }
 
   const pagesData = pagesBody as MetaAccountsResponse;
@@ -200,7 +251,12 @@ export async function GET(request: Request) {
       requestId,
       userId: stateRow.user_id,
     });
-    return NextResponse.json({ error: "Keine Facebook-Seite verfügbar." }, { status: 400 });
+    return NextResponse.redirect(
+      new URL(
+        `/app/integrations?error=${encodeURIComponent("Keine Facebook-Seite verfügbar.")}`,
+        request.url,
+      ),
+    );
   }
 
   // Get Instagram Business Account ID from the page
@@ -224,7 +280,12 @@ export async function GET(request: Request) {
         metaError: igBody?.error ?? igBody,
       },
     });
-    return NextResponse.json({ error: "Instagram Account nicht gefunden." }, { status: 400 });
+    return NextResponse.redirect(
+      new URL(
+        `/app/integrations?error=${encodeURIComponent("Instagram Account nicht gefunden.")}`,
+        request.url,
+      ),
+    );
   }
 
   const igData = igBody as MetaInstagramBusinessAccountResponse;
@@ -282,7 +343,12 @@ export async function GET(request: Request) {
       requestId,
       userId: stateRow.user_id,
     });
-    return NextResponse.json({ error: integrationError.message }, { status: 500 });
+    return NextResponse.redirect(
+      new URL(
+        `/app/integrations?error=${encodeURIComponent("Integration konnte nicht gespeichert werden.")}`,
+        request.url,
+      ),
+    );
   }
 
   await log.info("oauth", "OAuth flow completed", {
