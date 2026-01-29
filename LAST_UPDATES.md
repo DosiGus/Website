@@ -48,6 +48,30 @@ Alle drei Templates sind jetzt vollständig mit Quick Replies:
 
 ---
 
+## Gelöste Probleme dieser Session
+
+### Problem 1: Flow bleibt bei Freitext-Eingabe hängen
+**Symptom:** User tippt Namen bei "Name erfragen" → Bot antwortet nicht
+**Ursache:** Webhook versuchte neuen Flow zu matchen statt im aktuellen weiterzumachen
+**Lösung:** `handleFreeTextInput()` in `flowExecutor.ts` hinzugefügt, Webhook prüft jetzt ob User in aktivem Flow ist
+
+### Problem 2: Datum-Abfrage zu ungenau
+**Symptom:** Nur "Heute/Morgen/Wochenende" als Quick Replies - unpraktisch für echte Reservierung
+**Lösung:** Geändert zu Freitext-Eingabe: "Für welches Datum möchtest du reservieren?"
+
+### Problem 3: Zusammenfassung zeigt Platzhalter
+**Symptom:** "[wird eingetragen]" statt echte Daten
+**Ursache:** Kein Variable-System vorhanden um User-Eingaben zu speichern/anzeigen
+**Workaround:** Text geändert zu "Ich habe alle Angaben für deine Reservierung" ohne falsche Versprechen
+**Echte Lösung:** Variable-System implementieren (siehe Priorität 1 unten)
+
+### Problem 4: Leere Webhook-Events
+**Beobachtung:** Logs zeigen `"hasMessage": false, "messageText": ""` Events
+**Ursache:** Instagram sendet "seen" und "typing" Events die keine Nachricht enthalten
+**Status:** Harmlos - werden ignoriert, aber könnten gefiltert werden
+
+---
+
 ## Was noch offen ist / Nächste Schritte
 
 ### Priorität 1: User-Daten in Zusammenfassung anzeigen
@@ -100,9 +124,34 @@ Alle drei Templates sind jetzt vollständig mit Quick Replies:
 
 ---
 
+## Aktueller Stand des Flows
+
+**Getesteter Flow:** Restaurant-Reservierung
+**Flow-ID in DB:** `09ea2c2e-8e12-4d43-9a6f-c1120c7e7289`
+
+**Was funktioniert:**
+- Trigger "hallo" → Welcome-Node
+- Quick Reply Buttons klicken
+- Freitext-Eingabe (Name, Telefon, Datum)
+- Flow durchlaufen bis Zusammenfassung
+
+**Was noch nicht getestet:**
+- Neuer Flow mit aktualisierten Templates (Datum als Freitext)
+- Sonderwünsche-Pfad (Allergien, Anlass)
+- Bearbeiten-Option in Zusammenfassung
+
+**Hinweis:** Der getestete Flow nutzt noch die ALTEN Templates. Um die neuen zu testen:
+```sql
+DELETE FROM flow_templates;
+```
+Dann neuen Flow erstellen.
+
+---
+
 ## Commits dieser Session
 
 ```
+f85c95d3 Add LAST_UPDATES.md for session continuity
 422b0a05 Improve restaurant template: exact date input and realistic summary
 64b15c2a Fix: Handle free text input in conversation flow
 4ef58b57 Overhaul flow templates: full production-ready flows
