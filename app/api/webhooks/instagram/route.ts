@@ -13,7 +13,7 @@ import {
   sendInstagramMessageWithImage,
 } from "../../../../lib/meta/instagramApi";
 import { findMatchingFlow, parseQuickReplyPayload } from "../../../../lib/webhook/flowMatcher";
-import { executeFlowNode, handleQuickReplySelection } from "../../../../lib/webhook/flowExecutor";
+import { executeFlowNode, handleQuickReplySelection, handleFreeTextInput } from "../../../../lib/webhook/flowExecutor";
 import { logger, createRequestLogger } from "../../../../lib/logger";
 
 /**
@@ -244,7 +244,40 @@ async function processMessagingEvent(
     }
   }
 
-  // If no quick reply match, try to match a new flow
+  // If no quick reply match but user is in an active flow, try free text continuation
+  if (!flowResponse && messageText && conversation.current_flow_id && conversation.current_node_id) {
+    // Load the current flow
+    const { data: currentFlow } = await supabase
+      .from("flows")
+      .select("nodes, edges")
+      .eq("id", conversation.current_flow_id)
+      .single();
+
+    if (currentFlow) {
+      const freeTextResult = handleFreeTextInput(
+        conversation.current_node_id,
+        currentFlow.nodes,
+        currentFlow.edges,
+        conversation.current_flow_id
+      );
+
+      if (freeTextResult) {
+        flowResponse = freeTextResult.response;
+        matchedFlowId = conversation.current_flow_id;
+        matchedNodeId = freeTextResult.executedNodeId;
+
+        await reqLogger.info("webhook", "Free text input processed, continuing flow", {
+          metadata: {
+            flowId: conversation.current_flow_id,
+            fromNode: conversation.current_node_id,
+            toNode: matchedNodeId,
+          },
+        });
+      }
+    }
+  }
+
+  // If still no response, try to match a new flow
   if (!flowResponse && messageText) {
     const matchedFlow = await findMatchingFlow(userId, messageText);
 

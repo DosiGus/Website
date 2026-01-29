@@ -125,6 +125,58 @@ function findNextNode(nodeId: string, edges: FlowEdge[]): string | null {
   return edge?.target || null;
 }
 
+export type FreeTextResult = {
+  response: FlowResponse;
+  executedNodeId: string;
+};
+
+/**
+ * Handles free text input when the user is at a node that expects text (no quick replies).
+ * Returns the next node's response if the current node has a single outgoing edge.
+ */
+export function handleFreeTextInput(
+  currentNodeId: string,
+  nodes: FlowNode[],
+  edges: FlowEdge[],
+  flowId: string
+): FreeTextResult | null {
+  const currentNode = nodes.find((n) => n.id === currentNodeId);
+
+  if (!currentNode) {
+    return null;
+  }
+
+  // Check if this node expects free text input:
+  // - Has no quick replies (or empty array)
+  // - Has at least one outgoing edge
+  const hasQuickReplies = currentNode.data.quickReplies && currentNode.data.quickReplies.length > 0;
+  const outgoingEdges = edges.filter((e) => e.source === currentNodeId);
+
+  if (hasQuickReplies || outgoingEdges.length === 0) {
+    // Node has quick replies or is an end node - don't handle as free text
+    return null;
+  }
+
+  // Get the next node (follow the first/only edge)
+  const nextNodeId = outgoingEdges[0].target;
+
+  if (!nextNodeId) {
+    return null;
+  }
+
+  // Execute the next node
+  const response = executeFlowNode(nextNodeId, nodes, edges, flowId);
+
+  if (!response) {
+    return null;
+  }
+
+  return {
+    response,
+    executedNodeId: nextNodeId,
+  };
+}
+
 /**
  * Validates that a flow has at least one valid path.
  */
