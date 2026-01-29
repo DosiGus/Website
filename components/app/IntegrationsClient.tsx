@@ -27,6 +27,14 @@ export default function IntegrationsClient() {
   );
   const errorParam = useMemo(() => searchParams?.get("error"), [searchParams]);
 
+  const getAccessToken = useCallback(async () => {
+    const supabase = createSupabaseBrowserClient();
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  }, []);
+
+  const metaConnected = metaIntegration?.status === "connected";
+
   // After OAuth error, poll for status in case the primary request is still running
   const [oauthResolved, setOauthResolved] = useState(false);
   useEffect(() => {
@@ -70,12 +78,6 @@ export default function IntegrationsClient() {
       cancelled = true;
     };
   }, [errorParam, oauthResolved, metaConnected, getAccessToken]);
-
-  const getAccessToken = useCallback(async () => {
-    const supabase = createSupabaseBrowserClient();
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? null;
-  }, []);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -168,7 +170,6 @@ export default function IntegrationsClient() {
     }
   }, [getAccessToken, loadStatus]);
 
-  const metaConnected = metaIntegration?.status === "connected";
   const metaStatusLabel = metaConnected ? "Verbunden" : "Nicht verbunden";
 
   return (
