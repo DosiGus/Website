@@ -309,13 +309,33 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const addNode = useCallback((type: "message" | "choice", presetLabel?: string) => {
     const id = uuid();
+
+    // Calculate position in the center of visible viewport
+    let posX = 200;
+    let posY = 200;
+    let currentZoom = 1;
+
+    if (reactFlowInstance) {
+      const viewport = reactFlowInstance.getViewport();
+      currentZoom = viewport.zoom;
+      // Get the canvas container dimensions (approximate)
+      const canvasWidth = 800;
+      const canvasHeight = 500;
+
+      // Convert screen center to flow coordinates
+      posX = (canvasWidth / 2 - viewport.x) / viewport.zoom;
+      posY = (canvasHeight / 2 - viewport.y) / viewport.zoom;
+
+      // Add small offset to avoid exact overlap with existing nodes
+      const offset = nodes.length * 20;
+      posX += offset % 100;
+      posY += (offset % 60);
+    }
+
     const newNode: Node = {
       id,
       type: "wesponde",
-      position: {
-        x: 100 + Math.random() * 200,
-        y: 100 + Math.random() * 200,
-      },
+      position: { x: posX, y: posY },
       data: {
         label: presetLabel ?? (type === "message" ? "Neue Nachricht" : "Auswahl"),
         text: presetLabel ?? (type === "message" ? "Neue Nachricht" : "Auswahl"),
@@ -326,7 +346,12 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setNodes((prev) => [...prev, newNode]);
     setSelectedNodeId(id);
     setSelectedEdgeId(null);
-  }, []);
+
+    // Pan to the new node
+    setTimeout(() => {
+      reactFlowInstance?.setCenter(posX + 75, posY + 50, { zoom: currentZoom, duration: 300 });
+    }, 50);
+  }, [reactFlowInstance, nodes.length]);
 
   const handleNodeFieldChange = useCallback(
     (field: string, value: string) => {
@@ -834,11 +859,33 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const focusWarning = useCallback(
     (warning: FlowLintWarning) => {
+      // Handle edge warnings
+      if (warning.edgeId) {
+        const targetEdge = edges.find((edge) => edge.id === warning.edgeId);
+        if (targetEdge) {
+          setSelectedEdgeId(targetEdge.id);
+          setSelectedNodeId(null);
+          setInspectorTab("logic");
+          // Focus on the source node of the edge
+          const sourceNode = nodes.find((node) => node.id === targetEdge.source);
+          if (sourceNode) {
+            reactFlowInstance?.setCenter(
+              sourceNode.position.x + 100,
+              sourceNode.position.y,
+              { zoom: 1.1, duration: 600 },
+            );
+          }
+        }
+        return;
+      }
+
+      // Handle node warnings
       if (!warning.nodeId) return;
       const targetNode = nodes.find((node) => node.id === warning.nodeId);
       if (targetNode) {
         setSelectedNodeId(targetNode.id);
         setSelectedEdgeId(null);
+        setInspectorTab("content");
         reactFlowInstance?.setCenter(
           targetNode.position.x + 50,
           targetNode.position.y,
@@ -846,7 +893,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         );
       }
     },
-    [nodes, reactFlowInstance],
+    [nodes, edges, reactFlowInstance],
   );
 
   if (loading || !userId) {
@@ -1333,19 +1380,38 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                 {lintWarnings.map((warning) => (
                   <li
                     key={warning.id}
-                    className="rounded-2xl border border-amber-100 bg-white/70 p-3 text-slate-700"
+                    className={`rounded-2xl border p-3 text-slate-700 ${
+                      warning.severity === "info"
+                        ? "border-blue-100 bg-blue-50/50"
+                        : "border-amber-100 bg-amber-50/50"
+                    }`}
                   >
-                    <p className="font-semibold text-amber-700">{warning.message}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className={`font-semibold ${
+                        warning.severity === "info" ? "text-blue-700" : "text-amber-700"
+                      }`}>
+                        {warning.message}
+                      </p>
+                      {(warning as any).action ? (
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                          warning.severity === "info"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}>
+                          {(warning as any).action}
+                        </span>
+                      ) : null}
+                    </div>
                     {warning.suggestion ? (
-                      <p className="text-xs text-slate-500">{warning.suggestion}</p>
+                      <p className="mt-1 text-xs text-slate-500">{warning.suggestion}</p>
                     ) : null}
-                    {warning.nodeId ? (
+                    {(warning.nodeId || (warning as any).edgeId) ? (
                       <button
                         onClick={() => focusWarning(warning)}
-                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand"
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:text-brand-dark"
                       >
                         <Focus className="h-3 w-3" />
-                        Zum Node springen
+                        {(warning as any).edgeId ? "Zur Verbindung springen" : "Zum Node springen"}
                       </button>
                     ) : null}
                   </li>
