@@ -70,27 +70,10 @@ export const fallbackTemplates: FlowTemplate[] = [
         id: "ask-date",
         position: { x: 300, y: 100 },
         data: {
-          label: "Datum wählen",
-          text: "Wunderbar! 📅 Für welchen Tag möchtest du reservieren?",
+          label: "Datum erfragen",
+          text: "Wunderbar! 📅 Für welches Datum möchtest du reservieren?\n\nBitte nenne mir das genaue Datum (z.B. \"Samstag, 15. Februar\" oder \"morgen Abend\").",
           variant: "message",
-          quickReplies: [
-            { id: "qr-today", label: "Heute", payload: "heute", targetNodeId: "ask-time" },
-            { id: "qr-tomorrow", label: "Morgen", payload: "morgen", targetNodeId: "ask-time" },
-            { id: "qr-weekend", label: "Am Wochenende", payload: "wochenende", targetNodeId: "ask-time" },
-            { id: "qr-other-date", label: "Anderes Datum", payload: "anderes", targetNodeId: "ask-date-custom" },
-          ],
-        },
-      },
-      {
-        id: "ask-date-custom",
-        position: { x: 300, y: 280 },
-        data: {
-          label: "Datum eingeben",
-          text: "Kein Problem! Bitte schreib mir das gewünschte Datum (z.B. \"15. März\" oder \"nächsten Samstag\").",
-          variant: "message",
-          quickReplies: [
-            { id: "qr-date-back", label: "Zurück", payload: "back", targetNodeId: "ask-date" },
-          ],
+          quickReplies: [],
         },
       },
 
@@ -99,15 +82,25 @@ export const fallbackTemplates: FlowTemplate[] = [
         id: "ask-time",
         position: { x: 600, y: 100 },
         data: {
-          label: "Uhrzeit wählen",
+          label: "Uhrzeit erfragen",
           text: "Super! ⏰ Um wie viel Uhr möchtest du kommen?\n\nUnsere Küche ist von 11:30-14:30 und 17:30-22:00 Uhr geöffnet.",
           variant: "message",
           quickReplies: [
             { id: "qr-time-12", label: "12:00", payload: "12:00", targetNodeId: "ask-guests" },
-            { id: "qr-time-18", label: "18:00", payload: "18:00", targetNodeId: "ask-guests" },
             { id: "qr-time-19", label: "19:00", payload: "19:00", targetNodeId: "ask-guests" },
             { id: "qr-time-20", label: "20:00", payload: "20:00", targetNodeId: "ask-guests" },
+            { id: "qr-time-other", label: "Andere Uhrzeit", payload: "andere", targetNodeId: "ask-time-custom" },
           ],
+        },
+      },
+      {
+        id: "ask-time-custom",
+        position: { x: 600, y: 280 },
+        data: {
+          label: "Uhrzeit eingeben",
+          text: "Kein Problem! Bitte nenne mir deine gewünschte Uhrzeit.",
+          variant: "message",
+          quickReplies: [],
         },
       },
 
@@ -208,11 +201,11 @@ export const fallbackTemplates: FlowTemplate[] = [
         position: { x: 1500, y: 100 },
         data: {
           label: "Zusammenfassung",
-          text: "Perfekt! Hier ist deine Reservierung:\n\n📅 Datum: [wird eingetragen]\n⏰ Uhrzeit: [wird eingetragen]\n👥 Personen: [wird eingetragen]\n👤 Name: [wird eingetragen]\n📱 Telefon: [wird eingetragen]\n\nIst alles korrekt?",
+          text: "Perfekt! ✅ Ich habe alle Angaben für deine Reservierung:\n\n• Datum und Uhrzeit\n• Personenanzahl\n• Name und Telefonnummer\n\nSoll ich die Reservierung so abschicken?",
           variant: "message",
           quickReplies: [
-            { id: "qr-confirm", label: "Ja, bestätigen", payload: "confirm", targetNodeId: "confirmed" },
-            { id: "qr-edit", label: "Ändern", payload: "edit", targetNodeId: "edit-options" },
+            { id: "qr-confirm", label: "Ja, bestätigen!", payload: "confirm", targetNodeId: "confirmed" },
+            { id: "qr-edit", label: "Etwas ändern", payload: "edit", targetNodeId: "edit-options" },
             { id: "qr-cancel", label: "Abbrechen", payload: "cancel", targetNodeId: "cancelled" },
           ],
         },
@@ -276,12 +269,12 @@ export const fallbackTemplates: FlowTemplate[] = [
       { id: "e-hours-back", source: "info-hours", target: "welcome", data: { condition: "Zurück", tone: "neutral" } },
       { id: "e-menu-reserve", source: "info-menu", target: "ask-date", data: { condition: "Tisch reservieren", tone: "positive" } },
       { id: "e-menu-back", source: "info-menu", target: "welcome", data: { condition: "Zurück", tone: "neutral" } },
-      // Date flow
-      { id: "e-date-time", source: "ask-date", target: "ask-time", data: { condition: "Datum gewählt", tone: "positive" } },
-      { id: "e-date-custom", source: "ask-date", target: "ask-date-custom", data: { condition: "Anderes Datum", tone: "neutral" } },
-      { id: "e-date-custom-time", source: "ask-date-custom", target: "ask-time", data: { condition: "Datum eingegeben", tone: "positive" } },
+      // Date flow (free text input)
+      { id: "e-date-time", source: "ask-date", target: "ask-time", data: { condition: "Datum eingegeben", tone: "positive" } },
       // Time -> Guests
       { id: "e-time-guests", source: "ask-time", target: "ask-guests", data: { condition: "Uhrzeit gewählt", tone: "positive" } },
+      { id: "e-time-custom", source: "ask-time", target: "ask-time-custom", data: { condition: "Andere Uhrzeit", tone: "neutral" } },
+      { id: "e-time-custom-guests", source: "ask-time-custom", target: "ask-guests", data: { condition: "Uhrzeit eingegeben", tone: "positive" } },
       // Guests flow
       { id: "e-guests-name", source: "ask-guests", target: "ask-name", data: { condition: "Anzahl gewählt", tone: "positive" } },
       { id: "e-guests-large", source: "ask-guests", target: "ask-guests-large", data: { condition: "Mehr als 4", tone: "neutral" } },
