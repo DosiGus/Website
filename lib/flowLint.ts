@@ -105,19 +105,23 @@ export function lintFlow(
   edges.forEach((edge) => {
     outgoingMap.set(edge.source, [...(outgoingMap.get(edge.source) ?? []), edge]);
 
-    // Check for missing labels
-    if (!edge.data?.condition && !edge.label) {
+    // Check for missing labels - only for manually created edges (no quickReplyId)
+    // Quick Reply edges get labels automatically from the button text
+    const isQuickReplyEdge = Boolean((edge.data as any)?.quickReplyId);
+    const hasLabel = Boolean(edge.data?.condition || edge.label);
+
+    if (!hasLabel && !isQuickReplyEdge) {
       const sourceNode = nodes.find((n) => n.id === edge.source);
       const targetNode = nodes.find((n) => n.id === edge.target);
       const sourceLabel = sourceNode?.data?.label ?? "Unbekannt";
       const targetLabel = targetNode?.data?.label ?? "Unbekannt";
 
       warnings.push(
-        buildWarning(`Verbindung "${sourceLabel}" → "${targetLabel}" hat kein Label.`, {
+        buildWarning(`Manuelle Verbindung "${sourceLabel}" → "${targetLabel}" hat kein Label.`, {
           nodeId: edge.source,
           edgeId: edge.id,
-          suggestion: "Klicke auf die Verbindungslinie und trage im 'Logik'-Tab ein Label ein (z.B. den Button-Text).",
-          action: "Label hinzufügen",
+          suggestion: "Tipp: Erstelle stattdessen einen Quick Reply Button im Quell-Node. Buttons sind benutzerfreundlicher als unsichtbare Verbindungen.",
+          action: "Quick Reply nutzen",
           severity: "info",
         }),
       );

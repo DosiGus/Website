@@ -575,10 +575,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       if (!selectedEdgeId) return;
       const edge = edges.find((item) => item.id === selectedEdgeId);
       const quickReplyId = (edge?.data as any)?.quickReplyId;
-      if (field === "condition" && quickReplyId) {
-        updateQuickReply(quickReplyId, { label: value });
-        return;
-      }
+      const sourceNodeId = edge?.source;
+
+      // Always update the edge directly
       setEdges((prev) =>
         prev.map((item) =>
           item.id === selectedEdgeId
@@ -598,8 +597,22 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
             : item,
         ),
       );
+
+      // Also update the quick reply label if this edge is linked to one
+      if (field === "condition" && quickReplyId && sourceNodeId) {
+        setNodes((prev) =>
+          prev.map((node) => {
+            if (node.id !== sourceNodeId) return node;
+            const currentReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
+            const updatedReplies = currentReplies.map((reply) =>
+              reply.id === quickReplyId ? { ...reply, label: value } : reply,
+            );
+            return { ...node, data: { ...node.data, quickReplies: updatedReplies } };
+          }),
+        );
+      }
     },
-    [selectedEdgeId, edges, updateQuickReply],
+    [selectedEdgeId, edges],
   );
 
   const deleteSelection = useCallback(() => {
