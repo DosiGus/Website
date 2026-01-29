@@ -56,3 +56,82 @@ export type IntegrationStatus = {
   expires_at: string | null;
   updated_at: string | null;
 };
+
+// Instagram Webhook Types
+export type InstagramWebhookEntry = {
+  id: string;
+  time: number;
+  messaging: InstagramMessagingEvent[];
+};
+
+export type InstagramWebhookPayload = {
+  object: "instagram";
+  entry: InstagramWebhookEntry[];
+};
+
+export type InstagramMessagingEvent = {
+  sender: { id: string };
+  recipient: { id: string };
+  timestamp: number;
+  message?: InstagramIncomingMessage;
+  postback?: InstagramPostback;
+};
+
+export type InstagramIncomingMessage = {
+  mid: string;
+  text?: string;
+  quick_reply?: {
+    payload: string;
+  };
+  attachments?: InstagramAttachment[];
+};
+
+export type InstagramAttachment = {
+  type: "image" | "video" | "audio" | "file";
+  payload: {
+    url: string;
+  };
+};
+
+export type InstagramPostback = {
+  mid: string;
+  payload: string;
+  title: string;
+};
+
+// Instagram Send API Types
+export type InstagramQuickReply = {
+  content_type: "text";
+  title: string;
+  payload: string;
+};
+
+export type InstagramSendMessageRequest = {
+  recipient: { id: string };
+  message: {
+    text?: string;
+    attachment?: {
+      type: "image";
+      payload: {
+        url: string;
+        is_reusable?: boolean;
+      };
+    };
+    quick_replies?: InstagramQuickReply[];
+  };
+};
+
+export type InstagramSendMessageResponse = {
+  recipient_id: string;
+  message_id: string;
+};
+
+export type InstagramApiError = {
+  error: {
+    message: string;
+    type: string;
+    code: number;
+    error_subcode?: number;
+    fbtrace_id: string;
+  };
+};

@@ -166,3 +166,77 @@ create index if not exists logs_user_id_idx on public.logs(user_id);
 create index if not exists logs_request_id_idx on public.logs(request_id);
 
 alter table public.logs enable row level security;
+
+-- Conversations table for tracking customer conversations
+create table if not exists public.conversations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  integration_id uuid not null references public.integrations(id) on delete cascade,
+  instagram_sender_id text not null,
+  current_flow_id uuid references public.flows(id) on delete set null,
+  current_node_id text,
+  status text not null default 'active' check (status in ('active', 'closed', 'paused')),
+  last_message_at timestamptz default now(),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists conversations_user_id_idx on public.conversations(user_id);
+create index if not exists conversations_integration_id_idx on public.conversations(integration_id);
+create index if not exists conversations_instagram_sender_id_idx on public.conversations(instagram_sender_id);
+create unique index if not exists conversations_integration_sender_idx
+  on public.conversations(integration_id, instagram_sender_id);
+
+alter table public.conversations enable row level security;
+
+create policy "Conversations sind nur für Besitzer sichtbar"
+  on public.conversations
+  for select using (auth.uid() = user_id);
+
+create policy "Besitzer dürfen Conversations bearbeiten"
+  on public.conversations
+  for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Besitzer dürfen Conversations erstellen"
+  on public.conversations
+  for insert with check (auth.uid() = user_id);
+
+-- Messages table for storing incoming/outgoing messages
+create table if not exists public.messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  direction text not null check (direction in ('incoming', 'outgoing')),
+  message_type text not null default 'text' check (message_type in ('text', 'quick_reply', 'image')),
+  content text,
+  quick_reply_payload text,
+  instagram_message_id text,
+  flow_id uuid references public.flows(id) on delete set null,
+  node_id text,
+  sent_at timestamptz default now(),
+  created_at timestamptz default now()
+);
+
+create index if not exists messages_conversation_id_idx on public.messages(conversation_id);
+create index if not exists messages_instagram_message_id_idx on public.messages(instagram_message_id);
+create index if not exists messages_sent_at_idx on public.messages(sent_at desc);
+
+alter table public.messages enable row level security;
+
+create policy "Messages sind nur für Conversation-Besitzer sichtbar"
+  on public.messages
+  for select using (
+    exists (
+      select 1 from public.conversations c
+      where c.id = conversation_id and c.user_id = auth.uid()
+    )
+  );
+
+create policy "Messages dürfen nur von Conversation-Besitzern erstellt werden"
+  on public.messages
+  for insert with check (
+    exists (
+      select 1 from public.conversations c
+      where c.id = conversation_id and c.user_id = auth.uid()
+    )
+  );

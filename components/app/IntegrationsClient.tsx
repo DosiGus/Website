@@ -27,6 +27,50 @@ export default function IntegrationsClient() {
   );
   const errorParam = useMemo(() => searchParams?.get("error"), [searchParams]);
 
+  // After OAuth error, poll for status in case the primary request is still running
+  const [oauthResolved, setOauthResolved] = useState(false);
+  useEffect(() => {
+    if (!errorParam || oauthResolved || metaConnected) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    const pollStatus = async () => {
+      while (!cancelled && attempts < maxAttempts) {
+        attempts++;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        if (cancelled) return;
+
+        try {
+          const token = await getAccessToken();
+          if (!token) return;
+
+          const response = await fetch("/api/integrations", {
+            headers: { authorization: `Bearer ${token}` },
+          });
+
+          if (response.ok) {
+            const payload = (await response.json()) as { integrations: IntegrationStatus[] };
+            const meta = payload.integrations.find((i) => i.provider === "meta");
+            if (meta?.status === "connected") {
+              setMetaIntegration(meta);
+              setOauthResolved(true);
+              return;
+            }
+          }
+        } catch {
+          // Ignore polling errors
+        }
+      }
+    };
+
+    pollStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [errorParam, oauthResolved, metaConnected, getAccessToken]);
+
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
@@ -155,9 +199,15 @@ export default function IntegrationsClient() {
           </div>
         )}
 
-        {errorParam && (
+        {errorParam && !metaConnected && !oauthResolved && (
           <div className="mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             Verbindung fehlgeschlagen: {errorParam}
+          </div>
+        )}
+
+        {oauthResolved && (
+          <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Meta/Instagram wurde erfolgreich verbunden.
           </div>
         )}
 

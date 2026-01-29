@@ -40,7 +40,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const state = crypto.randomUUID();
+    // Encode user_id in state for duplicate callback detection
+    // Format: user_id.random (user_id can be extracted even if state is deleted)
+    const state = `${user.id}.${crypto.randomUUID()}`;
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     const supabase = createSupabaseServerClient();
