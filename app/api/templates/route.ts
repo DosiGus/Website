@@ -7,16 +7,26 @@ import { defaultMetadata } from "../../../lib/defaultFlow";
 
 export async function GET() {
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
+
+  // Load custom templates from database
+  const { data: dbTemplates } = await supabase
     .from("flow_templates")
     .select("*")
     .order("name", { ascending: true });
 
-  if (error || !data || data.length === 0) {
-    return NextResponse.json(fallbackTemplates);
-  }
+  // Code templates always take priority (they are always up-to-date)
+  // Only add DB templates that are NOT in the code templates (custom user templates)
+  const codeTemplateIds = new Set(fallbackTemplates.map((t) => t.id));
+  const codeTemplateSlugs = new Set(fallbackTemplates.map((t) => t.slug));
 
-  return NextResponse.json(data);
+  const customTemplates = (dbTemplates || []).filter(
+    (t) => !codeTemplateIds.has(t.id) && !codeTemplateSlugs.has(t.slug)
+  );
+
+  // Return code templates first, then custom templates
+  const allTemplates = [...fallbackTemplates, ...customTemplates];
+
+  return NextResponse.json(allTemplates);
 }
 
 export async function POST(request: Request) {

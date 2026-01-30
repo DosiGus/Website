@@ -46,27 +46,31 @@ export async function POST(request: Request) {
     let metadataToUse = defaultMetadata;
 
     if (templateId) {
-      const { data: template, error: templateError } = await supabase
-        .from("flow_templates")
-        .select("*")
-        .eq("id", templateId)
-        .single();
+      // PRIORITY: Check code templates FIRST (they are always up-to-date)
+      const codeTemplate = fallbackTemplates.find((tpl) => tpl.id === templateId);
 
-      if (template && !templateError) {
-        nodesToUse = template.nodes as any;
-        edgesToUse = template.edges as any;
-        triggersToUse =
-          (template.triggers as any) && Array.isArray(template.triggers)
-            ? (template.triggers as any)
-            : defaultTriggers;
-        metadataToUse = (template.metadata as any) ?? defaultMetadata;
+      if (codeTemplate) {
+        // Use code template (always up-to-date)
+        nodesToUse = codeTemplate.nodes as any;
+        edgesToUse = codeTemplate.edges as any;
+        triggersToUse = codeTemplate.triggers as any;
+        metadataToUse = codeTemplate.metadata ?? defaultMetadata;
       } else {
-        const fallback = fallbackTemplates.find((tpl) => tpl.id === templateId);
-        if (fallback) {
-          nodesToUse = fallback.nodes as any;
-          edgesToUse = fallback.edges as any;
-          triggersToUse = fallback.triggers as any;
-          metadataToUse = fallback.metadata ?? defaultMetadata;
+        // Only check DB for custom/user-created templates
+        const { data: template, error: templateError } = await supabase
+          .from("flow_templates")
+          .select("*")
+          .eq("id", templateId)
+          .single();
+
+        if (template && !templateError) {
+          nodesToUse = template.nodes as any;
+          edgesToUse = template.edges as any;
+          triggersToUse =
+            (template.triggers as any) && Array.isArray(template.triggers)
+              ? (template.triggers as any)
+              : defaultTriggers;
+          metadataToUse = (template.metadata as any) ?? defaultMetadata;
         }
       }
     } else {
