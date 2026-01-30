@@ -110,37 +110,49 @@ export function extractName(messageText: string): string | null {
   return null;
 }
 
+// German month names for parsing
+const GERMAN_MONTHS: Record<string, number> = {
+  januar: 1, jan: 1,
+  februar: 2, feb: 2,
+  märz: 3, maerz: 3, mrz: 3, mar: 3,
+  april: 4, apr: 4,
+  mai: 5,
+  juni: 6, jun: 6,
+  juli: 7, jul: 7,
+  august: 8, aug: 8,
+  september: 9, sep: 9, sept: 9,
+  oktober: 10, okt: 10,
+  november: 11, nov: 11,
+  dezember: 12, dez: 12,
+};
+
 /**
  * Extracts a date from a message, handling German date formats.
+ * Supports: "heute", "morgen", "Samstag", "15. Februar", "15.02", "15/02/2024"
  */
 export function extractDate(messageText: string): string | null {
   const trimmed = messageText.trim().toLowerCase();
+  const today = new Date();
 
   // Handle relative dates
-  const today = new Date();
-  if (trimmed === "heute" || trimmed.includes("heute")) {
+  if (trimmed === "heute" || /^heute\b/.test(trimmed)) {
     return formatDate(today);
   }
-  if (trimmed === "morgen" || trimmed.includes("morgen")) {
+  if (trimmed === "morgen" || /^morgen\b/.test(trimmed)) {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     return formatDate(tomorrow);
   }
-  if (trimmed === "übermorgen" || trimmed.includes("übermorgen")) {
+  if (trimmed === "übermorgen" || /^übermorgen\b/.test(trimmed)) {
     const dayAfter = new Date(today);
     dayAfter.setDate(dayAfter.getDate() + 2);
     return formatDate(dayAfter);
   }
 
-  // Handle day names
+  // Handle day names (e.g., "Samstag", "am Freitag")
   const dayNames = [
-    "sonntag",
-    "montag",
-    "dienstag",
-    "mittwoch",
-    "donnerstag",
-    "freitag",
-    "samstag",
+    "sonntag", "montag", "dienstag", "mittwoch",
+    "donnerstag", "freitag", "samstag"
   ];
   for (let i = 0; i < dayNames.length; i++) {
     if (trimmed.includes(dayNames[i])) {
@@ -154,7 +166,20 @@ export function extractDate(messageText: string): string | null {
     }
   }
 
-  // Handle explicit dates like "15.01" or "15.01.2024"
+  // Handle "15. Februar", "15 Februar", "15. Feb", "am 15. Februar"
+  const monthNameMatch = trimmed.match(
+    /(\d{1,2})\.?\s*(januar|jan|februar|feb|märz|maerz|mrz|mar|april|apr|mai|juni|jun|juli|jul|august|aug|september|sep|sept|oktober|okt|november|nov|dezember|dez)(?:\s+(\d{2,4}))?/i
+  );
+  if (monthNameMatch) {
+    const day = monthNameMatch[1].padStart(2, "0");
+    const monthName = monthNameMatch[2].toLowerCase();
+    const month = String(GERMAN_MONTHS[monthName] || 1).padStart(2, "0");
+    let year = monthNameMatch[3] || today.getFullYear().toString();
+    if (year.length === 2) year = "20" + year;
+    return `${year}-${month}-${day}`;
+  }
+
+  // Handle explicit dates like "15.01", "15.01.2024", "15/01/24"
   const dateMatch = trimmed.match(/(\d{1,2})[.\-/](\d{1,2})(?:[.\-/](\d{2,4}))?/);
   if (dateMatch) {
     const day = dateMatch[1].padStart(2, "0");
@@ -169,19 +194,45 @@ export function extractDate(messageText: string): string | null {
 
 /**
  * Extracts a time from a message.
+ * Only matches clear time patterns, NOT date patterns like "15.03"
  */
 export function extractTime(messageText: string): string | null {
   const trimmed = messageText.trim().toLowerCase();
 
-  // Handle "19:00", "19.00", "19 Uhr"
-  const timeMatch = trimmed.match(/(\d{1,2})[.:](\d{2})/);
-  if (timeMatch) {
-    return `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}`;
+  // Handle "19:00" (with colon - clearly a time)
+  const colonTimeMatch = trimmed.match(/(\d{1,2}):(\d{2})/);
+  if (colonTimeMatch) {
+    const hour = parseInt(colonTimeMatch[1], 10);
+    if (hour >= 0 && hour <= 24) {
+      return `${colonTimeMatch[1].padStart(2, "0")}:${colonTimeMatch[2]}`;
+    }
   }
 
+  // Handle "19.00 Uhr", "19.30 uhr" (dot with "uhr" - clearly a time)
+  const dotTimeWithUhr = trimmed.match(/(\d{1,2})\.(\d{2})\s*uhr/i);
+  if (dotTimeWithUhr) {
+    const hour = parseInt(dotTimeWithUhr[1], 10);
+    if (hour >= 0 && hour <= 24) {
+      return `${dotTimeWithUhr[1].padStart(2, "0")}:${dotTimeWithUhr[2]}`;
+    }
+  }
+
+  // Handle "19 Uhr", "um 19 uhr" (hour with "uhr")
   const hourMatch = trimmed.match(/(\d{1,2})\s*uhr/i);
   if (hourMatch) {
-    return `${hourMatch[1].padStart(2, "0")}:00`;
+    const hour = parseInt(hourMatch[1], 10);
+    if (hour >= 0 && hour <= 24) {
+      return `${hourMatch[1].padStart(2, "0")}:00`;
+    }
+  }
+
+  // Handle "um 19:30", "gegen 20:00"
+  const prefixTimeMatch = trimmed.match(/(?:um|gegen|ab)\s*(\d{1,2})[:\.](\d{2})/i);
+  if (prefixTimeMatch) {
+    const hour = parseInt(prefixTimeMatch[1], 10);
+    if (hour >= 0 && hour <= 24) {
+      return `${prefixTimeMatch[1].padStart(2, "0")}:${prefixTimeMatch[2]}`;
+    }
   }
 
   return null;
@@ -189,22 +240,36 @@ export function extractTime(messageText: string): string | null {
 
 /**
  * Extracts guest count from a message.
+ * Only matches clear guest count patterns, NOT dates like "15. Februar"
  */
 export function extractGuestCount(messageText: string): number | null {
-  const trimmed = messageText.trim();
+  const trimmed = messageText.trim().toLowerCase();
 
-  // Direct number
+  // Check if this looks like a date - don't extract guest count from dates
+  const looksLikeDate = /\d{1,2}\.\s*(?:januar|jan|februar|feb|märz|maerz|april|apr|mai|juni|jun|juli|jul|august|aug|september|sep|oktober|okt|november|nov|dezember|dez)/i.test(trimmed);
+  if (looksLikeDate) {
+    return null;
+  }
+
+  // Direct number (only if the entire message is just a number)
   const directNumber = trimmed.match(/^(\d+)$/);
   if (directNumber) {
     const num = parseInt(directNumber[1], 10);
+    if (num > 0 && num <= 20) return num; // Max 20 for direct numbers
+  }
+
+  // "4 Personen", "für 4 Personen", "4 Leute", "4 Gäste"
+  const countWithWord = trimmed.match(/(\d+)\s*(?:person|personen|leute|gäste|gaeste|pax)/i);
+  if (countWithWord) {
+    const num = parseInt(countWithWord[1], 10);
     if (num > 0 && num <= 100) return num;
   }
 
-  // "4 Personen", "für 4", etc.
-  const countMatch = trimmed.match(/(\d+)\s*(?:person|personen|leute|gäste|pax)?/i);
-  if (countMatch) {
-    const num = parseInt(countMatch[1], 10);
-    if (num > 0 && num <= 100) return num;
+  // "für 4", "wir sind 4", "zu 4"
+  const countWithPrefix = trimmed.match(/(?:für|wir\s+sind|zu)\s+(\d+)/i);
+  if (countWithPrefix) {
+    const num = parseInt(countWithPrefix[1], 10);
+    if (num > 0 && num <= 20) return num;
   }
 
   return null;

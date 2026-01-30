@@ -71,7 +71,21 @@ export const fallbackTemplates: FlowTemplate[] = [
         position: { x: 300, y: 100 },
         data: {
           label: "Datum erfragen",
-          text: "Wunderbar! 📅 Für welches Datum möchtest du reservieren?\n\nBitte nenne mir das genaue Datum (z.B. \"Samstag, 15. Februar\" oder \"morgen Abend\").",
+          text: "Wunderbar! 📅 Für welches Datum möchtest du reservieren?",
+          variant: "message",
+          quickReplies: [
+            { id: "qr-date-today", label: "Heute", payload: "heute", targetNodeId: "ask-time" },
+            { id: "qr-date-tomorrow", label: "Morgen", payload: "morgen", targetNodeId: "ask-time" },
+            { id: "qr-date-other", label: "Anderes Datum", payload: "anderes", targetNodeId: "ask-date-custom" },
+          ],
+        },
+      },
+      {
+        id: "ask-date-custom",
+        position: { x: 300, y: 280 },
+        data: {
+          label: "Datum eingeben",
+          text: "Kein Problem! Nenne mir bitte das gewünschte Datum.\n\nBeispiele: \"15. Februar\", \"Samstag\", \"nächsten Freitag\"",
           variant: "message",
           quickReplies: [],
         },
@@ -269,8 +283,11 @@ export const fallbackTemplates: FlowTemplate[] = [
       { id: "e-hours-back", source: "info-hours", target: "welcome", data: { condition: "Zurück", tone: "neutral" } },
       { id: "e-menu-reserve", source: "info-menu", target: "ask-date", data: { condition: "Tisch reservieren", tone: "positive" } },
       { id: "e-menu-back", source: "info-menu", target: "welcome", data: { condition: "Zurück", tone: "neutral" } },
-      // Date flow (free text input)
-      { id: "e-date-time", source: "ask-date", target: "ask-time", data: { condition: "Datum eingegeben", tone: "positive" } },
+      // Date flow
+      { id: "e-date-today", source: "ask-date", target: "ask-time", data: { condition: "Heute", tone: "positive" } },
+      { id: "e-date-tomorrow", source: "ask-date", target: "ask-time", data: { condition: "Morgen", tone: "positive" } },
+      { id: "e-date-other", source: "ask-date", target: "ask-date-custom", data: { condition: "Anderes Datum", tone: "neutral" } },
+      { id: "e-date-custom-time", source: "ask-date-custom", target: "ask-time", data: { condition: "Datum eingegeben", tone: "positive" } },
       // Time -> Guests
       { id: "e-time-guests", source: "ask-time", target: "ask-guests", data: { condition: "Uhrzeit gewählt", tone: "positive" } },
       { id: "e-time-custom", source: "ask-time", target: "ask-time-custom", data: { condition: "Andere Uhrzeit", tone: "neutral" } },
