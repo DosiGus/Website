@@ -215,11 +215,12 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const jumpToNode = useCallback((nodeId: string) => {
     const targetNode = nodes.find((node) => node.id === nodeId);
-    if (targetNode && reactFlowInstance) {
-      setSelectedNodeId(nodeId);
-      setSelectedEdgeId(null);
-      setNodeSearchOpen(false);
-      setNodeSearchQuery("");
+    if (!targetNode) return;
+    setSelectedNodeId(nodeId);
+    setSelectedEdgeId(null);
+    setNodeSearchOpen(false);
+    setNodeSearchQuery("");
+    if (reactFlowInstance) {
       reactFlowInstance.setCenter(
         targetNode.position.x + 100,
         targetNode.position.y + 50,
@@ -1226,6 +1227,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               <FlowListBuilder
                 nodes={nodes}
                 edges={edges}
+                startNodeIds={startNodeIds}
                 onNodesChange={handleListNodesChange}
                 onEdgesChange={handleListEdgesChange}
                 selectedNodeId={selectedNodeId}

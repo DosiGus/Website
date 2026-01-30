@@ -18,6 +18,7 @@ import type { FlowQuickReply } from "../../lib/flowTypes";
 type FlowListBuilderProps = {
   nodes: Node[];
   edges: Edge[];
+  startNodeIds: Set<string>;
   onNodesChange: (nodes: Node[]) => void;
   onEdgesChange: (edges: Edge[]) => void;
   selectedNodeId: string | null;
@@ -121,6 +122,7 @@ function detectSections(nodes: Node[], edges: Edge[]): Section[] {
 export default function FlowListBuilder({
   nodes,
   edges,
+  startNodeIds,
   onNodesChange,
   onEdgesChange,
   selectedNodeId,
@@ -132,6 +134,22 @@ export default function FlowListBuilder({
 
   // Detect sections based on node content
   const sections = useMemo(() => detectSections(nodes, edges), [nodes, edges]);
+
+  useEffect(() => {
+    if (!selectedNodeId) return;
+    const section = sections.find((item) => item.nodeIds.includes(selectedNodeId));
+    if (!section) return;
+    setCollapsedSections((prev) => {
+      if (!prev.has(section.id)) return prev;
+      const next = new Set(prev);
+      next.delete(section.id);
+      return next;
+    });
+    requestAnimationFrame(() => {
+      const element = document.querySelector(`[data-node-id="${selectedNodeId}"]`);
+      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [selectedNodeId, sections]);
 
   const toggleSection = useCallback((sectionId: string) => {
     setCollapsedSections(prev => {
@@ -150,15 +168,81 @@ export default function FlowListBuilder({
   }, [nodes]);
 
   const updateNodeText = useCallback((nodeId: string, text: string) => {
-    const updatedNodes = nodes.map(node =>
-      node.id === nodeId
-        ? { ...node, data: { ...node.data, text, label: text.slice(0, 40) || "Neue Nachricht" } }
-        : node
-    );
+    const updatedNodes = nodes.map(node => {
+      if (node.id !== nodeId) return node;
+      const currentLabel = String(node.data?.label ?? "");
+      const currentText = String(node.data?.text ?? "");
+      const shouldUpdateLabel = currentLabel.trim().length === 0 || currentLabel === currentText;
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          text,
+          ...(shouldUpdateLabel
+            ? { label: text.slice(0, 40) || "Neue Nachricht" }
+            : {}),
+        },
+      };
+    });
     onNodesChange(updatedNodes);
-  }, [nodes, onNodesChange]);
+  }, [nodes, onNodesChange, syncEdgesForNode]);
+
+  const syncEdgesForNode = useCallback((nodeId: string, replies: FlowQuickReply[]) => {
+    let next = edges
+      .filter((edge) => {
+        if (edge.source === nodeId && (edge.data as any)?.quickReplyId) {
+          const reply = replies.find(
+            (quickReply) => quickReply.id === (edge.data as any)?.quickReplyId,
+          );
+          return Boolean(reply && reply.targetNodeId);
+        }
+        return true;
+      })
+      .map((edge) => {
+        if (edge.source === nodeId && (edge.data as any)?.quickReplyId) {
+          const reply = replies.find(
+            (quickReply) => quickReply.id === (edge.data as any)?.quickReplyId,
+          );
+          if (!reply || !reply.targetNodeId) {
+            return edge;
+          }
+          return {
+            ...edge,
+            target: reply.targetNodeId,
+            data: {
+              ...(edge.data ?? {}),
+              tone: ((edge.data as any)?.tone as string) ?? "neutral",
+              condition: reply.label,
+              quickReplyId: reply.id,
+            },
+            label: reply.label,
+          };
+        }
+        return edge;
+      });
+
+    replies.forEach((reply) => {
+      if (!reply.targetNodeId) return;
+      const exists = next.some(
+        (edge) =>
+          edge.source === nodeId && (edge.data as any)?.quickReplyId === reply.id,
+      );
+      if (!exists) {
+        next.push({
+          id: `qr-${nodeId}-${reply.id}`,
+          source: nodeId,
+          target: reply.targetNodeId,
+          data: { tone: "neutral", condition: reply.label, quickReplyId: reply.id },
+          label: reply.label,
+        });
+      }
+    });
+
+    onEdgesChange(next);
+  }, [edges, onEdgesChange]);
 
   const addQuickReply = useCallback((nodeId: string) => {
+    let updatedReplies: FlowQuickReply[] = [];
     const updatedNodes = nodes.map(node => {
       if (node.id !== nodeId) return node;
       const currentReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
@@ -168,22 +252,27 @@ export default function FlowListBuilder({
         payload: "",
         targetNodeId: null,
       };
+      updatedReplies = [...currentReplies, newReply];
       return {
         ...node,
         data: {
           ...node.data,
-          quickReplies: [...currentReplies, newReply],
+          quickReplies: updatedReplies,
         },
       };
     });
     onNodesChange(updatedNodes);
-  }, [nodes, onNodesChange]);
+    if (updatedReplies.length > 0) {
+      syncEdgesForNode(nodeId, updatedReplies);
+    }
+  }, [nodes, onNodesChange, syncEdgesForNode]);
 
   const updateQuickReply = useCallback((nodeId: string, replyId: string, updates: Partial<FlowQuickReply>) => {
+    let updatedReplies: FlowQuickReply[] = [];
     const updatedNodes = nodes.map(node => {
       if (node.id !== nodeId) return node;
       const currentReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
-      const updatedReplies = currentReplies.map(r =>
+      updatedReplies = currentReplies.map(r =>
         r.id === replyId ? { ...r, ...updates } : r
       );
       return {
@@ -192,21 +281,27 @@ export default function FlowListBuilder({
       };
     });
     onNodesChange(updatedNodes);
-  }, [nodes, onNodesChange]);
+    if (updatedReplies.length > 0) {
+      syncEdgesForNode(nodeId, updatedReplies);
+    }
+  }, [nodes, onNodesChange, syncEdgesForNode]);
 
   const removeQuickReply = useCallback((nodeId: string, replyId: string) => {
+    let updatedReplies: FlowQuickReply[] = [];
     const updatedNodes = nodes.map(node => {
       if (node.id !== nodeId) return node;
       const currentReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
+      updatedReplies = currentReplies.filter(r => r.id !== replyId);
       return {
         ...node,
         data: {
           ...node.data,
-          quickReplies: currentReplies.filter(r => r.id !== replyId),
+          quickReplies: updatedReplies,
         },
       };
     });
     onNodesChange(updatedNodes);
+    syncEdgesForNode(nodeId, updatedReplies);
   }, [nodes, onNodesChange]);
 
   const getSectionIcon = (icon: Section["icon"]) => {
@@ -290,7 +385,7 @@ export default function FlowListBuilder({
             {/* Section Content */}
             {!isCollapsed && (
               <div className="border-t border-slate-100 p-4 space-y-3">
-                {sectionNodes.map((node, index) => {
+                {sectionNodes.map((node) => {
                   const quickReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
                   const isSelected = selectedNodeId === node.id;
 
@@ -298,6 +393,7 @@ export default function FlowListBuilder({
                     <div
                       key={node.id}
                       onClick={() => onSelectNode(node.id)}
+                      data-node-id={node.id}
                       className={`group relative rounded-xl border p-4 transition cursor-pointer ${
                         isSelected
                           ? "border-brand bg-brand/5 ring-2 ring-brand/20"
@@ -307,12 +403,12 @@ export default function FlowListBuilder({
                       {/* Step Header */}
                       <div className="mb-3 flex items-center gap-2">
                         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">
-                          {index + 1}
+                          •
                         </span>
                         <span className="text-sm font-semibold text-slate-700 truncate flex-1">
                           {node.data?.label || "Ohne Titel"}
                         </span>
-                        {node.data?.isStart && (
+                        {startNodeIds.has(node.id) && (
                           <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
                             Start
                           </span>
