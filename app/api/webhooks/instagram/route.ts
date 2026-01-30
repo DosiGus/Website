@@ -331,6 +331,21 @@ async function processMessagingEvent(
       .single();
 
     if (currentFlow) {
+      const currentNode = Array.isArray(currentFlow.nodes)
+        ? currentFlow.nodes.find(
+            (node: any) => node.id === conversation.current_node_id
+          )
+        : null;
+      const quickReplies = Array.isArray(currentNode?.data?.quickReplies)
+        ? currentNode?.data?.quickReplies
+        : [];
+      const outgoingEdges = Array.isArray(currentFlow.edges)
+        ? currentFlow.edges.filter(
+            (edge: { source?: string }) => edge.source === conversation.current_node_id
+          )
+        : [];
+      const expectsFreeText = quickReplies.length === 0 && outgoingEdges.length > 0;
+
       const freeTextResult = handleFreeTextInput(
         conversation.current_node_id,
         currentFlow.nodes,
@@ -349,6 +364,16 @@ async function processMessagingEvent(
             flowId: conversation.current_flow_id,
             fromNode: conversation.current_node_id,
             toNode: matchedNodeId,
+            variables: mergedVariables,
+          },
+        });
+      } else if (expectsFreeText) {
+        await reqLogger.info("webhook", "Free text input did not continue flow", {
+          metadata: {
+            flowId: conversation.current_flow_id,
+            currentNodeId: conversation.current_node_id,
+            outgoingEdgeCount: outgoingEdges.length,
+            hasQuickReplies: quickReplies.length > 0,
             variables: mergedVariables,
           },
         });
@@ -416,11 +441,12 @@ async function processMessagingEvent(
       });
 
       // Update conversation state
+      const storedNodeId = flowResponse.isEndOfFlow ? null : matchedNodeId;
       await supabase
         .from("conversations")
         .update({
           current_flow_id: matchedFlowId,
-          current_node_id: flowResponse.nextNodeId || matchedNodeId,
+          current_node_id: storedNodeId,
           last_message_at: new Date().toISOString(),
           status: flowResponse.isEndOfFlow ? "closed" : "active",
         })
@@ -431,6 +457,12 @@ async function processMessagingEvent(
           messageId: sendResult.data.message_id,
           flowId: matchedFlowId,
           nodeId: matchedNodeId,
+          storedNodeId,
+          nextNodeId: flowResponse.nextNodeId,
+          expectsFreeText:
+            !flowResponse.isEndOfFlow &&
+            flowResponse.quickReplies.length === 0 &&
+            Boolean(flowResponse.nextNodeId),
         },
       });
 
