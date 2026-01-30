@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Filter, Star } from "lucide-react";
+import { Copy, Filter, Star, Trash2 } from "lucide-react";
 import type { Edge, Node } from "reactflow";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { lintFlow } from "../../lib/flowLint";
@@ -24,7 +24,7 @@ type Props = {
   variant: "grid" | "table";
 };
 
-type PendingAction = { id: string; type: "duplicate" | "template" } | null;
+type PendingAction = { id: string; type: "duplicate" | "template" | "delete" } | null;
 
 export default function FlowListClient({ variant }: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -37,6 +37,7 @@ export default function FlowListClient({ variant }: Props) {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("wesponde-flow-favorites");
@@ -194,6 +195,31 @@ export default function FlowListClient({ variant }: Props) {
       return;
     }
     router.refresh();
+  };
+
+  const deleteFlow = async (flowId: string) => {
+    setPendingAction({ id: flowId, type: "delete" });
+    setError(null);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      router.replace("/login");
+      return;
+    }
+    const response = await fetch(`/api/flows/${flowId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+    setPendingAction(null);
+    setDeleteConfirmId(null);
+    if (response.ok) {
+      setFlows((prev) => prev.filter((f) => f.id !== flowId));
+    } else {
+      setError("Flow konnte nicht gelöscht werden.");
+    }
   };
 
   if (loading) {
@@ -399,6 +425,33 @@ export default function FlowListClient({ variant }: Props) {
                     <Star className="h-3 w-3" fill={favorites.includes(flow.id) ? "currentColor" : "none"} />
                     Favorit
                   </button>
+                  {deleteConfirmId === flow.id ? (
+                    <>
+                      <button
+                        onClick={() => deleteFlow(flow.id)}
+                        disabled={pendingAction?.id === flow.id && pendingAction.type === "delete"}
+                        className="rounded-full bg-rose-600 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+                      >
+                        {pendingAction?.id === flow.id && pendingAction.type === "delete"
+                          ? "Lösche…"
+                          : "Ja, löschen"}
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirmId(null)}
+                        className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                      >
+                        Abbrechen
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setDeleteConfirmId(flow.id)}
+                      className="flex items-center gap-1 rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Löschen
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>

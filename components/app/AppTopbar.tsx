@@ -1,8 +1,30 @@
 'use client';
 
+import { useEffect, useMemo, useState } from "react";
 import { Bell, Search, User } from "lucide-react";
+import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 
 export default function AppTopbar() {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Try to get name from user metadata first, fallback to email
+        const name = user.user_metadata?.full_name ||
+                     user.user_metadata?.name ||
+                     user.email?.split('@')[0] ||
+                     'Benutzer';
+        setUserName(name);
+        setUserEmail(user.email || null);
+      }
+    }
+    loadUser();
+  }, [supabase]);
+
   return (
     <header className="flex items-center justify-between border-b border-slate-200 bg-white/80 px-8 py-4 backdrop-blur">
       <div className="relative w-full max-w-md">
@@ -21,8 +43,8 @@ export default function AppTopbar() {
             <User className="h-4 w-4" />
           </div>
           <div className="text-left leading-tight">
-            <p className="font-semibold text-slate-900">Laura Weber</p>
-            <p className="text-xs text-slate-400">Premium Plan</p>
+            <p className="font-semibold text-slate-900">{userName || 'Laden...'}</p>
+            <p className="text-xs text-slate-400">{userEmail || ''}</p>
           </div>
         </div>
       </div>
