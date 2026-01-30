@@ -167,26 +167,6 @@ export default function FlowListBuilder({
     return nodes.find(n => n.id === nodeId);
   }, [nodes]);
 
-  const updateNodeText = useCallback((nodeId: string, text: string) => {
-    const updatedNodes = nodes.map(node => {
-      if (node.id !== nodeId) return node;
-      const currentLabel = String(node.data?.label ?? "");
-      const currentText = String(node.data?.text ?? "");
-      const shouldUpdateLabel = currentLabel.trim().length === 0 || currentLabel === currentText;
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          text,
-          ...(shouldUpdateLabel
-            ? { label: text.slice(0, 40) || "Neue Nachricht" }
-            : {}),
-        },
-      };
-    });
-    onNodesChange(updatedNodes);
-  }, [nodes, onNodesChange, syncEdgesForNode]);
-
   const syncEdgesForNode = useCallback((nodeId: string, replies: FlowQuickReply[]) => {
     let next = edges
       .filter((edge) => {
@@ -240,6 +220,26 @@ export default function FlowListBuilder({
 
     onEdgesChange(next);
   }, [edges, onEdgesChange]);
+
+  const updateNodeText = useCallback((nodeId: string, text: string) => {
+    const updatedNodes = nodes.map(node => {
+      if (node.id !== nodeId) return node;
+      const currentLabel = String(node.data?.label ?? "");
+      const currentText = String(node.data?.text ?? "");
+      const shouldUpdateLabel = currentLabel.trim().length === 0 || currentLabel === currentText;
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          text,
+          ...(shouldUpdateLabel
+            ? { label: text.slice(0, 40) || "Neue Nachricht" }
+            : {}),
+        },
+      };
+    });
+    onNodesChange(updatedNodes);
+  }, [nodes, onNodesChange, syncEdgesForNode]);
 
   const addQuickReply = useCallback((nodeId: string) => {
     let updatedReplies: FlowQuickReply[] = [];
