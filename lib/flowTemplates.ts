@@ -215,7 +215,7 @@ export const fallbackTemplates: FlowTemplate[] = [
         position: { x: 1500, y: 100 },
         data: {
           label: "Zusammenfassung",
-          text: "Perfekt! ✅ Ich habe alle Angaben für deine Reservierung:\n\n• Datum und Uhrzeit\n• Personenanzahl\n• Name und Telefonnummer\n\nSoll ich die Reservierung so abschicken?",
+          text: "Perfekt! ✅ Hier sind deine Angaben:\n\n📅 Datum: {{date}}\n⏰ Uhrzeit: {{time}}\n👥 Personen: {{guestCount}}\n👤 Name: {{name}}\n📱 Telefon: {{phone}}\n\nSoll ich die Reservierung so abschicken?",
           variant: "message",
           quickReplies: [
             { id: "qr-confirm", label: "Ja, bestätigen!", payload: "confirm", targetNodeId: "confirmed" },

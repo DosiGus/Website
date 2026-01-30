@@ -28,6 +28,7 @@ import { ConversationMetadata } from "../../../../lib/flowTypes";
 import {
   canCreateReservation,
   createReservationFromVariables,
+  getMissingReservationFields,
 } from "../../../../lib/webhook/reservationCreator";
 
 /**
@@ -243,10 +244,51 @@ async function processMessagingEvent(
   }
 
   // Merge new variables with existing ones
-  const mergedVariables = mergeVariables(existingVariables, newVariables);
+  let mergedVariables = mergeVariables(existingVariables, newVariables);
 
-  // Update metadata if new variables were extracted
-  if (Object.keys(newVariables).length > 0) {
+  // Allow overriding specific fields when the user is answering a targeted question
+  const overrideVariables: ExtractedVariables = {};
+  if (messageText && conversation.current_node_id) {
+    const nodeKey = conversation.current_node_id.toLowerCase();
+
+    if (nodeKey.includes("name")) {
+      const extractedName = extractName(messageText);
+      if (extractedName) overrideVariables.name = extractedName;
+    }
+
+    if (nodeKey.includes("date")) {
+      const extractedDate = extractDate(messageText);
+      if (extractedDate) overrideVariables.date = extractedDate;
+    }
+
+    if (nodeKey.includes("time")) {
+      const extractedTime = extractTime(messageText);
+      if (extractedTime) overrideVariables.time = extractedTime;
+    }
+
+    if (nodeKey.includes("guest")) {
+      const extractedCount = extractGuestCount(messageText);
+      if (extractedCount) overrideVariables.guestCount = extractedCount;
+    }
+
+    if (nodeKey.includes("phone")) {
+      const extractedPhone = extractVariables(messageText, {}).phone;
+      if (extractedPhone) overrideVariables.phone = extractedPhone;
+    }
+
+    if (nodeKey.includes("special") || nodeKey.includes("notes")) {
+      const trimmed = messageText.trim();
+      if (trimmed) overrideVariables.specialRequests = trimmed;
+    }
+  }
+
+  const hasOverrides = Object.keys(overrideVariables).length > 0;
+  if (hasOverrides) {
+    mergedVariables = { ...mergedVariables, ...overrideVariables };
+  }
+
+  // Update metadata if new variables were extracted or overridden
+  if (Object.keys(newVariables).length > 0 || hasOverrides) {
     const updatedMetadata: ConversationMetadata = {
       ...existingMetadata,
       variables: mergedVariables,
@@ -258,7 +300,7 @@ async function processMessagingEvent(
       .eq("id", conversation.id);
 
     await reqLogger.info("webhook", "Variables extracted from message", {
-      metadata: { newVariables, mergedVariables },
+      metadata: { newVariables, overrideVariables, mergedVariables },
     });
   }
 
@@ -466,8 +508,12 @@ async function processMessagingEvent(
         },
       });
 
-      // Create reservation automatically when flow ends with complete data
-      if (flowResponse.isEndOfFlow && canCreateReservation(mergedVariables)) {
+      const reservationAlreadyExists = Boolean(existingMetadata?.reservationId);
+      const shouldCreateReservation =
+        !reservationAlreadyExists &&
+        (flowResponse.isEndOfFlow || matchedNodeId === "confirmed");
+
+      if (shouldCreateReservation && canCreateReservation(mergedVariables)) {
         const reservationResult = await createReservationFromVariables(
           userId,
           conversation.id,
@@ -504,6 +550,13 @@ async function processMessagingEvent(
             },
           });
         }
+      } else if (shouldCreateReservation) {
+        await reqLogger.warn("webhook", "Reservation data incomplete on confirmation", {
+          metadata: {
+            missingFields: getMissingReservationFields(mergedVariables),
+            variables: mergedVariables,
+          },
+        });
       }
     } else {
       await reqLogger.error("webhook", `Failed to send response: ${sendResult.error}`);

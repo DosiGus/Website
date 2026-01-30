@@ -1,5 +1,5 @@
 import { FlowNodeData, FlowQuickReply, ConversationVariables } from "../flowTypes";
-import { substituteVariables } from "./variableSubstitutor";
+import { substituteVariables, hasPlaceholders } from "./variableSubstitutor";
 
 export type FlowResponse = {
   text: string;
@@ -46,7 +46,14 @@ export function executeFlowNode(
   const nodeData = node.data;
   // Apply variable substitution to the text
   const rawText = nodeData.text || nodeData.label || "";
-  const text = substituteVariables(rawText, variables);
+  let text = substituteVariables(rawText, variables);
+
+  if (node.id === "summary" && !hasPlaceholders(rawText)) {
+    const summaryDetails = buildSummaryDetails(variables);
+    if (summaryDetails) {
+      text = `${text}\n\n${summaryDetails}`;
+    }
+  }
 
   // Find outgoing edges to determine next node(s)
   const outgoingEdges = edges.filter((e) => e.source === nodeId);
@@ -130,6 +137,24 @@ export function handleQuickReplySelection(
 function findNextNode(nodeId: string, edges: FlowEdge[]): string | null {
   const edge = edges.find((e) => e.source === nodeId);
   return edge?.target || null;
+}
+
+function buildSummaryDetails(variables: ConversationVariables): string | null {
+  const lines: string[] = [];
+
+  if (variables.date) lines.push("Datum: {{date}}");
+  if (variables.time) lines.push("Uhrzeit: {{time}}");
+  if (variables.guestCount) lines.push("Personen: {{guestCount}}");
+  if (variables.name) lines.push("Name: {{name}}");
+  if (variables.phone) lines.push("Telefon: {{phone}}");
+  if (variables.email) lines.push("E-Mail: {{email}}");
+  if (variables.specialRequests) lines.push("Wünsche: {{specialRequests}}");
+
+  if (lines.length === 0) {
+    return null;
+  }
+
+  return substituteVariables(lines.join("\n"), variables);
 }
 
 export type FreeTextResult = {
