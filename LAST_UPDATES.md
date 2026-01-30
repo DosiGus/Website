@@ -1,99 +1,83 @@
 # Wesponde - Letzte Updates
 
-**Letzte Session:** 29. Januar 2026
-**Status:** Instagram Webhook funktioniert, Templates überarbeitet
+**Letzte Session:** 30. Januar 2026
+**Status:** Reservierungsflow stabil (Variablen, Summary, Speicherung), Webhook-Logging verbessert
 
 ---
 
-## Was wurde gemacht
+## Was wurde gemacht (30. Januar 2026)
 
-### 1. Instagram Webhook Infrastruktur (Komplett)
-- `app/api/webhooks/instagram/route.ts` - Empfängt Instagram DMs
-- `lib/meta/webhookVerify.ts` - HMAC-SHA256 Signatur-Verifizierung
-- `lib/meta/instagramApi.ts` - Nachrichten an Instagram senden
-- `lib/webhook/flowMatcher.ts` - Trigger-Keyword-Matching
-- `lib/webhook/flowExecutor.ts` - Flow-Nodes ausführen
+### 1. Variable-System + Zusammenfassung (Erledigt)
+- User-Eingaben werden in `conversations.metadata.variables` gespeichert.
+- Platzhalter `{{date}}`, `{{time}}`, `{{guestCount}}`, `{{name}}`, `{{phone}}`, `{{email}}`, `{{specialRequests}}` werden beim Senden ersetzt.
+- Summary-Node bekommt automatisch echte Daten, auch wenn im Template keine Platzhalter stehen.
+- Restaurant-Template Summary wurde auf Platzhalter umgestellt.
 
-**Webhook URL:** `https://wesponde.com/api/webhooks/instagram`
-**Verify Token:** In `.env.local` als `META_WEBHOOK_VERIFY_TOKEN`
+### 2. Reservierungen in DB (Erledigt)
+- Reservierung wird jetzt bei Bestätigung (`confirmed`) erstellt, nicht nur am Flow-Ende.
+- `reservationId` wird in Conversation-Metadata gespeichert.
+- Fehlende Felder werden geloggt, falls Daten unvollständig sind.
 
-### 2. Datenbank-Tabellen (In Supabase angelegt)
-- `conversations` - Gespräche mit Instagram-Usern
-- `messages` - Eingehende/ausgehende Nachrichten
+### 3. Webhook/Flow Stabilisierung (Erledigt)
+- Conversation speichert den *aktuellen* Node (nicht den nächsten).
+- Free-Text-Weiterführung funktioniert zuverlässig.
+- Zusätzliche Logs für Debugging (z.B. `expectsFreeText`, `storedNodeId`).
 
-### 3. Flow Templates komplett überarbeitet
-Alle drei Templates sind jetzt vollständig mit Quick Replies:
+### 4. FlowBuilder Test Mode (Erledigt)
+- Chat-Simulation im FlowBuilder vorhanden (`FlowSimulator`).
 
-| Template | Nodes | Features |
-|----------|-------|----------|
-| Restaurant | ~15 | Datum (Freitext), Uhrzeit, Gäste, Name, Telefon, Sonderwünsche |
-| Salon | ~22 | Behandlung, Stylist, Datum, Uhrzeit, Kontakt, Notizen |
-| Praxis | ~23 | Anliegen, Rezept, Notfall, Termin, Versicherung, Kontakt |
+---
 
-### 4. Bug Fixes
-- **Freitext-Eingabe:** Flows bleiben nicht mehr hängen wenn User Text tippt (Name, Telefon, etc.)
-- **Edge Labels:** Labels werden jetzt korrekt gespeichert
-- **FlowBuilder UX:** Bessere Warnungen mit Aktions-Badges
+## Status der offenen Punkte aus der letzten Session
+
+- Priorität 1: User-Daten in Zusammenfassung anzeigen -> **Erledigt**
+- Priorität 2: Reservierungen in DB speichern -> **Erledigt**
+- Priorität 3: Flow im FlowBuilder testen -> **Erledigt**
 
 ---
 
 ## Was funktioniert jetzt
 
-1. User schreibt Instagram DM an verbundenes Konto
-2. Webhook empfängt Nachricht
-3. Flow-Trigger wird gematcht (z.B. "hallo" startet Welcome-Node)
-4. Bot antwortet mit Text + Quick Reply Buttons
-5. User klickt Button oder tippt Freitext
-6. Flow geht weiter bis zum Ende
+1. Instagram DM startet Flow (Trigger)
+2. Quick Replies + Freitext laufen stabil durch
+3. Variablen werden korrekt überschrieben (z.B. Name, Datum, Uhrzeit)
+4. Zusammenfassung zeigt echte Daten
+5. Bestätigung erzeugt Reservierung in `reservations`
 
 ---
 
 ## Gelöste Probleme dieser Session
 
-### Problem 1: Flow bleibt bei Freitext-Eingabe hängen
-**Symptom:** User tippt Namen bei "Name erfragen" → Bot antwortet nicht
-**Ursache:** Webhook versuchte neuen Flow zu matchen statt im aktuellen weiterzumachen
-**Lösung:** `handleFreeTextInput()` in `flowExecutor.ts` hinzugefügt, Webhook prüft jetzt ob User in aktivem Flow ist
+### Problem 1: Zusammenfassung zeigt keine echten Daten
+**Lösung:** Variable-Substitution + Summary-Fallback in `flowExecutor.ts`, Template-Update
 
-### Problem 2: Datum-Abfrage zu ungenau
-**Symptom:** Nur "Heute/Morgen/Wochenende" als Quick Replies - unpraktisch für echte Reservierung
-**Lösung:** Geändert zu Freitext-Eingabe: "Für welches Datum möchtest du reservieren?"
+### Problem 2: Reservierungen wurden nicht gespeichert
+**Lösung:** Reservierung wird bei `confirmed` erzeugt, Logging ergänzt
 
-### Problem 3: Zusammenfassung zeigt Platzhalter
-**Symptom:** "[wird eingetragen]" statt echte Daten
-**Ursache:** Kein Variable-System vorhanden um User-Eingaben zu speichern/anzeigen
-**Workaround:** Text geändert zu "Ich habe alle Angaben für deine Reservierung" ohne falsche Versprechen
-**Echte Lösung:** Variable-System implementieren (siehe Priorität 1 unten)
-
-### Problem 4: Leere Webhook-Events
-**Beobachtung:** Logs zeigen `"hasMessage": false, "messageText": ""` Events
-**Ursache:** Instagram sendet "seen" und "typing" Events die keine Nachricht enthalten
-**Status:** Harmlos - werden ignoriert, aber könnten gefiltert werden
+### Problem 3: Freitext-Flow blieb hängen (Datum/Time etc.)
+**Lösung:** Aktueller Node wird gespeichert, Free-Text-Weiterführung zuverlässig
 
 ---
 
 ## Was noch offen ist / Nächste Schritte
 
-### Priorität 1: User-Daten in Zusammenfassung anzeigen
-**Problem:** Die Zusammenfassung zeigt nicht die eingegebenen Daten (Name, Datum, etc.)
-**Lösung:** Variable-System implementieren:
-- User-Eingaben in `conversations.metadata` speichern
-- Nodes unterstützen `{{name}}`, `{{date}}` Platzhalter
-- Beim Senden werden Variablen ersetzt
+### Priorität 1: Dashboard/Ansicht für Reservierungen
+- UI-Seite im App-Bereich, Filtern, Status ändern
 
-### Priorität 2: Reservierungen in DB speichern
-- Neue Tabelle `reservations` anlegen
-- Nach Bestätigung alle Daten in DB schreiben
-- Dashboard-Ansicht für Reservierungen
-
-### Priorität 3: Flow im FlowBuilder testen
-- "Vorschau" oder "Test" Modus im FlowBuilder
-- Ohne echte Instagram-Verbindung durchspielen
+### Priorität 2: Logs von leeren Webhook-Events reduzieren
+- "seen/typing" Events filtern, um Log-Noise zu verringern
 
 ### Nice-to-have
-- WhatsApp Integration (ähnlich wie Instagram)
+- WhatsApp Integration
 - Benachrichtigungen bei neuen Reservierungen
 - Kalender-Integration
+
+---
+
+## Webhook Info
+
+- **Webhook URL:** `https://wesponde.com/api/webhooks/instagram`
+- **Verify Token:** In `.env.local` als `META_WEBHOOK_VERIFY_TOKEN`
 
 ---
 
@@ -101,58 +85,39 @@ Alle drei Templates sind jetzt vollständig mit Quick Replies:
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/flowTemplates.ts` | Flow-Templates (Restaurant, Salon, Praxis) |
-| `lib/webhook/flowExecutor.ts` | Flow-Logik, Freitext-Handling |
-| `app/api/webhooks/instagram/route.ts` | Webhook-Endpoint |
+| `app/api/webhooks/instagram/route.ts` | Webhook-Endpoint + Flow-Logik |
+| `lib/webhook/flowExecutor.ts` | Flow-Ausführung + Summary-Fallback |
+| `lib/webhook/variableExtractor.ts` | Variablen erkennen (Name, Datum, Uhrzeit, etc.) |
+| `lib/webhook/variableSubstitutor.ts` | Platzhalter ersetzen |
+| `lib/webhook/reservationCreator.ts` | Reservierung erstellen |
+| `lib/flowTemplates.ts` | Templates (Summary-Platzhalter) |
 | `components/app/FlowBuilderClient.tsx` | Flow-Editor UI |
-| `lib/flowLint.ts` | Flow-Validierung/Warnungen |
+| `components/app/FlowSimulator.tsx` | Testmodus im FlowBuilder |
 
 ---
 
 ## Zum Testen
 
-1. **Neuen Flow erstellen:** Supabase Templates löschen damit Fallback greift:
-   ```sql
-   DELETE FROM flow_templates;
-   ```
-
-2. **Flow aktivieren:** Status auf "Aktiv" setzen (nicht "Entwurf")
-
-3. **Instagram DM senden:** "Hallo" oder "reservieren" an verbundenes Konto
-
-4. **Logs prüfen:** In Supabase → `logs` Tabelle
+1. Neuen Flow anlegen und auf "Aktiv" setzen
+2. Instagram DM senden (z.B. "Hallo" oder "reservieren")
+3. Flow bis Summary und Bestätigung durchspielen
+4. In Supabase prüfen:
+   - `conversations.metadata.variables`
+   - `reservations` (neuer Eintrag)
 
 ---
 
 ## Aktueller Stand des Flows
 
-**Getesteter Flow:** Restaurant-Reservierung
-**Flow-ID in DB:** `09ea2c2e-8e12-4d43-9a6f-c1120c7e7289`
-
-**Was funktioniert:**
-- Trigger "hallo" → Welcome-Node
-- Quick Reply Buttons klicken
-- Freitext-Eingabe (Name, Telefon, Datum)
-- Flow durchlaufen bis Zusammenfassung
-
-**Was noch nicht getestet:**
-- Neuer Flow mit aktualisierten Templates (Datum als Freitext)
-- Sonderwünsche-Pfad (Allergien, Anlass)
-- Bearbeiten-Option in Zusammenfassung
-
-**Hinweis:** Der getestete Flow nutzt noch die ALTEN Templates. Um die neuen zu testen:
-```sql
-DELETE FROM flow_templates;
-```
-Dann neuen Flow erstellen.
+**Letzter erfolgreicher Test:** 30. Januar 2026
+**Flow-Name:** "kevin 1.0"
+**Ergebnis:** Summary zeigte Daten, Reservierung wurde erstellt
 
 ---
 
 ## Commits dieser Session
 
 ```
-f85c95d3 Add LAST_UPDATES.md for session continuity
-422b0a05 Improve restaurant template: exact date input and realistic summary
-64b15c2a Fix: Handle free text input in conversation flow
-4ef58b57 Overhaul flow templates: full production-ready flows
+504efbba Fix webhook state tracking for free-text flows
+2a5e2a70 Show reservation summary data and create booking on confirm
 ```
