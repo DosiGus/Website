@@ -28,6 +28,7 @@ import {
   Edit2,
   Focus,
   Plus,
+  Search,
   Shapes,
   Sparkles,
   Trash2,
@@ -35,6 +36,7 @@ import {
   X,
 } from "lucide-react";
 import FlowBuilderCanvas from "./FlowBuilderCanvas";
+import FlowListBuilder from "./FlowListBuilder";
 import FlowSimulator from "./FlowSimulator";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import {
@@ -60,6 +62,7 @@ type FlowResponse = {
 type SaveState = "idle" | "saving" | "saved" | "error";
 type InspectorTab = "content" | "logic" | "variables" | "preview";
 type EdgeTone = "neutral" | "positive" | "negative";
+type BuilderMode = "simple" | "pro";
 
 const EDGE_TONE_META: Record<EdgeTone, { label: string; bg: string; text: string }> = {
   neutral: { label: "Neutral", bg: "#e2e8f0", text: "#0f172a" },
@@ -151,6 +154,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [editingTriggerId, setEditingTriggerId] = useState<string | null>(null);
   const [triggerForm, setTriggerForm] = useState<FlowTrigger | null>(null);
   const [keywordInput, setKeywordInput] = useState("");
+  const [nodeSearchQuery, setNodeSearchQuery] = useState("");
+  const [nodeSearchOpen, setNodeSearchOpen] = useState(false);
+  const [builderMode, setBuilderMode] = useState<BuilderMode>("simple");
   const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -196,6 +202,47 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   );
 
   const decoratedEdges = useMemo(() => edges.map(decorateEdgeForCanvas), [edges]);
+
+  const searchResults = useMemo(() => {
+    if (!nodeSearchQuery.trim()) return [];
+    const query = nodeSearchQuery.toLowerCase();
+    return nodes.filter((node) => {
+      const label = (node.data?.label ?? "").toLowerCase();
+      const text = (node.data?.text ?? "").toLowerCase();
+      return label.includes(query) || text.includes(query);
+    }).slice(0, 8);
+  }, [nodes, nodeSearchQuery]);
+
+  const jumpToNode = useCallback((nodeId: string) => {
+    const targetNode = nodes.find((node) => node.id === nodeId);
+    if (targetNode && reactFlowInstance) {
+      setSelectedNodeId(nodeId);
+      setSelectedEdgeId(null);
+      setNodeSearchOpen(false);
+      setNodeSearchQuery("");
+      reactFlowInstance.setCenter(
+        targetNode.position.x + 100,
+        targetNode.position.y + 50,
+        { zoom: 1.2, duration: 500 }
+      );
+    }
+  }, [nodes, reactFlowInstance]);
+
+  const handleListNodesChange = useCallback((newNodes: Node[]) => {
+    setNodes(newNodes);
+  }, []);
+
+  const handleListEdgesChange = useCallback((newEdges: Edge[]) => {
+    setEdges(newEdges);
+  }, []);
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    setNodes((prev) => prev.filter((n) => n.id !== nodeId));
+    setEdges((prev) => prev.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    if (selectedNodeId === nodeId) {
+      setSelectedNodeId(null);
+    }
+  }, [selectedNodeId]);
 
   const selectedNode = useMemo(
     () => nodes.find((node) => node.id === selectedNodeId) ?? null,
@@ -1050,58 +1097,144 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
         <div className="relative space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => addNode("message")}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
-            >
-              <Plus className="h-4 w-4" />
-              Nachricht
-            </button>
-            <button
-              onClick={() => addNode("choice")}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
-            >
-              <Shapes className="h-4 w-4" />
-              Auswahl
-            </button>
-            <button
-              onClick={runAutoLayout}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
-            >
-              <Focus className="h-4 w-4" />
-              Auto-Layout
-            </button>
-            <button
-              onClick={fitToView}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
-            >
-              Zoom to Fit
-            </button>
+            {/* Mode Toggle */}
+            <div className="flex rounded-full bg-slate-100 p-1">
+              <button
+                onClick={() => setBuilderMode("simple")}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  builderMode === "simple"
+                    ? "bg-white text-slate-900 shadow"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                Einfach
+              </button>
+              <button
+                onClick={() => setBuilderMode("pro")}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  builderMode === "pro"
+                    ? "bg-white text-slate-900 shadow"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                Profi
+              </button>
+            </div>
+
+            <div className="h-6 w-px bg-slate-200" />
+
+            {builderMode === "pro" && (
+              <>
+                <button
+                  onClick={() => addNode("message")}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nachricht
+                </button>
+                <button
+                  onClick={() => addNode("choice")}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
+                >
+                  <Shapes className="h-4 w-4" />
+                  Auswahl
+                </button>
+                <button
+                  onClick={runAutoLayout}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
+                >
+                  <Focus className="h-4 w-4" />
+                  Auto-Layout
+                </button>
+                <button
+                  onClick={fitToView}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
+                >
+                  Zoom to Fit
+                </button>
+              </>
+            )}
+            <div className="relative ml-auto">
+              <button
+                onClick={() => setNodeSearchOpen(!nodeSearchOpen)}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
+              >
+                <Search className="h-4 w-4" />
+                Suchen
+              </button>
+              {nodeSearchOpen && (
+                <div className="absolute right-0 top-12 z-20 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
+                  <input
+                    type="text"
+                    placeholder="Schritt suchen..."
+                    value={nodeSearchQuery}
+                    onChange={(e) => setNodeSearchQuery(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                    autoFocus
+                  />
+                  {searchResults.length > 0 && (
+                    <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+                      {searchResults.map((node) => (
+                        <button
+                          key={node.id}
+                          onClick={() => jumpToNode(node.id)}
+                          className="flex w-full items-start gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-slate-50"
+                        >
+                          <Focus className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                          <div>
+                            <p className="font-semibold text-slate-700">{node.data?.label || "Ohne Titel"}</p>
+                            <p className="line-clamp-1 text-xs text-slate-400">{node.data?.text || ""}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {nodeSearchQuery && searchResults.length === 0 && (
+                    <p className="mt-2 text-center text-sm text-slate-400">Keine Ergebnisse</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-          <FlowBuilderCanvas
-            nodes={displayNodes}
-            edges={decoratedEdges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onConnect={handleConnect}
-            onNodeClick={(_, node) => {
-              setSelectedNodeId(node.id);
-              setSelectedEdgeId(null);
-            }}
-            onNodeDoubleClick={(_, node) => {
-              setSelectedNodeId(node.id);
-              setSelectedEdgeId(null);
-              openInlineEditor(node);
-            }}
-            onEdgeClick={(_, edge) => {
-              setSelectedEdgeId(edge.id);
-              setSelectedNodeId(null);
-              setInspectorTab("logic");
-            }}
-            onSelectionChange={handleSelectionChange}
-            onInit={(instance) => setReactFlowInstance(instance)}
-            onFitView={fitToView}
-          />
+          {builderMode === "pro" ? (
+            <FlowBuilderCanvas
+              nodes={displayNodes}
+              edges={decoratedEdges}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onConnect={handleConnect}
+              onNodeClick={(_, node) => {
+                setSelectedNodeId(node.id);
+                setSelectedEdgeId(null);
+              }}
+              onNodeDoubleClick={(_, node) => {
+                setSelectedNodeId(node.id);
+                setSelectedEdgeId(null);
+                openInlineEditor(node);
+              }}
+              onEdgeClick={(_, edge) => {
+                setSelectedEdgeId(edge.id);
+                setSelectedNodeId(null);
+                setInspectorTab("logic");
+              }}
+              onSelectionChange={handleSelectionChange}
+              onInit={(instance) => setReactFlowInstance(instance)}
+              onFitView={fitToView}
+            />
+          ) : (
+            <div className="h-[640px] overflow-y-auto rounded-3xl border border-slate-200 bg-slate-50/50 p-6">
+              <FlowListBuilder
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={handleListNodesChange}
+                onEdgesChange={handleListEdgesChange}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={setSelectedNodeId}
+                onAddNode={addNode}
+                onDeleteNode={handleDeleteNode}
+              />
+            </div>
+          )}
           {inlineEditNodeId ? (
             <div className="absolute bottom-6 right-10 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">

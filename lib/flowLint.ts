@@ -49,9 +49,9 @@ export function lintFlow(
   // === FLOW LEVEL CHECKS ===
   if (nodes.length === 0) {
     warnings.push(
-      buildWarning("Dein Flow ist leer.", {
-        suggestion: "Klicke auf '+ Nachricht' um deinen ersten Schritt hinzuzufügen.",
-        action: "Node hinzufügen",
+      buildWarning("Dein Flow ist noch leer", {
+        suggestion: "Klicke oben auf '+ Nachricht' um deinen ersten Schritt hinzuzufügen.",
+        action: "Schritt hinzufügen",
       }),
     );
     return { warnings };
@@ -60,38 +60,38 @@ export function lintFlow(
   // === TRIGGER CHECKS ===
   if (triggers.length === 0) {
     warnings.push(
-      buildWarning("Kein Trigger vorhanden - der Flow kann nicht starten.", {
-        suggestion: "Klicke links auf 'Neuer Trigger' und füge Keywords hinzu, die den Flow auslösen (z.B. 'reservieren', 'termin').",
-        action: "Trigger erstellen",
+      buildWarning("Kein Auslöser vorhanden", {
+        suggestion: "Dein Flow braucht einen Auslöser, damit er startet. Klicke links auf 'Neuer Trigger' und füge Wörter hinzu, auf die der Bot reagieren soll (z.B. 'Hallo', 'Reservieren').",
+        action: "Auslöser erstellen",
       }),
     );
   } else {
     triggers.forEach((trigger, index) => {
       const triggerLabel = trigger.config.keywords.length > 0
         ? `"${trigger.config.keywords[0]}"${trigger.config.keywords.length > 1 ? ` (+${trigger.config.keywords.length - 1})` : ""}`
-        : `Trigger ${index + 1}`;
+        : `Auslöser ${index + 1}`;
 
       if (!trigger.config.keywords.length) {
         warnings.push(
-          buildWarning(`Trigger ${triggerLabel} hat keine Keywords.`, {
+          buildWarning(`Auslöser ${triggerLabel} hat keine Schlüsselwörter`, {
             nodeId: trigger.startNodeId ?? undefined,
-            suggestion: "Bearbeite den Trigger und füge mindestens ein Keyword hinzu, das Kunden schreiben könnten.",
-            action: "Trigger bearbeiten",
+            suggestion: "Bearbeite den Auslöser und füge mindestens ein Wort hinzu, das Kunden schreiben könnten (z.B. 'Hallo', 'Termin').",
+            action: "Wörter hinzufügen",
           }),
         );
       }
       if (!trigger.startNodeId) {
         warnings.push(
-          buildWarning(`Trigger ${triggerLabel} führt zu keinem Node.`, {
-            suggestion: "Bearbeite den Trigger und wähle unter 'Start Node' aus, welche Nachricht zuerst gesendet werden soll.",
-            action: "Start-Node wählen",
+          buildWarning(`Auslöser ${triggerLabel} hat keinen Startpunkt`, {
+            suggestion: "Bearbeite den Auslöser und wähle aus, welche Nachricht zuerst gesendet werden soll.",
+            action: "Startpunkt wählen",
           }),
         );
       } else if (!nodes.some((n) => n.id === trigger.startNodeId)) {
         warnings.push(
-          buildWarning(`Trigger ${triggerLabel} verweist auf einen gelöschten Node.`, {
-            suggestion: "Bearbeite den Trigger und wähle einen existierenden Node als Start aus.",
-            action: "Start-Node aktualisieren",
+          buildWarning(`Auslöser ${triggerLabel} verweist auf einen gelöschten Schritt`, {
+            suggestion: "Der ursprüngliche Startpunkt wurde gelöscht. Wähle einen neuen Startpunkt aus.",
+            action: "Startpunkt aktualisieren",
           }),
         );
       }
@@ -106,7 +106,6 @@ export function lintFlow(
     outgoingMap.set(edge.source, [...(outgoingMap.get(edge.source) ?? []), edge]);
 
     // Check for missing labels - only for manually created edges (no quickReplyId)
-    // Quick Reply edges get labels automatically from the button text
     const isQuickReplyEdge = Boolean((edge.data as any)?.quickReplyId);
     const hasLabel = Boolean(edge.data?.condition || edge.label);
 
@@ -117,11 +116,11 @@ export function lintFlow(
       const targetLabel = targetNode?.data?.label ?? "Unbekannt";
 
       warnings.push(
-        buildWarning(`Manuelle Verbindung "${sourceLabel}" → "${targetLabel}" hat kein Label.`, {
+        buildWarning(`Verbindung von "${sourceLabel}" zu "${targetLabel}" ohne Beschriftung`, {
           nodeId: edge.source,
           edgeId: edge.id,
-          suggestion: "Tipp: Erstelle stattdessen einen Quick Reply Button im Quell-Node. Buttons sind benutzerfreundlicher als unsichtbare Verbindungen.",
-          action: "Quick Reply nutzen",
+          suggestion: "Tipp: Nutze stattdessen Antwort-Buttons! Buttons sind für Kunden einfacher zu bedienen als unsichtbare Verbindungen.",
+          action: "Button erstellen",
           severity: "info",
         }),
       );
@@ -130,17 +129,17 @@ export function lintFlow(
 
   // === NODE CHECKS ===
   nodes.forEach((node) => {
-    const nodeLabel = node.data?.label ?? "Unbenannter Node";
+    const nodeLabel = node.data?.label ?? "Ohne Titel";
     const hasText = Boolean(node.data?.text && node.data.text.trim().length > 0);
     const hasImage = Boolean(node.data?.imageUrl);
 
     // Empty node check
     if (!hasText && !hasImage) {
       warnings.push(
-        buildWarning(`"${nodeLabel}" hat keinen Inhalt.`, {
+        buildWarning(`"${nodeLabel}" hat keinen Inhalt`, {
           nodeId: node.id,
-          suggestion: "Wähle den Node aus und schreibe eine Nachricht ins Textfeld oder füge ein Bild hinzu.",
-          action: "Inhalt hinzufügen",
+          suggestion: "Wähle diesen Schritt aus und schreibe eine Nachricht, die der Bot senden soll.",
+          action: "Text schreiben",
         }),
       );
     }
@@ -154,48 +153,33 @@ export function lintFlow(
     // Has edges but no quick replies
     if (outgoingEdges.length > 0 && quickReplies.length === 0) {
       warnings.push(
-        buildWarning(`"${nodeLabel}" hat Verbindungen, aber keine Buttons.`, {
+        buildWarning(`"${nodeLabel}" hat keine Antwort-Buttons`, {
           nodeId: node.id,
-          suggestion: "Füge Quick Reply Buttons hinzu, damit Nutzer auf diese Nachricht antworten können. Die Buttons führen dann zum nächsten Schritt.",
-          action: "Quick Reply hinzufügen",
+          suggestion: "Füge Antwort-Buttons hinzu, damit Kunden auf diese Nachricht antworten können. Die Buttons führen dann zum nächsten Schritt.",
+          action: "Buttons hinzufügen",
         }),
       );
     }
 
     // Check quick replies
-    const payloadSet = new Set<string>();
     quickReplies.forEach((reply, index) => {
       const replyLabel = reply.label || `Button ${index + 1}`;
-
-      // Duplicate payload
-      if (reply.payload) {
-        if (payloadSet.has(reply.payload)) {
-          warnings.push(
-            buildWarning(`"${nodeLabel}" hat doppelte Button-Payloads.`, {
-              nodeId: node.id,
-              suggestion: `Der Payload "${reply.payload}" wird mehrfach verwendet. Gib jedem Button einen eindeutigen Payload.`,
-              action: "Payload anpassen",
-            }),
-          );
-        }
-        payloadSet.add(reply.payload);
-      }
 
       // Missing target
       if (!reply.targetNodeId) {
         warnings.push(
-          buildWarning(`Button "${replyLabel}" in "${nodeLabel}" führt nirgendwo hin.`, {
+          buildWarning(`Button "${replyLabel}" führt nirgendwo hin`, {
             nodeId: node.id,
-            suggestion: "Wähle unter 'Weiterleiten zu' aus, welcher Node nach dem Klick angezeigt werden soll.",
-            action: "Ziel-Node wählen",
+            suggestion: `Wähle bei "${replyLabel}" unter 'Weiterleiten zu' aus, was nach dem Klick passieren soll.`,
+            action: "Ziel wählen",
           }),
         );
       } else if (!nodeIds.has(reply.targetNodeId)) {
         warnings.push(
-          buildWarning(`Button "${replyLabel}" verweist auf einen gelöschten Node.`, {
+          buildWarning(`Button "${replyLabel}" verweist auf gelöschten Schritt`, {
             nodeId: node.id,
-            suggestion: "Der Ziel-Node existiert nicht mehr. Wähle einen anderen Node als Ziel aus.",
-            action: "Ziel-Node aktualisieren",
+            suggestion: "Der Ziel-Schritt wurde gelöscht. Wähle ein neues Ziel aus.",
+            action: "Neues Ziel wählen",
           }),
         );
       }
@@ -237,12 +221,12 @@ export function lintFlow(
     // Find unreachable nodes
     nodes.forEach((node) => {
       if (!visited.has(node.id)) {
-        const nodeLabel = node.data?.label ?? "Unbenannter Node";
+        const nodeLabel = node.data?.label ?? "Ohne Titel";
         warnings.push(
-          buildWarning(`"${nodeLabel}" ist nicht erreichbar.`, {
+          buildWarning(`"${nodeLabel}" ist nicht erreichbar`, {
             nodeId: node.id,
-            suggestion: "Dieser Node ist nicht mit dem Flow verbunden. Erstelle eine Verbindung von einem anderen Node hierher, oder lösche ihn falls er nicht gebraucht wird.",
-            action: "Node verbinden oder löschen",
+            suggestion: "Dieser Schritt ist nicht mit dem Rest des Flows verbunden. Verbinde ihn mit einem anderen Schritt oder lösche ihn, falls er nicht gebraucht wird.",
+            action: "Verbinden oder löschen",
           }),
         );
       }

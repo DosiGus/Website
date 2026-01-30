@@ -77,8 +77,32 @@ function Canvas({
           markerEnd: { type: MarkerType.ArrowClosed },
         }}
       >
-        <MiniMap pannable zoomable />
-        <Controls position="top-left" />
+        <MiniMap
+          pannable
+          zoomable
+          position="bottom-right"
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+          }}
+          nodeColor={(node) => node.data?.isStart ? '#3769FF' : '#94a3b8'}
+          maskColor="rgba(0, 0, 0, 0.08)"
+        />
+        <Controls
+          position="bottom-left"
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            gap: '4px',
+            backgroundColor: 'white',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            padding: '4px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          }}
+          showInteractive={false}
+        />
         <Background gap={24} size={1} />
       </ReactFlow>
       <div className="pointer-events-none absolute right-4 top-4 flex gap-2">
