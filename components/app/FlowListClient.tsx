@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Filter, Star, Trash2 } from "lucide-react";
+import { Copy, Filter, Star, Trash2, Pencil, Check, X } from "lucide-react";
 import type { Edge, Node } from "reactflow";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { lintFlow } from "../../lib/flowLint";
@@ -38,6 +38,8 @@ export default function FlowListClient({ variant }: Props) {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
 
   useEffect(() => {
     const stored = localStorage.getItem("wesponde-flow-favorites");
@@ -222,6 +224,63 @@ export default function FlowListClient({ variant }: Props) {
     }
   };
 
+  const startEditing = (flow: FlowSummary) => {
+    setEditingFlowId(flow.id);
+    setEditingName(flow.name);
+  };
+
+  const cancelEditing = () => {
+    setEditingFlowId(null);
+    setEditingName("");
+  };
+
+  const saveFlowName = async (flowId: string) => {
+    if (!editingName.trim()) {
+      setError("Name darf nicht leer sein.");
+      return;
+    }
+    setError(null);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      router.replace("/login");
+      return;
+    }
+
+    // Get the current flow data first
+    const flow = flows.find((f) => f.id === flowId);
+    if (!flow) return;
+
+    const response = await fetch(`/api/flows/${flowId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        name: editingName.trim(),
+        status: flow.status,
+        nodes: flow.nodes,
+        edges: flow.edges,
+        triggers: flow.triggers,
+        metadata: flow.metadata,
+      }),
+    });
+
+    if (response.ok) {
+      setFlows((prev) =>
+        prev.map((f) =>
+          f.id === flowId ? { ...f, name: editingName.trim() } : f
+        )
+      );
+      setEditingFlowId(null);
+      setEditingName("");
+    } else {
+      setError("Name konnte nicht gespeichert werden.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
@@ -374,7 +433,46 @@ export default function FlowListClient({ variant }: Props) {
           {filteredFlows.map((flow) => (
             <tr key={flow.id} className="hover:bg-slate-50">
               <td className="whitespace-nowrap px-6 py-4 font-medium text-slate-900">
-                {flow.name}
+                {editingFlowId === flow.id ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveFlowName(flow.id);
+                        if (e.key === "Escape") cancelEditing();
+                      }}
+                      className="rounded-lg border border-brand px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => saveFlowName(flow.id)}
+                      className="rounded-full p-1 text-emerald-600 hover:bg-emerald-50"
+                      title="Speichern"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      className="rounded-full p-1 text-slate-400 hover:bg-slate-100"
+                      title="Abbrechen"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="group flex items-center gap-2">
+                    <span>{flow.name}</span>
+                    <button
+                      onClick={() => startEditing(flow)}
+                      className="rounded-full p-1 text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100"
+                      title="Namen bearbeiten"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
               </td>
               <td className="px-6 py-4">
                 <span
