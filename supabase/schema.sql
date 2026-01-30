@@ -240,3 +240,68 @@ create policy "Messages dürfen nur von Conversation-Besitzern erstellt werden"
       where c.id = conversation_id and c.user_id = auth.uid()
     )
   );
+
+-- Add metadata column to conversations for storing extracted variables
+alter table if exists public.conversations
+  add column if not exists metadata jsonb default '{}'::jsonb;
+
+create index if not exists conversations_metadata_idx
+  on public.conversations using gin(metadata);
+
+-- Reservations table for storing completed bookings from flows
+create table if not exists public.reservations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  conversation_id uuid references public.conversations(id) on delete set null,
+  flow_id uuid references public.flows(id) on delete set null,
+
+  -- Guest data
+  guest_name text not null,
+  reservation_date date not null,
+  reservation_time time not null,
+  guest_count integer not null default 2 check (guest_count > 0),
+  phone_number text,
+  email text,
+  special_requests text,
+
+  -- Status management
+  status text not null default 'pending'
+    check (status in ('pending', 'confirmed', 'cancelled', 'completed', 'no_show')),
+
+  -- Timestamps
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  confirmed_at timestamptz,
+
+  -- Source tracking
+  source text default 'instagram_dm',
+  instagram_sender_id text
+);
+
+-- Indexes for fast dashboard queries
+create index if not exists reservations_user_id_idx on public.reservations(user_id);
+create index if not exists reservations_date_idx on public.reservations(reservation_date);
+create index if not exists reservations_status_idx on public.reservations(status);
+create index if not exists reservations_conversation_idx on public.reservations(conversation_id);
+create index if not exists reservations_user_date_idx on public.reservations(user_id, reservation_date);
+
+-- Enable RLS
+alter table public.reservations enable row level security;
+
+-- RLS Policies for reservations
+create policy "Reservations sind nur für Besitzer sichtbar"
+  on public.reservations
+  for select using (auth.uid() = user_id);
+
+create policy "Besitzer dürfen Reservations bearbeiten"
+  on public.reservations
+  for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Besitzer dürfen Reservations erstellen"
+  on public.reservations
+  for insert with check (auth.uid() = user_id);
+
+create policy "Besitzer dürfen Reservations löschen"
+  on public.reservations
+  for delete using (auth.uid() = user_id);

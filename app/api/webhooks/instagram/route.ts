@@ -15,6 +15,20 @@ import {
 import { findMatchingFlow, parseQuickReplyPayload } from "../../../../lib/webhook/flowMatcher";
 import { executeFlowNode, handleQuickReplySelection, handleFreeTextInput } from "../../../../lib/webhook/flowExecutor";
 import { logger, createRequestLogger } from "../../../../lib/logger";
+import {
+  extractVariables,
+  extractName,
+  extractDate,
+  extractTime,
+  extractGuestCount,
+  mergeVariables,
+  ExtractedVariables,
+} from "../../../../lib/webhook/variableExtractor";
+import { ConversationMetadata } from "../../../../lib/flowTypes";
+import {
+  canCreateReservation,
+  createReservationFromVariables,
+} from "../../../../lib/webhook/reservationCreator";
 
 /**
  * GET: Webhook subscription verification from Meta.
@@ -139,7 +153,7 @@ async function processMessagingEvent(
   // Get or create conversation
   let { data: conversation } = await supabase
     .from("conversations")
-    .select("id, current_flow_id, current_node_id")
+    .select("id, current_flow_id, current_node_id, metadata")
     .eq("integration_id", integration.id)
     .eq("instagram_sender_id", senderId)
     .single();
@@ -152,8 +166,9 @@ async function processMessagingEvent(
         integration_id: integration.id,
         instagram_sender_id: senderId,
         status: "active",
+        metadata: {},
       })
-      .select("id, current_flow_id, current_node_id")
+      .select("id, current_flow_id, current_node_id, metadata")
       .single();
 
     if (convError) {
@@ -184,6 +199,67 @@ async function processMessagingEvent(
     instagramMessageId = event.postback.mid;
     quickReplyPayload = event.postback.payload;
     messageType = "quick_reply";
+  }
+
+  // Extract and merge variables from the incoming message
+  const existingMetadata = (conversation.metadata || {}) as ConversationMetadata;
+  const existingVariables = existingMetadata.variables || {};
+
+  // Extract variables from the message text
+  let newVariables: ExtractedVariables = {};
+  if (messageText) {
+    // Try general extraction first
+    newVariables = extractVariables(messageText, {});
+
+    // If no name was found but message looks like a name, extract it
+    if (!existingVariables.name && !newVariables.name) {
+      const extractedName = extractName(messageText);
+      if (extractedName) {
+        newVariables.name = extractedName;
+      }
+    }
+
+    // Extract specific fields if not already present
+    if (!existingVariables.date && !newVariables.date) {
+      const extractedDate = extractDate(messageText);
+      if (extractedDate) {
+        newVariables.date = extractedDate;
+      }
+    }
+
+    if (!existingVariables.time && !newVariables.time) {
+      const extractedTime = extractTime(messageText);
+      if (extractedTime) {
+        newVariables.time = extractedTime;
+      }
+    }
+
+    if (!existingVariables.guestCount && !newVariables.guestCount) {
+      const extractedCount = extractGuestCount(messageText);
+      if (extractedCount) {
+        newVariables.guestCount = extractedCount;
+      }
+    }
+  }
+
+  // Merge new variables with existing ones
+  const mergedVariables = mergeVariables(existingVariables, newVariables);
+
+  // Update metadata if new variables were extracted
+  if (Object.keys(newVariables).length > 0) {
+    const updatedMetadata: ConversationMetadata = {
+      ...existingMetadata,
+      variables: mergedVariables,
+    };
+
+    await supabase
+      .from("conversations")
+      .update({ metadata: updatedMetadata })
+      .eq("id", conversation.id);
+
+    await reqLogger.info("webhook", "Variables extracted from message", {
+      metadata: { newVariables, mergedVariables },
+    });
   }
 
   // Check for duplicate message (idempotency)
@@ -236,7 +312,8 @@ async function processMessagingEvent(
           quickReplyPayload,
           flow.nodes,
           flow.edges,
-          parsed.flowId
+          parsed.flowId,
+          mergedVariables
         );
         matchedFlowId = parsed.flowId;
         matchedNodeId = parsed.nodeId;
@@ -258,7 +335,8 @@ async function processMessagingEvent(
         conversation.current_node_id,
         currentFlow.nodes,
         currentFlow.edges,
-        conversation.current_flow_id
+        conversation.current_flow_id,
+        mergedVariables
       );
 
       if (freeTextResult) {
@@ -271,6 +349,7 @@ async function processMessagingEvent(
             flowId: conversation.current_flow_id,
             fromNode: conversation.current_node_id,
             toNode: matchedNodeId,
+            variables: mergedVariables,
           },
         });
       }
@@ -286,7 +365,8 @@ async function processMessagingEvent(
         matchedFlow.startNodeId,
         matchedFlow.nodes,
         matchedFlow.edges,
-        matchedFlow.flowId
+        matchedFlow.flowId,
+        mergedVariables
       );
       matchedFlowId = matchedFlow.flowId;
       matchedNodeId = matchedFlow.startNodeId;
@@ -296,6 +376,7 @@ async function processMessagingEvent(
           flowId: matchedFlow.flowId,
           flowName: matchedFlow.flowName,
           triggerId: matchedFlow.triggerId,
+          variables: mergedVariables,
         },
       });
     }
@@ -352,6 +433,46 @@ async function processMessagingEvent(
           nodeId: matchedNodeId,
         },
       });
+
+      // Create reservation automatically when flow ends with complete data
+      if (flowResponse.isEndOfFlow && canCreateReservation(mergedVariables)) {
+        const reservationResult = await createReservationFromVariables(
+          userId,
+          conversation.id,
+          matchedFlowId,
+          mergedVariables,
+          senderId
+        );
+
+        if (reservationResult.success) {
+          // Update conversation metadata with reservation ID
+          const finalMetadata: ConversationMetadata = {
+            ...existingMetadata,
+            variables: mergedVariables,
+            reservationId: reservationResult.reservationId,
+            flowCompleted: true,
+          };
+
+          await supabase
+            .from("conversations")
+            .update({ metadata: finalMetadata })
+            .eq("id", conversation.id);
+
+          await reqLogger.info("webhook", "Reservation created from flow", {
+            metadata: {
+              reservationId: reservationResult.reservationId,
+              variables: mergedVariables,
+            },
+          });
+        } else {
+          await reqLogger.warn("webhook", "Could not create reservation", {
+            metadata: {
+              missingFields: reservationResult.missingFields,
+              error: reservationResult.error,
+            },
+          });
+        }
+      }
     } else {
       await reqLogger.error("webhook", `Failed to send response: ${sendResult.error}`);
     }

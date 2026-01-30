@@ -35,6 +35,7 @@ import {
   X,
 } from "lucide-react";
 import FlowBuilderCanvas from "./FlowBuilderCanvas";
+import FlowSimulator from "./FlowSimulator";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import {
   defaultNodes,
@@ -1343,42 +1344,13 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           )}
 
           {inspectorTab === "preview" && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-500">
-                Vorschau simuliert die aktuelle Nachricht mit Buttons.
-              </p>
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700">
-                {selectedNode ? (
-                  <div className="space-y-3 rounded-2xl bg-slate-900 p-4 text-white">
-                    <p>{selectedNode.data?.text ?? "Keine Nachricht"}</p>
-                    {selectedNode.data?.imageUrl ? (
-                      <div className="relative mt-2 h-40 w-full overflow-hidden rounded-2xl border border-white/10">
-                        <Image
-                          src={selectedNode.data.imageUrl}
-                          alt="Preview"
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
-                    ) : null}
-                    {selectedNodeReplies.length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {selectedNodeReplies.map((reply) => (
-                          <span
-                            key={reply.id}
-                            className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold"
-                          >
-                            {reply.label || "Button"}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  "Wähle einen Node, um die Ausgabe zu sehen."
-                )}
-              </div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <FlowSimulator
+                nodes={nodes}
+                edges={edges}
+                triggers={triggers}
+                onNodeSelect={setSelectedNodeId}
+              />
             </div>
           )}
 

@@ -41,3 +41,22 @@ export type FlowExport = {
   edges: any[];
   metadata: FlowMetadata;
 };
+
+// Conversation metadata for storing extracted variables
+export type ConversationVariables = {
+  name?: string;
+  date?: string;
+  time?: string;
+  guestCount?: number;
+  phone?: string;
+  email?: string;
+  specialRequests?: string;
+  [key: string]: string | number | undefined;
+};
+
+export type ConversationMetadata = {
+  variables?: ConversationVariables;
+  reservationId?: string;
+  flowCompleted?: boolean;
+  [key: string]: unknown;
+};

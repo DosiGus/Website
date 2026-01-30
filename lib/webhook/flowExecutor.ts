@@ -1,4 +1,5 @@
-import { FlowNodeData, FlowQuickReply } from "../flowTypes";
+import { FlowNodeData, FlowQuickReply, ConversationVariables } from "../flowTypes";
+import { substituteVariables } from "./variableSubstitutor";
 
 export type FlowResponse = {
   text: string;
@@ -26,12 +27,14 @@ type FlowEdge = {
 
 /**
  * Executes a flow node and generates a response.
+ * @param variables - Optional conversation variables for placeholder substitution
  */
 export function executeFlowNode(
   nodeId: string,
   nodes: FlowNode[],
   edges: FlowEdge[],
-  flowId: string
+  flowId: string,
+  variables: ConversationVariables = {}
 ): FlowResponse | null {
   const node = nodes.find((n) => n.id === nodeId);
 
@@ -41,7 +44,9 @@ export function executeFlowNode(
   }
 
   const nodeData = node.data;
-  const text = nodeData.text || nodeData.label || "";
+  // Apply variable substitution to the text
+  const rawText = nodeData.text || nodeData.label || "";
+  const text = substituteVariables(rawText, variables);
 
   // Find outgoing edges to determine next node(s)
   const outgoingEdges = edges.filter((e) => e.source === nodeId);
@@ -93,25 +98,27 @@ export function executeFlowNode(
 
 /**
  * Handles a quick reply selection and returns the next node's response.
+ * @param variables - Optional conversation variables for placeholder substitution
  */
 export function handleQuickReplySelection(
   selectedPayload: string,
   nodes: FlowNode[],
   edges: FlowEdge[],
-  flowId: string
+  flowId: string,
+  variables: ConversationVariables = {}
 ): FlowResponse | null {
   // Parse the payload to get the target node ID
   const match = selectedPayload.match(/^flow:([^:]+):node:(.+)$/);
 
   if (match && match[1] === flowId) {
     const targetNodeId = match[2];
-    return executeFlowNode(targetNodeId, nodes, edges, flowId);
+    return executeFlowNode(targetNodeId, nodes, edges, flowId, variables);
   }
 
   // Payload might be a direct node ID (legacy format)
   const nodeExists = nodes.some((n) => n.id === selectedPayload);
   if (nodeExists) {
-    return executeFlowNode(selectedPayload, nodes, edges, flowId);
+    return executeFlowNode(selectedPayload, nodes, edges, flowId, variables);
   }
 
   return null;
@@ -133,12 +140,14 @@ export type FreeTextResult = {
 /**
  * Handles free text input when the user is at a node that expects text (no quick replies).
  * Returns the next node's response if the current node has a single outgoing edge.
+ * @param variables - Optional conversation variables for placeholder substitution
  */
 export function handleFreeTextInput(
   currentNodeId: string,
   nodes: FlowNode[],
   edges: FlowEdge[],
-  flowId: string
+  flowId: string,
+  variables: ConversationVariables = {}
 ): FreeTextResult | null {
   const currentNode = nodes.find((n) => n.id === currentNodeId);
 
@@ -164,8 +173,8 @@ export function handleFreeTextInput(
     return null;
   }
 
-  // Execute the next node
-  const response = executeFlowNode(nextNodeId, nodes, edges, flowId);
+  // Execute the next node with variables
+  const response = executeFlowNode(nextNodeId, nodes, edges, flowId, variables);
 
   if (!response) {
     return null;
