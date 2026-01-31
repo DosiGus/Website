@@ -509,9 +509,45 @@ async function processMessagingEvent(
       });
 
       const reservationAlreadyExists = Boolean(existingMetadata?.reservationId);
+
+      // Check if the current node is a confirmation node (multiple naming conventions)
+      const confirmationNodeIds = [
+        "confirmed",
+        "confirmation",
+        "bestätigung",
+        "bestaetigung",
+        "bestaetigt",
+        "bestätigt",
+        "abschluss",
+        "fertig",
+        "done",
+        "complete",
+        "end",
+        "ende",
+      ];
+      const isConfirmationNode = matchedNodeId
+        ? confirmationNodeIds.some(id =>
+            matchedNodeId.toLowerCase().includes(id.toLowerCase())
+          )
+        : false;
+
       const shouldCreateReservation =
         !reservationAlreadyExists &&
-        (flowResponse.isEndOfFlow || matchedNodeId === "confirmed");
+        (flowResponse.isEndOfFlow || isConfirmationNode);
+
+      // Log reservation check details for debugging
+      await reqLogger.info("webhook", "Reservation check", {
+        metadata: {
+          reservationAlreadyExists,
+          isEndOfFlow: flowResponse.isEndOfFlow,
+          isConfirmationNode,
+          matchedNodeId,
+          shouldCreateReservation,
+          canCreate: canCreateReservation(mergedVariables),
+          missingFields: getMissingReservationFields(mergedVariables),
+          variables: mergedVariables,
+        },
+      });
 
       if (shouldCreateReservation && canCreateReservation(mergedVariables)) {
         const reservationResult = await createReservationFromVariables(
