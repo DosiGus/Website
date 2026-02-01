@@ -524,6 +524,11 @@ async function processMessagingEvent(
         "complete",
         "end",
         "ende",
+        "danke",
+        "thanks",
+        "thank",
+        "success",
+        "erfolgreich",
       ];
       const isConfirmationNode = matchedNodeId
         ? confirmationNodeIds.some(id =>
@@ -531,9 +536,43 @@ async function processMessagingEvent(
           )
         : false;
 
+      // Check if the quick reply payload indicates confirmation
+      const confirmationPayloads = [
+        "confirm",
+        "bestätigen",
+        "bestaetigen",
+        "ja",
+        "yes",
+        "ok",
+        "buchen",
+        "reservieren",
+        "absenden",
+        "senden",
+      ];
+      const isConfirmationPayload = quickReplyPayload
+        ? confirmationPayloads.some(p =>
+            quickReplyPayload.toLowerCase().includes(p.toLowerCase())
+          )
+        : false;
+
+      // Check if all required reservation data is present and this looks like a final step
+      const hasAllReservationData = canCreateReservation(mergedVariables);
+      const looksLikeFinalStep =
+        hasAllReservationData &&
+        (flowResponse.isEndOfFlow ||
+          flowResponse.quickReplies.length === 0 ||
+          (flowResponse.text &&
+            (flowResponse.text.toLowerCase().includes("bestätigt") ||
+              flowResponse.text.toLowerCase().includes("reservierung") ||
+              flowResponse.text.toLowerCase().includes("vielen dank") ||
+              flowResponse.text.toLowerCase().includes("erfolgreich"))));
+
       const shouldCreateReservation =
         !reservationAlreadyExists &&
-        (flowResponse.isEndOfFlow || isConfirmationNode);
+        (flowResponse.isEndOfFlow ||
+          isConfirmationNode ||
+          isConfirmationPayload ||
+          looksLikeFinalStep);
 
       // Log reservation check details for debugging
       await reqLogger.info("webhook", "Reservation check", {
@@ -541,7 +580,12 @@ async function processMessagingEvent(
           reservationAlreadyExists,
           isEndOfFlow: flowResponse.isEndOfFlow,
           isConfirmationNode,
+          isConfirmationPayload,
+          looksLikeFinalStep,
+          hasAllReservationData,
           matchedNodeId,
+          quickReplyPayload,
+          responseText: flowResponse.text?.slice(0, 100),
           shouldCreateReservation,
           canCreate: canCreateReservation(mergedVariables),
           missingFields: getMissingReservationFields(mergedVariables),
