@@ -425,6 +425,121 @@ async function processMessagingEvent(
 
   // If still no response, try to match a new flow
   if (!flowResponse && messageText) {
+    // Handle special payloads for existing reservation management
+    if (quickReplyPayload === "CANCEL_EXISTING_RESERVATION") {
+      // User wants to cancel their existing reservation
+      const { data: existingRes } = await supabase
+        .from("reservations")
+        .select("id, guest_name, reservation_date, reservation_time")
+        .eq("instagram_sender_id", senderId)
+        .eq("user_id", userId)
+        .in("status", ["pending", "confirmed"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (existingRes) {
+        await supabase
+          .from("reservations")
+          .update({ status: "cancelled" })
+          .eq("id", existingRes.id);
+
+        const cancelText = `✅ Deine Reservierung wurde storniert.\n\nFalls du eine neue Reservierung machen möchtest, schreib einfach "Reservieren" oder "Tisch buchen".`;
+
+        await sendInstagramMessage({
+          recipientId: senderId,
+          text: cancelText,
+          quickReplies: [
+            { label: "Neue Reservierung", payload: "NEUE_RESERVIERUNG" },
+          ],
+          accessToken,
+        });
+
+        await reqLogger.info("webhook", "Reservation cancelled by user", {
+          metadata: { reservationId: existingRes.id },
+        });
+        return;
+      }
+    }
+
+    if (quickReplyPayload === "KEEP_EXISTING_RESERVATION") {
+      const keepText = `👍 Alles klar! Deine bestehende Reservierung bleibt unverändert.\n\nFalls du Fragen hast, schreib uns einfach!`;
+
+      await sendInstagramMessage({
+        recipientId: senderId,
+        text: keepText,
+        quickReplies: [],
+        accessToken,
+      });
+      return;
+    }
+
+    // Check if user already has an active reservation (before starting a new flow)
+    const forceNewReservation = quickReplyPayload === "NEUE_RESERVIERUNG" ||
+                                 quickReplyPayload === "FORCE_NEW_RESERVATION";
+
+    // If user clicked "Neue Reservierung", treat it as a reservation request
+    if (forceNewReservation) {
+      messageText = "reservieren"; // Trigger the reservation flow
+      // Clear existing variables for fresh reservation
+      mergedVariables = {};
+      const clearedMetadata: ConversationMetadata = {
+        ...existingMetadata,
+        variables: {},
+        reservationId: undefined,
+        flowCompleted: undefined,
+      };
+      await supabase
+        .from("conversations")
+        .update({ metadata: clearedMetadata, current_flow_id: null, current_node_id: null })
+        .eq("id", conversation.id);
+    }
+
+    if (!forceNewReservation) {
+      const { data: existingReservation } = await supabase
+        .from("reservations")
+        .select("id, guest_name, reservation_date, reservation_time, guest_count, status")
+        .eq("instagram_sender_id", senderId)
+        .eq("user_id", userId)
+        .in("status", ["pending", "confirmed"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (existingReservation) {
+        // Format date for German display
+        const [year, month, day] = existingReservation.reservation_date.split("-");
+        const formattedDate = `${day}.${month}.${year}`;
+
+        const existingResText = `📋 Du hast bereits eine aktive Reservierung:\n\n` +
+          `👤 Name: ${existingReservation.guest_name}\n` +
+          `📅 Datum: ${formattedDate}\n` +
+          `⏰ Uhrzeit: ${existingReservation.reservation_time}\n` +
+          `👥 Personen: ${existingReservation.guest_count}\n` +
+          `📌 Status: ${existingReservation.status === "confirmed" ? "Bestätigt" : "Ausstehend"}\n\n` +
+          `Was möchtest du tun?`;
+
+        await sendInstagramMessage({
+          recipientId: senderId,
+          text: existingResText,
+          quickReplies: [
+            { label: "Stornieren", payload: "CANCEL_EXISTING_RESERVATION" },
+            { label: "Behalten", payload: "KEEP_EXISTING_RESERVATION" },
+            { label: "Neue Reservierung", payload: "FORCE_NEW_RESERVATION" },
+          ],
+          accessToken,
+        });
+
+        await reqLogger.info("webhook", "User has existing reservation, showing options", {
+          metadata: {
+            existingReservationId: existingReservation.id,
+            status: existingReservation.status,
+          },
+        });
+        return;
+      }
+    }
+
     const matchedFlow = await findMatchingFlow(userId, messageText);
 
     if (matchedFlow) {
