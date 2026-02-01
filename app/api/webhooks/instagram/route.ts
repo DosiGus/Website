@@ -207,18 +207,15 @@ async function processMessagingEvent(
   const existingVariables = existingMetadata.variables || {};
 
   // Extract variables from the message text
+  // NOTE: We only extract name when explicitly asked (at ask-name node)
+  // to avoid capturing trigger messages like "Hallo" or "Reservieren" as names
   let newVariables: ExtractedVariables = {};
   if (messageText) {
-    // Try general extraction first
+    // Try general extraction first (date, time, phone, email, guestCount)
     newVariables = extractVariables(messageText, {});
 
-    // If no name was found but message looks like a name, extract it
-    if (!existingVariables.name && !newVariables.name) {
-      const extractedName = extractName(messageText);
-      if (extractedName) {
-        newVariables.name = extractedName;
-      }
-    }
+    // DO NOT extract name automatically from every message!
+    // Names are only extracted when the current node is asking for a name (see overrides below)
 
     // Extract specific fields if not already present
     if (!existingVariables.date && !newVariables.date) {
@@ -250,35 +247,59 @@ async function processMessagingEvent(
   const overrideVariables: ExtractedVariables = {};
   if (messageText && conversation.current_node_id) {
     const nodeKey = conversation.current_node_id.toLowerCase();
+    const trimmedMessage = messageText.trim();
 
+    // When asking for name: use the entire message as the name
+    // (user is expected to just type their name)
     if (nodeKey.includes("name")) {
-      const extractedName = extractName(messageText);
-      if (extractedName) overrideVariables.name = extractedName;
+      // First try structured extraction
+      const extractedName = extractName(trimmedMessage);
+      if (extractedName) {
+        overrideVariables.name = extractedName;
+      } else if (trimmedMessage.length > 0 && trimmedMessage.length < 100) {
+        // If no structured name found, use the whole message as name
+        // (as long as it's reasonable length)
+        overrideVariables.name = trimmedMessage;
+      }
     }
 
     if (nodeKey.includes("date")) {
-      const extractedDate = extractDate(messageText);
+      const extractedDate = extractDate(trimmedMessage);
       if (extractedDate) overrideVariables.date = extractedDate;
     }
 
     if (nodeKey.includes("time")) {
-      const extractedTime = extractTime(messageText);
+      const extractedTime = extractTime(trimmedMessage);
       if (extractedTime) overrideVariables.time = extractedTime;
     }
 
     if (nodeKey.includes("guest")) {
-      const extractedCount = extractGuestCount(messageText);
+      const extractedCount = extractGuestCount(trimmedMessage);
       if (extractedCount) overrideVariables.guestCount = extractedCount;
     }
 
-    if (nodeKey.includes("phone")) {
-      const extractedPhone = extractVariables(messageText, {}).phone;
-      if (extractedPhone) overrideVariables.phone = extractedPhone;
+    // When asking for phone: accept direct phone number input
+    // Clean up the number (remove spaces, dashes) and use it
+    if (nodeKey.includes("phone") || nodeKey.includes("telefon") || nodeKey.includes("nummer")) {
+      // First try structured extraction
+      const extractedPhone = extractVariables(trimmedMessage, {}).phone;
+      if (extractedPhone) {
+        overrideVariables.phone = extractedPhone;
+      } else {
+        // If no structured phone found, try to clean the message as a phone number
+        const cleanedPhone = trimmedMessage.replace(/[\s\-\/\(\)]/g, "");
+        // Check if it looks like a phone number (mostly digits, maybe starting with +)
+        if (/^\+?[\d]{6,15}$/.test(cleanedPhone)) {
+          overrideVariables.phone = cleanedPhone;
+        }
+      }
     }
 
-    if (nodeKey.includes("special") || nodeKey.includes("notes")) {
-      const trimmed = messageText.trim();
-      if (trimmed) overrideVariables.specialRequests = trimmed;
+    // When asking for special requests/wishes: use the entire message
+    if (nodeKey.includes("special") || nodeKey.includes("wunsch") || nodeKey.includes("wünsch") || nodeKey.includes("notes") || nodeKey.includes("notiz")) {
+      if (trimmedMessage.length > 0) {
+        overrideVariables.specialRequests = trimmedMessage;
+      }
     }
   }
 
