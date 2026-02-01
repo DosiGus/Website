@@ -203,8 +203,9 @@ async function processMessagingEvent(
   }
 
   // Extract and merge variables from the incoming message
-  const existingMetadata = (conversation.metadata || {}) as ConversationMetadata;
-  const existingVariables = existingMetadata.variables || {};
+  // NOTE: This is mutable because it may be reset when a new flow starts
+  let existingMetadata = (conversation.metadata || {}) as ConversationMetadata;
+  let existingVariables = existingMetadata.variables || {};
 
   // Extract variables from the message text
   // NOTE: We only extract name when explicitly asked (at ask-name node)
@@ -504,16 +505,20 @@ async function processMessagingEvent(
       messageText = "reservieren"; // Trigger the reservation flow
       // Clear existing variables for fresh reservation
       mergedVariables = {};
-      const clearedMetadata: ConversationMetadata = {
-        ...existingMetadata,
+      existingVariables = {};
+      existingMetadata = {
         variables: {},
         reservationId: undefined,
         flowCompleted: undefined,
       };
       await supabase
         .from("conversations")
-        .update({ metadata: clearedMetadata, current_flow_id: null, current_node_id: null })
+        .update({ metadata: existingMetadata, current_flow_id: null, current_node_id: null })
         .eq("id", conversation.id);
+
+      await reqLogger.info("webhook", "User requested new reservation, metadata cleared", {
+        metadata: { previousReservationId: existingMetadata.reservationId },
+      });
     }
 
     if (!forceNewReservation) {
@@ -566,19 +571,25 @@ async function processMessagingEvent(
     if (matchedFlow) {
       // Reset variables and reservationId when starting a NEW flow
       // This ensures old reservation data doesn't block new reservations
+      const previousReservationId = existingMetadata.reservationId;
       mergedVariables = {};
-      const resetMetadata: ConversationMetadata = {
+      existingVariables = {};
+      existingMetadata = {
         variables: {},
         reservationId: undefined,
         flowCompleted: undefined,
       };
       await supabase
         .from("conversations")
-        .update({ metadata: resetMetadata, current_flow_id: null, current_node_id: null })
+        .update({ metadata: existingMetadata, current_flow_id: null, current_node_id: null })
         .eq("id", conversation.id);
 
       await reqLogger.info("webhook", "New flow started, metadata reset", {
-        metadata: { flowId: matchedFlow.flowId, flowName: matchedFlow.flowName },
+        metadata: {
+          flowId: matchedFlow.flowId,
+          flowName: matchedFlow.flowName,
+          previousReservationId,
+        },
       });
 
       flowResponse = executeFlowNode(
