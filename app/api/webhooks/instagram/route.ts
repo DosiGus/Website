@@ -508,7 +508,32 @@ async function processMessagingEvent(
         },
       });
 
-      const reservationAlreadyExists = Boolean(existingMetadata?.reservationId);
+      // Check if reservation actually exists in database (not just in metadata)
+      let reservationAlreadyExists = false;
+      if (existingMetadata?.reservationId) {
+        const { data: existingReservation } = await supabase
+          .from("reservations")
+          .select("id")
+          .eq("id", existingMetadata.reservationId)
+          .single();
+        reservationAlreadyExists = Boolean(existingReservation);
+
+        // If metadata has reservationId but reservation doesn't exist, clean up metadata
+        if (!existingReservation) {
+          await reqLogger.info("webhook", "Cleaning up orphaned reservationId from metadata", {
+            metadata: { orphanedReservationId: existingMetadata.reservationId },
+          });
+          const cleanedMetadata: ConversationMetadata = {
+            ...existingMetadata,
+            reservationId: undefined,
+            flowCompleted: undefined,
+          };
+          await supabase
+            .from("conversations")
+            .update({ metadata: cleanedMetadata })
+            .eq("id", conversation.id);
+        }
+      }
 
       // Check if the current node is a confirmation node (multiple naming conventions)
       const confirmationNodeIds = [
