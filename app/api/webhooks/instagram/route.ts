@@ -723,18 +723,32 @@ async function processMessagingEvent(
 
       // Check if all required reservation data is present and this looks like a final step
       const hasAllReservationData = canCreateReservation(mergedVariables);
+
+      // List of nodes that are still collecting data - don't create reservation here
+      const dataCollectionNodes = [
+        "ask-name", "ask-phone", "ask-special", "ask-date", "ask-time", "ask-guests",
+        "ask-date-custom", "ask-time-custom", "ask-guests-large",
+        "special-allergy", "special-occasion"
+      ];
+      const isDataCollectionNode = matchedNodeId
+        ? dataCollectionNodes.some(n => matchedNodeId.toLowerCase().includes(n.toLowerCase().replace("ask-", "")))
+        : false;
+
+      // Only consider it a final step if the response text explicitly confirms the reservation
+      // AND we're not at a data collection node
       const looksLikeFinalStep =
         hasAllReservationData &&
-        (flowResponse.isEndOfFlow ||
-          flowResponse.quickReplies.length === 0 ||
-          (flowResponse.text &&
-            (flowResponse.text.toLowerCase().includes("bestätigt") ||
-              flowResponse.text.toLowerCase().includes("reservierung") ||
-              flowResponse.text.toLowerCase().includes("vielen dank") ||
-              flowResponse.text.toLowerCase().includes("erfolgreich"))));
+        !isDataCollectionNode &&
+        flowResponse.isEndOfFlow ||
+        (flowResponse.text &&
+          !isDataCollectionNode &&
+          (flowResponse.text.toLowerCase().includes("reservierung ist bestätigt") ||
+            flowResponse.text.toLowerCase().includes("vielen dank") ||
+            flowResponse.text.toLowerCase().includes("erfolgreich")));
 
       const shouldCreateReservation =
         !reservationAlreadyExists &&
+        !isDataCollectionNode &&
         (flowResponse.isEndOfFlow ||
           isConfirmationNode ||
           isConfirmationPayload ||
