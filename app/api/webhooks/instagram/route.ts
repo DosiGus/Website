@@ -564,6 +564,23 @@ async function processMessagingEvent(
     const matchedFlow = await findMatchingFlow(userId, messageText);
 
     if (matchedFlow) {
+      // Reset variables and reservationId when starting a NEW flow
+      // This ensures old reservation data doesn't block new reservations
+      mergedVariables = {};
+      const resetMetadata: ConversationMetadata = {
+        variables: {},
+        reservationId: undefined,
+        flowCompleted: undefined,
+      };
+      await supabase
+        .from("conversations")
+        .update({ metadata: resetMetadata, current_flow_id: null, current_node_id: null })
+        .eq("id", conversation.id);
+
+      await reqLogger.info("webhook", "New flow started, metadata reset", {
+        metadata: { flowId: matchedFlow.flowId, flowName: matchedFlow.flowName },
+      });
+
       flowResponse = executeFlowNode(
         matchedFlow.startNodeId,
         matchedFlow.nodes,
@@ -645,27 +662,38 @@ async function processMessagingEvent(
       });
 
       // Check if reservation actually exists in database (not just in metadata)
+      // AND belongs to the current conversation AND is still active (pending/confirmed)
       let reservationAlreadyExists = false;
       if (existingMetadata?.reservationId) {
         const { data: existingReservation } = await supabase
           .from("reservations")
-          .select("id")
+          .select("id, conversation_id, status")
           .eq("id", existingMetadata.reservationId)
           .single();
-        reservationAlreadyExists = Boolean(existingReservation);
 
-        // If metadata has reservationId but reservation doesn't exist, clean up metadata
-        // IMPORTANT: Use mergedVariables to preserve phone, specialRequests, etc.
-        if (!existingReservation) {
-          await reqLogger.info("webhook", "Cleaning up orphaned reservationId from metadata", {
+        // Only consider it "already exists" if:
+        // 1. The reservation exists
+        // 2. It belongs to THIS conversation
+        // 3. It's still active (pending or confirmed)
+        const isActiveReservation = Boolean(existingReservation &&
+          existingReservation.conversation_id === conversation.id &&
+          (existingReservation.status === "pending" || existingReservation.status === "confirmed"));
+
+        reservationAlreadyExists = isActiveReservation;
+
+        // If metadata has reservationId but reservation doesn't exist or is inactive, clean up metadata
+        if (!isActiveReservation) {
+          await reqLogger.info("webhook", "Cleaning up old/orphaned reservationId from metadata", {
             metadata: {
-              orphanedReservationId: existingMetadata.reservationId,
+              oldReservationId: existingMetadata.reservationId,
+              reason: !existingReservation ? "not_found" :
+                      existingReservation.conversation_id !== conversation.id ? "wrong_conversation" : "inactive",
               preservedVariables: mergedVariables,
             },
           });
           const cleanedMetadata: ConversationMetadata = {
             ...existingMetadata,
-            variables: mergedVariables, // Use current variables, not old ones!
+            variables: mergedVariables,
             reservationId: undefined,
             flowCompleted: undefined,
           };
