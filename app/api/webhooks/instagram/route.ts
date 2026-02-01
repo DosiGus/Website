@@ -655,12 +655,17 @@ async function processMessagingEvent(
         reservationAlreadyExists = Boolean(existingReservation);
 
         // If metadata has reservationId but reservation doesn't exist, clean up metadata
+        // IMPORTANT: Use mergedVariables to preserve phone, specialRequests, etc.
         if (!existingReservation) {
           await reqLogger.info("webhook", "Cleaning up orphaned reservationId from metadata", {
-            metadata: { orphanedReservationId: existingMetadata.reservationId },
+            metadata: {
+              orphanedReservationId: existingMetadata.reservationId,
+              preservedVariables: mergedVariables,
+            },
           });
           const cleanedMetadata: ConversationMetadata = {
             ...existingMetadata,
+            variables: mergedVariables, // Use current variables, not old ones!
             reservationId: undefined,
             flowCompleted: undefined,
           };

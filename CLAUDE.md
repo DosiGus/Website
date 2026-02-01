@@ -213,4 +213,4 @@ supabase/
 - **"Invalid redirect_uri"**: Check that the exact URL is in Meta's "Valid OAuth Redirect URIs"
 - **"User is not a test user"**: Add the Facebook account to App Roles → Test Users
 - **Permission denied**: Some permissions require App Review for production; use test users in dev mode
-- **Webhook not receiving**: Verify the webhook is subscribed to `messages` field in Meta Developer Portal
+- **Webhook not receiving**: Verify the webhook is subscribed to `messages` field in Meta Developer Portal1

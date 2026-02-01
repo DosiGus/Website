@@ -34,9 +34,9 @@ export type CreateReservationInput = {
   reservation_date: string;
   reservation_time: string;
   guest_count: number;
-  phone_number?: string;
-  email?: string;
-  special_requests?: string;
+  phone_number?: string | null;
+  email?: string | null;
+  special_requests?: string | null;
   conversation_id?: string;
   flow_id?: string;
   instagram_sender_id?: string;

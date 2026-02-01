@@ -54,20 +54,26 @@ export async function createReservationFromVariables(
   const supabase = createSupabaseServerClient();
 
   try {
+    // Log the incoming variables for debugging
+    console.log("Creating reservation with variables:", JSON.stringify(variables, null, 2));
+
     const input: CreateReservationInput = {
       guest_name: String(variables.name),
       reservation_date: parseDate(String(variables.date)),
       reservation_time: parseTime(String(variables.time)),
       guest_count: Number(variables.guestCount),
-      phone_number: variables.phone ? String(variables.phone) : undefined,
-      email: variables.email ? String(variables.email) : undefined,
+      phone_number: variables.phone ? String(variables.phone) : null,
+      email: variables.email ? String(variables.email) : null,
       special_requests: variables.specialRequests
         ? String(variables.specialRequests)
-        : undefined,
+        : null,
       conversation_id: conversationId,
       flow_id: flowId || undefined,
       instagram_sender_id: instagramSenderId,
     };
+
+    // Log what we're actually inserting
+    console.log("Reservation input:", JSON.stringify(input, null, 2));
 
     const { data, error } = await supabase
       .from("reservations")
