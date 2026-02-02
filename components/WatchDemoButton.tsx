@@ -2,17 +2,25 @@
 
 import { useState } from "react";
 
-export default function WatchDemoButton() {
+type WatchDemoButtonProps = {
+  className?: string;
+  label?: string;
+};
+
+export default function WatchDemoButton({ className, label = "Demo ansehen" }: WatchDemoButtonProps) {
   const [open, setOpen] = useState(false);
+
+  const baseClassName =
+    "inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/50 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-ink";
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center justify-center rounded-full px-6 py-3 text-base font-semibold text-white/80 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+        className={`${baseClassName} ${className ?? ""}`}
       >
-        Watch Demo
+        {label}
       </button>
       {open ? (
         <div

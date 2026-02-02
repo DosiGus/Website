@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 
 const navLinks = [
-  { href: "#features", label: "Funktionen" },
-  { href: "#how-it-works", label: "So funktioniert's" },
-  { href: "#industries", label: "Branchen" },
+  { href: "#outcomes", label: "Ergebnisse" },
+  { href: "#how", label: "So funktioniert's" },
+  { href: "#use-cases", label: "Branchen" },
+  { href: "#product", label: "Produkt" },
   { href: "/about", label: "Über uns" },
   { href: "/contact", label: "Support" },
 ];
@@ -21,7 +22,7 @@ export default function Navbar() {
           key={link.href}
           href={link.href}
           onClick={onNavigate}
-          className="transition hover:text-brand-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+          className="transition hover:text-brand-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
         >
           {link.label}
         </a>
@@ -30,7 +31,7 @@ export default function Navbar() {
           key={link.href}
           href={link.href}
           onClick={onNavigate}
-          className="transition hover:text-brand-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+          className="transition hover:text-brand-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
         >
           {link.label}
         </Link>
@@ -38,11 +39,11 @@ export default function Navbar() {
     );
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-slate-950/90 backdrop-blur">
+    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-ink/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
         <Link
           href="/"
-          className="text-lg font-semibold tracking-tight text-white transition hover:text-brand-light"
+          className="font-display text-lg font-semibold tracking-tight text-white transition hover:text-brand-light"
         >
           Wesponde
         </Link>
@@ -52,13 +53,13 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <Link
             href="/login"
-            className="hidden rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-brand hover:text-brand-light md:block"
+            className="hidden rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-white/50 hover:text-white md:block"
           >
             Login für Partner
           </Link>
           <a
             href="#beta"
-            className="hidden rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand/30 transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 md:inline-flex md:items-center"
+            className="hidden rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink shadow-lg shadow-white/20 transition hover:bg-sand md:inline-flex md:items-center"
           >
             Join Beta
           </a>
@@ -86,19 +87,19 @@ export default function Navbar() {
         </div>
       </div>
       {menuOpen ? (
-        <div className="border-t border-white/10 bg-slate-950/95 px-4 py-6 text-sm font-semibold text-slate-100 md:hidden">
+        <div className="border-t border-white/10 bg-ink/95 px-4 py-6 text-sm font-semibold text-slate-100 md:hidden">
           <div className="flex flex-col gap-4">{renderLinks(() => setMenuOpen(false))}</div>
           <div className="mt-6 flex flex-col gap-3">
             <Link
               href="/login"
-              className="rounded-full border border-white/20 px-4 py-2 text-center text-sm font-semibold text-slate-100 transition hover:border-brand hover:text-brand-light"
+              className="rounded-full border border-white/20 px-4 py-2 text-center text-sm font-semibold text-slate-100 transition hover:border-white/50 hover:text-white"
               onClick={() => setMenuOpen(false)}
             >
               Login für Partner
             </Link>
             <a
               href="#beta"
-              className="rounded-full bg-brand px-4 py-2 text-center text-sm font-semibold text-white shadow-lg shadow-brand/30 transition hover:bg-brand-dark"
+              className="rounded-full bg-white px-4 py-2 text-center text-sm font-semibold text-ink shadow-lg shadow-white/20 transition hover:bg-sand"
               onClick={() => setMenuOpen(false)}
             >
               Join Beta

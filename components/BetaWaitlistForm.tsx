@@ -42,14 +42,14 @@ export default function BetaWaitlistForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-3xl border border-slate-200 bg-white/80 p-8 shadow-xl shadow-brand/10 backdrop-blur"
+      className="space-y-5 rounded-[32px] border border-slate-200/70 bg-white/85 p-8 shadow-[0_30px_80px_-50px_rgba(15,17,22,0.45)] backdrop-blur"
     >
       <div>
         <label className="block text-sm font-semibold text-slate-600">Vollständiger Name</label>
         <input
           required
           name="name"
-          className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
           placeholder="Laura Weber"
         />
       </div>
@@ -59,7 +59,7 @@ export default function BetaWaitlistForm() {
           required
           type="email"
           name="email"
-          className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
           placeholder="laura@studio.co"
         />
       </div>
@@ -68,7 +68,7 @@ export default function BetaWaitlistForm() {
         <select
           required
           name="industry"
-          className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
           defaultValue=""
         >
           <option value="" disabled>
@@ -85,7 +85,7 @@ export default function BetaWaitlistForm() {
       <button
         type="submit"
         disabled={status === "loading"}
-        className="w-full rounded-2xl bg-brand px-5 py-3 text-base font-semibold text-white shadow-lg shadow-brand/30 transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-70"
+        className="w-full rounded-2xl bg-ink px-5 py-3 text-base font-semibold text-white shadow-lg shadow-ink/30 transition hover:bg-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-70"
       >
         {status === "loading" ? "Wird gesendet..." : "Join Beta"}
       </button>
@@ -101,7 +101,7 @@ export default function BetaWaitlistForm() {
       <p className="text-xs text-slate-500">
         Wir schützen deine Daten. Mit dem Absenden akzeptierst du unsere{" "}
         <a
-          className="font-semibold text-brand-dark hover:text-brand"
+          className="font-semibold text-ink hover:text-brand-dark"
           href="/privacy"
         >
           Datenschutzerklärung

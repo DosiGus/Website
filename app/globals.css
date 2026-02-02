@@ -3,12 +3,28 @@
 @tailwind utilities;
 
 :root {
-  --bg: #ffffff;
-  --fg: #0f172a;
+  --bg: #f7f2eb;
+  --fg: #0e1116;
 }
 html, body {
   height: 100%;
   scroll-behavior: smooth;
   background: var(--bg);
   color: var(--fg);
+}
+
+body {
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), serif;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+::selection {
+  background: rgba(55, 105, 255, 0.25);
 }
