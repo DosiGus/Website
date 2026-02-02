@@ -19,12 +19,12 @@
 
 | # | Task | Aufwand | Status |
 |---|------|---------|--------|
-| 1 | Error Handling im Webhook | 2-3 Tage | 📋 |
-| 2 | Dashboard echte Daten | 1 Tag | 📋 |
-| 3 | Token Expiry Warning | 1 Tag | 📋 |
-| 4 | Input Validation (Reservierungen) | 1 Tag | 📋 |
+| 1 | Error Handling im Webhook | 2-3 Tage | ✅ |
+| 2 | Dashboard echte Daten | 1 Tag | ✅ |
+| 3 | Token Expiry Warning | 1 Tag | ✅ |
+| 4 | Input Validation (Reservierungen) | 1 Tag | ✅ |
 | 5 | Rate Limiting | 1 Tag | 📋 |
-| 6 | Error Responses anonymisieren | 0.5 Tage | 📋 |
+| 6 | Error Responses anonymisieren | 0.5 Tage | ✅ |
 | 7 | Conversation History UI | 2-3 Tage | 📋 |
 
 **Total: ~10-12 Arbeitstage**

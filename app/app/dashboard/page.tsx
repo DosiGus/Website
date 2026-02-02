@@ -1,15 +1,13 @@
 import Link from "next/link";
 import FlowListClient from "../../../components/app/FlowListClient";
+import DashboardStats from "../../../components/app/DashboardStats";
+import TokenExpiryAlert from "../../../components/app/TokenExpiryAlert";
 
 export default function DashboardPage() {
-  const stats = [
-    { label: "Aktive Bots", value: "4" },
-    { label: "Verbundene Kanäle", value: "3" },
-    { label: "Automatisierte Antworten", value: "1.248" },
-  ];
-
   return (
     <div className="space-y-10">
+      <TokenExpiryAlert />
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm uppercase tracking-wide text-slate-400">Dashboard</p>
@@ -26,17 +24,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
-          >
-            <p className="text-sm text-slate-500">{stat.label}</p>
-            <p className="mt-3 text-3xl font-semibold text-slate-900">{stat.value}</p>
-          </div>
-        ))}
-      </section>
+      <DashboardStats />
 
       <section className="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">

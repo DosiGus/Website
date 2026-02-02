@@ -316,10 +316,14 @@ async function processMessagingEvent(
       variables: mergedVariables,
     };
 
-    await supabase
+    const { error: metaUpdateError } = await supabase
       .from("conversations")
       .update({ metadata: updatedMetadata })
       .eq("id", conversation.id);
+
+    if (metaUpdateError) {
+      await reqLogger.error("webhook", `Failed to update conversation metadata: ${metaUpdateError.message}`);
+    }
 
     await reqLogger.info("webhook", "Variables extracted from message", {
       metadata: { newVariables, overrideVariables, mergedVariables },
@@ -343,7 +347,7 @@ async function processMessagingEvent(
   }
 
   // Save incoming message
-  await supabase.from("messages").insert({
+  const { error: incomingMsgError } = await supabase.from("messages").insert({
     conversation_id: conversation.id,
     direction: "incoming",
     message_type: messageType,
@@ -353,6 +357,10 @@ async function processMessagingEvent(
     flow_id: conversation.current_flow_id,
     node_id: conversation.current_node_id,
   });
+
+  if (incomingMsgError) {
+    await reqLogger.error("webhook", `Failed to save incoming message: ${incomingMsgError.message}`);
+  }
 
   // Determine response
   let flowResponse = null;
@@ -461,10 +469,14 @@ async function processMessagingEvent(
         .single();
 
       if (existingRes) {
-        await supabase
+        const { error: cancelError } = await supabase
           .from("reservations")
           .update({ status: "cancelled" })
           .eq("id", existingRes.id);
+
+        if (cancelError) {
+          await reqLogger.error("webhook", `Failed to cancel reservation: ${cancelError.message}`);
+        }
 
         const cancelText = `✅ Deine Reservierung wurde storniert.\n\nFalls du eine neue Reservierung machen möchtest, schreib einfach "Reservieren" oder "Tisch buchen".`;
 
@@ -511,10 +523,14 @@ async function processMessagingEvent(
         reservationId: undefined,
         flowCompleted: undefined,
       };
-      await supabase
+      const { error: resetError1 } = await supabase
         .from("conversations")
         .update({ metadata: existingMetadata, current_flow_id: null, current_node_id: null })
         .eq("id", conversation.id);
+
+      if (resetError1) {
+        await reqLogger.error("webhook", `Failed to reset conversation for new reservation: ${resetError1.message}`);
+      }
 
       await reqLogger.info("webhook", "User requested new reservation, metadata cleared", {
         metadata: { previousReservationId: existingMetadata.reservationId },
@@ -579,10 +595,14 @@ async function processMessagingEvent(
         reservationId: undefined,
         flowCompleted: undefined,
       };
-      await supabase
+      const { error: resetError2 } = await supabase
         .from("conversations")
         .update({ metadata: existingMetadata, current_flow_id: null, current_node_id: null })
         .eq("id", conversation.id);
+
+      if (resetError2) {
+        await reqLogger.error("webhook", `Failed to reset conversation for new flow: ${resetError2.message}`);
+      }
 
       await reqLogger.info("webhook", "New flow started, metadata reset", {
         metadata: {
@@ -636,7 +656,7 @@ async function processMessagingEvent(
 
     if (sendResult.success) {
       // Save outgoing message
-      await supabase.from("messages").insert({
+      const { error: outgoingMsgError } = await supabase.from("messages").insert({
         conversation_id: conversation.id,
         direction: "outgoing",
         message_type: flowResponse.quickReplies.length > 0 ? "quick_reply" : "text",
@@ -646,9 +666,13 @@ async function processMessagingEvent(
         node_id: matchedNodeId,
       });
 
+      if (outgoingMsgError) {
+        await reqLogger.error("webhook", `Failed to save outgoing message: ${outgoingMsgError.message}`);
+      }
+
       // Update conversation state
       const storedNodeId = flowResponse.isEndOfFlow ? null : matchedNodeId;
-      await supabase
+      const { error: convUpdateError } = await supabase
         .from("conversations")
         .update({
           current_flow_id: matchedFlowId,
@@ -657,6 +681,10 @@ async function processMessagingEvent(
           status: flowResponse.isEndOfFlow ? "closed" : "active",
         })
         .eq("id", conversation.id);
+
+      if (convUpdateError) {
+        await reqLogger.error("webhook", `Failed to update conversation state: ${convUpdateError.message}`);
+      }
 
       await reqLogger.info("webhook", "Response sent successfully", {
         metadata: {
@@ -708,10 +736,14 @@ async function processMessagingEvent(
             reservationId: undefined,
             flowCompleted: undefined,
           };
-          await supabase
+          const { error: cleanupError } = await supabase
             .from("conversations")
             .update({ metadata: cleanedMetadata })
             .eq("id", conversation.id);
+
+          if (cleanupError) {
+            await reqLogger.error("webhook", `Failed to cleanup orphaned metadata: ${cleanupError.message}`);
+          }
         }
       }
 
@@ -830,10 +862,14 @@ async function processMessagingEvent(
             flowCompleted: true,
           };
 
-          await supabase
+          const { error: finalMetaError } = await supabase
             .from("conversations")
             .update({ metadata: finalMetadata })
             .eq("id", conversation.id);
+
+          if (finalMetaError) {
+            await reqLogger.error("webhook", `Failed to update final metadata: ${finalMetaError.message}`);
+          }
 
           await reqLogger.info("webhook", "Reservation created from flow", {
             metadata: {
@@ -866,9 +902,13 @@ async function processMessagingEvent(
     });
 
     // Update last_message_at even without response
-    await supabase
+    const { error: lastMsgError } = await supabase
       .from("conversations")
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", conversation.id);
+
+    if (lastMsgError) {
+      await reqLogger.error("webhook", `Failed to update last_message_at: ${lastMsgError.message}`);
+    }
   }
 }

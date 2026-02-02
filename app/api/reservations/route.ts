@@ -6,6 +6,12 @@ import {
   ReservationListResponse,
   ReservationStatus,
 } from "../../../lib/reservationTypes";
+import {
+  createReservationSchema,
+  updateReservationSchema,
+  reservationQuerySchema,
+  formatZodErrors,
+} from "../../../lib/validation/reservationSchema";
 
 /**
  * GET /api/reservations
@@ -16,13 +22,25 @@ export async function GET(request: Request) {
     const user = await requireUser(request);
     const { searchParams } = new URL(request.url);
 
-    // Parse query parameters
-    const status = searchParams.get("status") as ReservationStatus | null;
-    const date = searchParams.get("date");
-    const dateFrom = searchParams.get("dateFrom");
-    const dateTo = searchParams.get("dateTo");
-    const limit = parseInt(searchParams.get("limit") || "50", 10);
-    const offset = parseInt(searchParams.get("offset") || "0", 10);
+    // Parse and validate query parameters
+    const queryParams = {
+      status: searchParams.get("status") || undefined,
+      date: searchParams.get("date") || undefined,
+      dateFrom: searchParams.get("dateFrom") || undefined,
+      dateTo: searchParams.get("dateTo") || undefined,
+      limit: searchParams.get("limit") || undefined,
+      offset: searchParams.get("offset") || undefined,
+    };
+
+    const parseResult = reservationQuerySchema.safeParse(queryParams);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Ungültige Abfrageparameter", details: formatZodErrors(parseResult.error) },
+        { status: 400 }
+      );
+    }
+
+    const { status, date, dateFrom, dateTo, limit, offset } = parseResult.data;
 
     const supabase = createSupabaseServerClient();
 
@@ -55,7 +73,8 @@ export async function GET(request: Request) {
     const { data, error, count } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("Reservations GET error:", error);
+      return NextResponse.json({ error: "Fehler beim Laden der Reservierungen" }, { status: 500 });
     }
 
     const response: ReservationListResponse = {
@@ -68,10 +87,11 @@ export async function GET(request: Request) {
     return NextResponse.json(response);
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
+    console.error("Reservations GET unexpected error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Ein Fehler ist aufgetreten" },
       { status: 500 }
     );
   }
@@ -86,6 +106,15 @@ export async function POST(request: Request) {
     const user = await requireUser(request);
     const body = await request.json();
 
+    // Validate input
+    const parseResult = createReservationSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Ungültige Eingabe", details: formatZodErrors(parseResult.error) },
+        { status: 400 }
+      );
+    }
+
     const {
       guest_name,
       reservation_date,
@@ -94,18 +123,7 @@ export async function POST(request: Request) {
       phone_number,
       email,
       special_requests,
-    } = body;
-
-    // Validate required fields
-    if (!guest_name || !reservation_date || !reservation_time || !guest_count) {
-      return NextResponse.json(
-        {
-          error: "Missing required fields",
-          required: ["guest_name", "reservation_date", "reservation_time", "guest_count"],
-        },
-        { status: 400 }
-      );
-    }
+    } = parseResult.data;
 
     const supabase = createSupabaseServerClient();
 
@@ -116,26 +134,28 @@ export async function POST(request: Request) {
         guest_name,
         reservation_date,
         reservation_time,
-        guest_count: Number(guest_count),
-        phone_number: phone_number || null,
-        email: email || null,
-        special_requests: special_requests || null,
+        guest_count,
+        phone_number,
+        email,
+        special_requests,
         source: "manual",
       })
       .select()
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("Reservation POST error:", error);
+      return NextResponse.json({ error: "Fehler beim Erstellen der Reservierung" }, { status: 500 });
     }
 
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
+    console.error("Reservation POST unexpected error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Ein Fehler ist aufgetreten" },
       { status: 500 }
     );
   }
@@ -150,22 +170,30 @@ export async function PATCH(request: Request) {
     const user = await requireUser(request);
     const body = await request.json();
 
-    const { id, status, ...updates } = body;
-
-    if (!id) {
+    // Validate input
+    const parseResult = updateReservationSchema.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "Reservation ID is required" },
+        { error: "Ungültige Eingabe", details: formatZodErrors(parseResult.error) },
         { status: 400 }
       );
     }
 
+    const { id, status, ...updates } = parseResult.data;
+
     const supabase = createSupabaseServerClient();
 
-    // Build update object
+    // Build update object (only include defined values)
     const updateData: Record<string, unknown> = {
-      ...updates,
       updated_at: new Date().toISOString(),
     };
+
+    // Only add fields that are defined
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value !== undefined) {
+        updateData[key] = value;
+      }
+    });
 
     if (status) {
       updateData.status = status;
@@ -183,12 +211,13 @@ export async function PATCH(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("Reservation PATCH error:", error);
+      return NextResponse.json({ error: "Fehler beim Aktualisieren der Reservierung" }, { status: 500 });
     }
 
     if (!data) {
       return NextResponse.json(
-        { error: "Reservation not found" },
+        { error: "Reservierung nicht gefunden" },
         { status: 404 }
       );
     }
@@ -196,10 +225,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json(data);
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
+    console.error("Reservation PATCH unexpected error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Ein Fehler ist aufgetreten" },
       { status: 500 }
     );
   }
@@ -217,7 +247,16 @@ export async function DELETE(request: Request) {
 
     if (!id) {
       return NextResponse.json(
-        { error: "Reservation ID is required" },
+        { error: "Reservierungs-ID ist erforderlich" },
+        { status: 400 }
+      );
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json(
+        { error: "Ungültige Reservierungs-ID" },
         { status: 400 }
       );
     }
@@ -231,16 +270,18 @@ export async function DELETE(request: Request) {
       .eq("user_id", user.id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("Reservation DELETE error:", error);
+      return NextResponse.json({ error: "Fehler beim Löschen der Reservierung" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
+    console.error("Reservation DELETE unexpected error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Ein Fehler ist aufgetreten" },
       { status: 500 }
     );
   }

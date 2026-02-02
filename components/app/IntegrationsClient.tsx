@@ -172,6 +172,25 @@ export default function IntegrationsClient() {
 
   const metaStatusLabel = metaConnected ? "Verbunden" : "Nicht verbunden";
 
+  // Calculate days until token expires
+  const getTokenExpiryInfo = () => {
+    if (!metaIntegration?.expires_at) return null;
+
+    const expiresAt = new Date(metaIntegration.expires_at);
+    const now = new Date();
+    const diffMs = expiresAt.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    return {
+      daysUntilExpiry: diffDays,
+      expiresAt,
+      isExpired: diffDays <= 0,
+      isExpiringSoon: diffDays > 0 && diffDays <= 7,
+    };
+  };
+
+  const tokenExpiryInfo = getTokenExpiryInfo();
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -226,6 +245,44 @@ export default function IntegrationsClient() {
                 Instagram ID: {metaIntegration.instagram_id}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Token Expiry Warning */}
+        {metaConnected && tokenExpiryInfo?.isExpired && (
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm">
+            <div className="flex items-start gap-3">
+              <span className="text-xl">⚠️</span>
+              <div>
+                <div className="font-semibold text-rose-700">Token abgelaufen!</div>
+                <div className="text-rose-600">
+                  Dein Instagram-Zugang ist abgelaufen. Bitte verbinde deinen Account erneut,
+                  um weiterhin Nachrichten zu empfangen.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {metaConnected && tokenExpiryInfo?.isExpiringSoon && !tokenExpiryInfo?.isExpired && (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+            <div className="flex items-start gap-3">
+              <span className="text-xl">⏰</span>
+              <div>
+                <div className="font-semibold text-amber-700">
+                  Token läuft in {tokenExpiryInfo.daysUntilExpiry} {tokenExpiryInfo.daysUntilExpiry === 1 ? "Tag" : "Tagen"} ab
+                </div>
+                <div className="text-amber-600">
+                  Dein Instagram-Zugang läuft am{" "}
+                  {tokenExpiryInfo.expiresAt.toLocaleDateString("de-DE", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}{" "}
+                  ab. Bitte verbinde deinen Account erneut, um Unterbrechungen zu vermeiden.
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
