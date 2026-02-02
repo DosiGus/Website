@@ -1,83 +1,101 @@
 # Wesponde - Letzte Updates
 
-**Letzte Session:** 30. Januar 2026
-**Status:** Reservierungsflow stabil (Variablen, Summary, Speicherung), Webhook-Logging verbessert
+**Letzte Session:** 1. Februar 2026
+**Status:** Reservierungsflow komplett überarbeitet - Telefon & Sonderwünsche werden jetzt korrekt gespeichert
 
 ---
 
-## Was wurde gemacht (30. Januar 2026)
+## Was wurde gemacht (1. Februar 2026)
 
-### 1. Variable-System + Zusammenfassung (Erledigt)
-- User-Eingaben werden in `conversations.metadata.variables` gespeichert.
-- Platzhalter `{{date}}`, `{{time}}`, `{{guestCount}}`, `{{name}}`, `{{phone}}`, `{{email}}`, `{{specialRequests}}` werden beim Senden ersetzt.
-- Summary-Node bekommt automatisch echte Daten, auch wenn im Template keine Platzhalter stehen.
-- Restaurant-Template Summary wurde auf Platzhalter umgestellt.
+### 1. Reservierungs-Timing Fix (Erledigt ✅)
+- **Problem:** Reservierung wurde zu früh erstellt (sobald Name/Datum/Zeit/Gäste da waren) - BEVOR Telefon und Sonderwünsche eingegeben werden konnten
+- **Lösung:** Data-Collection-Nodes (ask-phone, ask-special, etc.) werden jetzt explizit ausgeschlossen
+- **Ergebnis:** Reservierung wird nur noch beim `confirmed` Node erstellt
 
-### 2. Reservierungen in DB (Erledigt)
-- Reservierung wird jetzt bei Bestätigung (`confirmed`) erstellt, nicht nur am Flow-Ende.
-- `reservationId` wird in Conversation-Metadata gespeichert.
-- Fehlende Felder werden geloggt, falls Daten unvollständig sind.
+### 2. Bestehende Reservierungen prüfen (Erledigt ✅)
+- **Problem:** Alte `reservationId` im Metadata blockierte neue Reservierungen
+- **Lösung:**
+  - `existingMetadata` wird jetzt bei Flow-Start korrekt zurückgesetzt
+  - Prüfung ob Reservierung zur aktuellen Conversation gehört UND noch aktiv ist
+- **Ergebnis:** User kann jetzt problemlos neue Reservierungen machen
 
-### 3. Webhook/Flow Stabilisierung (Erledigt)
-- Conversation speichert den *aktuellen* Node (nicht den nächsten).
-- Free-Text-Weiterführung funktioniert zuverlässig.
-- Zusätzliche Logs für Debugging (z.B. `expectsFreeText`, `storedNodeId`).
+### 3. Metadata-Verwaltung verbessert (Erledigt ✅)
+- `existingMetadata` von `const` zu `let` geändert
+- Wird bei Flow-Start und "Neue Reservierung" korrekt aktualisiert
+- Keine "Ghost"-Reservierungen mehr durch alte IDs
 
-### 4. FlowBuilder Test Mode (Erledigt)
-- Chat-Simulation im FlowBuilder vorhanden (`FlowSimulator`).
-
----
-
-## Status der offenen Punkte aus der letzten Session
-
-- Priorität 1: User-Daten in Zusammenfassung anzeigen -> **Erledigt**
-- Priorität 2: Reservierungen in DB speichern -> **Erledigt**
-- Priorität 3: Flow im FlowBuilder testen -> **Erledigt**
+### 4. MCP-Integration Setup (Erledigt ✅)
+- Supabase MCP verbunden
+- Vercel MCP verbunden
+- Direkte DB-Abfragen und Deployment-Management möglich
 
 ---
 
-## Was funktioniert jetzt
+## Status der Features
 
-1. Instagram DM startet Flow (Trigger)
-2. Quick Replies + Freitext laufen stabil durch
-3. Variablen werden korrekt überschrieben (z.B. Name, Datum, Uhrzeit)
-4. Zusammenfassung zeigt echte Daten
-5. Bestätigung erzeugt Reservierung in `reservations`
+### Erledigt ✅
+
+| Feature | Status | Beschreibung |
+|---------|--------|--------------|
+| Instagram OAuth | ✅ | Verbindung mit Instagram-Account |
+| Flow Builder | ✅ | Visueller Editor für Konversationsflows |
+| Flow Templates | ✅ | Vorgefertigte Templates (Restaurant, Salon, etc.) |
+| Flow Simulator | ✅ | Test-Modus im Browser |
+| Webhook-Verarbeitung | ✅ | Empfang und Verarbeitung von Instagram DMs |
+| Variable-Extraktion | ✅ | Name, Datum, Zeit, Gäste, Telefon, Wünsche |
+| Platzhalter-Ersetzung | ✅ | `{{name}}`, `{{date}}`, etc. in Nachrichten |
+| Zusammenfassung | ✅ | Summary-Node zeigt alle Daten |
+| Reservierung erstellen | ✅ | Automatisch bei Bestätigung |
+| Telefon speichern | ✅ | Wird jetzt korrekt in DB gespeichert |
+| Sonderwünsche speichern | ✅ | Wird jetzt korrekt in DB gespeichert |
+| Bestehende Reservierung prüfen | ✅ | User wird gefragt: Stornieren/Behalten/Neu |
+| Reservierungs-Dashboard | ✅ | UI zum Verwalten von Buchungen |
+| Logging | ✅ | Webhook-Events werden geloggt |
+
+### In Arbeit 🔄
+
+| Feature | Status | Beschreibung |
+|---------|--------|--------------|
+| Reservierungs-Benachrichtigungen | 🔄 | Email/Push bei neuer Reservierung |
+
+### Geplant 📋
+
+| Feature | Status | Beschreibung |
+|---------|--------|--------------|
+| WhatsApp Integration | 📋 | Zusätzlicher Kanal |
+| Kalender-Integration | 📋 | Google Calendar, iCal |
+| Multi-Language | 📋 | Englisch, weitere Sprachen |
+| Analytics Dashboard | 📋 | Statistiken zu Flows/Reservierungen |
 
 ---
 
-## Gelöste Probleme dieser Session
+## Commits dieser Session (1. Februar 2026)
 
-### Problem 1: Zusammenfassung zeigt keine echten Daten
-**Lösung:** Variable-Substitution + Summary-Fallback in `flowExecutor.ts`, Template-Update
-
-### Problem 2: Reservierungen wurden nicht gespeichert
-**Lösung:** Reservierung wird bei `confirmed` erzeugt, Logging ergänzt
-
-### Problem 3: Freitext-Flow blieb hängen (Datum/Time etc.)
-**Lösung:** Aktueller Node wird gespeichert, Free-Text-Weiterführung zuverlässig
+```
+7349472f Fix: existingMetadata wird korrekt aktualisiert bei neuem Flow
+a7466e16 Fix: Reservierung wird jetzt korrekt erstellt
+157bf611 Fix: Reservierung wird nicht mehr zu früh erstellt
+```
 
 ---
 
-## Was noch offen ist / Nächste Schritte
+## Vorherige Session (30. Januar 2026)
 
-### Priorität 1: Dashboard/Ansicht für Reservierungen
-- UI-Seite im App-Bereich, Filtern, Status ändern
+### Erledigt ✅
+- Variable-System + Zusammenfassung
+- Reservierungen in DB speichern
+- Webhook/Flow Stabilisierung
+- FlowBuilder Test Mode
 
-### Priorität 2: Logs von leeren Webhook-Events reduzieren
-- "seen/typing" Events filtern, um Log-Noise zu verringern
-
-### Nice-to-have
-- WhatsApp Integration
-- Benachrichtigungen bei neuen Reservierungen
-- Kalender-Integration
-
----
-
-## Webhook Info
-
-- **Webhook URL:** `https://wesponde.com/api/webhooks/instagram`
-- **Verify Token:** In `.env.local` als `META_WEBHOOK_VERIFY_TOKEN`
+### Commits
+```
+cfe5e15a Fix: Telefon und Wünsche werden jetzt korrekt gespeichert
+d0b4793a Fix: Name, Telefon und Wünsche werden korrekt gespeichert
+55b9cbdf Feature: Zeige bestehende Reservierung wenn User eine neue machen will
+8b4b901d Fix: Prüfe ob Reservierung wirklich in DB existiert
+6443ca37 Fix: Erweiterte Reservierungs-Erkennung
+42ead012 Fix: Reservierungen werden jetzt bei mehr Node-Namen erstellt
+```
 
 ---
 
@@ -85,7 +103,7 @@
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `app/api/webhooks/instagram/route.ts` | Webhook-Endpoint + Flow-Logik |
+| `app/api/webhooks/instagram/route.ts` | Webhook-Endpoint + Flow-Logik (HAUPTDATEI) |
 | `lib/webhook/flowExecutor.ts` | Flow-Ausführung + Summary-Fallback |
 | `lib/webhook/variableExtractor.ts` | Variablen erkennen (Name, Datum, Uhrzeit, etc.) |
 | `lib/webhook/variableSubstitutor.ts` | Platzhalter ersetzen |
@@ -93,31 +111,53 @@
 | `lib/flowTemplates.ts` | Templates (Summary-Platzhalter) |
 | `components/app/FlowBuilderClient.tsx` | Flow-Editor UI |
 | `components/app/FlowSimulator.tsx` | Testmodus im FlowBuilder |
+| `components/app/ReservationsClient.tsx` | Reservierungs-Dashboard |
 
 ---
 
 ## Zum Testen
 
+### Neuer Reservierungsflow
 1. Neuen Flow anlegen und auf "Aktiv" setzen
-2. Instagram DM senden (z.B. "Hallo" oder "reservieren")
-3. Flow bis Summary und Bestätigung durchspielen
+2. Instagram DM senden (z.B. "Reservieren")
+3. Flow komplett durchspielen:
+   - Datum wählen
+   - Uhrzeit wählen
+   - Gästeanzahl wählen
+   - Name eingeben
+   - **Telefonnummer eingeben** ← Jetzt funktioniert!
+   - **Sonderwünsche eingeben** ← Jetzt funktioniert!
+   - Bestätigen
 4. In Supabase prüfen:
-   - `conversations.metadata.variables`
-   - `reservations` (neuer Eintrag)
+   - `reservations` → `phone_number` und `special_requests` sollten gefüllt sein
+
+### Bestehende Reservierung
+1. User hat bereits aktive Reservierung
+2. User schreibt "Reservieren"
+3. System zeigt bestehende Reservierung + Optionen:
+   - Stornieren
+   - Behalten
+   - Neue Reservierung
 
 ---
 
-## Aktueller Stand des Flows
+## Bekannte Einschränkungen
 
-**Letzter erfolgreicher Test:** 30. Januar 2026
-**Flow-Name:** "kevin 1.0"
-**Ergebnis:** Summary zeigte Daten, Reservierung wurde erstellt
+- **Test-Modus:** Instagram-Permissions erfordern Test-User in Meta Developer Portal
+- **60-Tage Token:** Access Token muss alle 60 Tage erneuert werden
+- **Webhook-Delay:** Instagram kann 1-2 Sekunden Verzögerung haben
 
 ---
 
-## Commits dieser Session
+## Nächste Session
 
-```
-504efbba Fix webhook state tracking for free-text flows
-2a5e2a70 Show reservation summary data and create booking on confirm
-```
+### Priorität 1
+- [ ] Reservierungs-Benachrichtigungen (Email/Push)
+
+### Priorität 2
+- [ ] Token-Refresh automatisieren
+- [ ] WhatsApp Integration vorbereiten
+
+### Nice-to-have
+- [ ] Analytics Dashboard
+- [ ] Kalender-Export

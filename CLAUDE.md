@@ -39,16 +39,20 @@ Schema in `supabase/schema.sql`. All tables use RLS (Row-Level Security) scoped 
 | `integrations` | Meta/Instagram OAuth tokens and connection status |
 | `oauth_states` | CSRF protection for OAuth flow |
 | `messages` | Incoming/outgoing messages from Instagram/WhatsApp |
-| `conversations` | Conversation threads with customers |
+| `conversations` | Conversation threads with customers (includes `metadata.variables` and `metadata.reservationId`) |
 | `reservations` | Bookings/appointments extracted from conversations |
+| `logs` | Webhook/system logs for debugging |
 
 ### Flow Builder
 
 The core feature. Key files:
 
-- `components/app/FlowBuilderClient.tsx` — Main orchestrator (~55KB). Manages all state: node editing, drag-drop, triggers, autosave (2s debounce on inactivity), publish/draft toggle, real-time linting warnings
+- `components/app/FlowBuilderClient.tsx` — Main orchestrator (~63KB). Manages all state: node editing, drag-drop, triggers, autosave (2s debounce on inactivity), publish/draft toggle, real-time linting warnings
 - `components/app/FlowBuilderCanvas.tsx` — React Flow canvas wrapper, controlled by FlowBuilderClient
+- `components/app/FlowListBuilder.tsx` — Simplified list-based flow builder for quick editing
+- `components/app/FlowSetupWizard.tsx` — Step-by-step wizard for creating flows from templates
 - `components/app/FlowNode.tsx` — Custom node renderer
+- `components/app/FlowSimulator.tsx` — Test mode to simulate conversations in the browser
 - `lib/flowTypes.ts` — TypeScript types for flows, triggers, quick replies
 - `lib/flowLint.ts` — Validates node connectivity, triggers, warns on disconnected nodes
 - `lib/defaultFlow.ts` — Default nodes/edges for new flows
@@ -60,7 +64,53 @@ Flow API routes: `app/api/flows/route.ts` (list/create), `app/api/flows/[id]/rou
 
 Flow status values are German: `"Entwurf"` (Draft) and `"Aktiv"` (Active). Triggers are keyword-based with `EXACT` or `CONTAINS` match types. Nodes store `text`, optional `imageUrl`, `quickReplies` array, and a `variant` field.
 
-## Meta/Instagram Integration (PRIORITY)
+### Webhook & Message Processing
+
+The core message processing happens in `app/api/webhooks/instagram/route.ts`. Key logic:
+
+```
+Instagram DM received
+        ↓
+Verify signature (X-Hub-Signature-256)
+        ↓
+Find/create conversation for Instagram sender
+        ↓
+Extract variables from message (name, date, time, phone, etc.)
+        ↓
+Check for existing active reservation
+  → If exists: Show options (Cancel/Keep/New)
+        ↓
+Match message against flow triggers OR continue existing flow
+        ↓
+Execute flow node, generate response
+        ↓
+At confirmation: Create reservation in DB
+        ↓
+Send reply via Instagram API
+```
+
+Key webhook files:
+- `lib/webhook/flowMatcher.ts` — Matches messages against flow triggers
+- `lib/webhook/flowExecutor.ts` — Executes flow nodes, handles quick replies and free text
+- `lib/webhook/variableExtractor.ts` — Extracts user data (name, date, time, phone, email, specialRequests)
+- `lib/webhook/variableSubstitutor.ts` — Replaces `{{placeholders}}` in messages
+- `lib/webhook/reservationCreator.ts` — Creates reservations from extracted variables
+
+### Reservation System
+
+Reservations are created automatically when users complete a reservation flow:
+
+1. **Variable Collection**: During the flow, variables are stored in `conversations.metadata.variables`
+2. **Existing Reservation Check**: Before starting a new flow, checks if user has active reservation
+3. **Reservation Creation**: Only at `confirmed` node or explicit confirmation
+4. **Duplicate Prevention**: `reservationId` in metadata prevents duplicate creation
+
+Required reservation fields: `name`, `date`, `time`, `guestCount`
+Optional fields: `phone`, `email`, `specialRequests`
+
+Reservations UI: `app/app/reservations/page.tsx` with `components/app/ReservationsClient.tsx`
+
+## Meta/Instagram Integration
 
 ### Current Status
 - Meta App ID: `2003432446768451`
@@ -83,20 +133,20 @@ Flow status values are German: `"Entwurf"` (Draft) and `"Aktiv"` (Active). Trigg
 ### Required Permissions for Instagram DM
 | Permission | Status | Notes |
 |------------|--------|-------|
-| `instagram_basic` | Standard access (rejected for advanced) | Works in dev mode |
-| `instagram_manage_messages` | Standard access (rejected for advanced) | Works in dev mode |
+| `instagram_basic` | Standard access | Works in dev mode |
+| `instagram_manage_messages` | Standard access | Works in dev mode |
 | `instagram_business_manage_messages` | Standard access | Works in dev mode |
 | `pages_manage_metadata` | Standard access ✅ | Ready |
 | `pages_read_engagement` | Standard access ✅ | Ready |
 | `business_management` | Standard access ✅ | Ready |
 | `pages_messaging` | Standard access ✅ | Ready |
-| `pages_show_list` | Needs activation | Click "Standardzugriff erhalten" |
+| `pages_show_list` | Standard access ✅ | Ready |
 
 ### OAuth Flow Architecture
 ```
 User clicks "Connect Instagram"
         ↓
-GET /api/meta/oauth
+GET /api/meta/oauth/start
         ↓
 Redirect to Facebook Login Dialog
 (https://www.facebook.com/v21.0/dialog/oauth)
@@ -126,13 +176,18 @@ Verify signature (X-Hub-Signature-256)
         ↓
 Parse message payload
         ↓
+Check for existing reservation
+  → Show options if active reservation exists
+        ↓
 Match against active flows (triggers)
         ↓
-Execute flow, generate response
+Execute flow, extract variables
         ↓
 Send reply via Instagram API
         ↓
-Log to messages/conversations tables
+Create reservation at confirmation
+        ↓
+Log to messages/conversations/logs tables
 ```
 
 ## Conventions
@@ -168,49 +223,117 @@ META_WEBHOOK_VERIFY_TOKEN=<random string you define>
 
 ## Deployment
 
-Vercel via GitHub. Environment variables set in Vercel dashboard. 
+Vercel via GitHub. Environment variables set in Vercel dashboard.
 - Production URL: `https://wesponde.com`
 - App URL: `https://wesponde.com/app`
+- GitHub Repo: `DosiGus/Website`
 
-## File Structure for Meta Integration
+Auto-deployment: Push to `main` triggers Vercel build.
+
+## File Structure
 
 ```
 app/
   api/
+    flows/
+      route.ts              # List/create flows
+      [id]/
+        route.ts            # Get/update/delete flow
+        export/route.ts     # Export flow as JSON
     meta/
       oauth/
-        route.ts              # Initiates OAuth flow
-        callback/
-          route.ts            # Handles OAuth callback
+        start/route.ts      # Initiates OAuth flow
+        callback/route.ts   # Handles OAuth callback
     webhooks/
-      instagram/
-        route.ts              # Receives Instagram DM webhooks
-      messenger/
-        route.ts              # Receives Messenger webhooks
+      instagram/route.ts    # Receives Instagram DM webhooks (MAIN WEBHOOK LOGIC)
+    integrations/route.ts   # Integration management
+    reservations/route.ts   # Reservation API
+    logs/route.ts           # Logs API
+    templates/route.ts      # Flow templates
+  app/
+    dashboard/page.tsx      # Dashboard
+    flows/
+      page.tsx              # Flow list
+      new/page.tsx          # Create new flow
+      [id]/page.tsx         # Edit flow
+    integrations/page.tsx   # Connect Instagram/Meta
+    reservations/page.tsx   # Reservation management
+    settings/page.tsx       # User settings
+
 lib/
+  webhook/
+    flowMatcher.ts          # Match messages to flows
+    flowExecutor.ts         # Execute flow nodes
+    variableExtractor.ts    # Extract user data from messages
+    variableSubstitutor.ts  # Replace {{placeholders}}
+    reservationCreator.ts   # Create reservations
   meta/
-    client.ts                 # Meta Graph API client
-    types.ts                  # TypeScript types for Meta API
-    permissions.ts            # Permission scopes
-    webhookVerify.ts          # Webhook signature verification
+    instagramApi.ts         # Send Instagram messages
+    types.ts                # Meta API types
+    webhookVerify.ts        # Webhook signature verification
+  flowTypes.ts              # Flow type definitions
+  flowLint.ts               # Flow validation
+  flowTemplates.ts          # Template definitions
+  logger.ts                 # Logging utility
+  reservationTypes.ts       # Reservation types
+
 components/
   app/
-    IntegrationsClient.tsx    # Integrations page with connect buttons
-    InstagramConnectButton.tsx
+    FlowBuilderClient.tsx   # Main flow editor
+    FlowBuilderCanvas.tsx   # React Flow canvas
+    FlowListBuilder.tsx     # Simple list editor
+    FlowSetupWizard.tsx     # Template wizard
+    FlowSimulator.tsx       # Test mode
+    FlowNode.tsx            # Custom node component
+    ReservationsClient.tsx  # Reservation dashboard
+    IntegrationsClient.tsx  # Integration management
+    AppSidebar.tsx          # App navigation
+    AppTopbar.tsx           # App header
+
 supabase/
-  schema.sql                  # Database schema including integrations table
+  schema.sql                # Database schema
 ```
 
-## Testing Meta Integration
+## Testing
 
+### Testing Instagram Integration
 1. Add yourself as a test user in Meta Developer Portal → App Roles
 2. Make sure you have a Facebook Page connected to an Instagram Business/Creator account
-3. Use the OAuth flow to connect
+3. Use the OAuth flow to connect your account
 4. Test with your own Instagram DMs
+
+### Testing Reservation Flow
+1. Create a new flow and set it to "Aktiv"
+2. Add trigger keywords (e.g., "reservieren", "tisch")
+3. Send a DM to your connected Instagram account
+4. Complete the flow (date, time, guests, name, phone, special requests)
+5. Verify in Supabase:
+   - `conversations.metadata.variables` — collected data
+   - `reservations` — new entry created
+
+### Debugging
+- Check `logs` table in Supabase for webhook events
+- Use Vercel logs for server-side errors
+- Check browser console for client-side issues
 
 ## Common Issues
 
 - **"Invalid redirect_uri"**: Check that the exact URL is in Meta's "Valid OAuth Redirect URIs"
 - **"User is not a test user"**: Add the Facebook account to App Roles → Test Users
 - **Permission denied**: Some permissions require App Review for production; use test users in dev mode
-- **Webhook not receiving**: Verify the webhook is subscribed to `messages` field in Meta Developer Portal1
+- **Webhook not receiving**: Verify the webhook is subscribed to `messages` field in Meta Developer Portal
+- **Reservation not created**: Check that all required fields (name, date, time, guestCount) are present
+- **Duplicate reservations**: The system checks `metadata.reservationId` to prevent duplicates
+- **Old reservation blocking new one**: Metadata is reset when a new flow starts
+
+## MCP Integration
+
+This project can be managed via Claude Code with MCP servers:
+- **Supabase MCP**: Direct database access, execute SQL, manage tables
+- **Vercel MCP**: Deployment management, logs, project settings
+
+To connect:
+```bash
+claude mcp add --transport http supabase https://mcp.supabase.com
+claude mcp add --transport http vercel https://mcp.vercel.com
+```

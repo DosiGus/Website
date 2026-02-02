@@ -1,50 +1,166 @@
-# Wesponde Website
+# Wesponde
 
-Next.js 14 + Tailwind-Projekt für die Wesponde-Landingpage inkl. Beta-Warteliste, Login- und Info-Seiten.
+B2B SaaS platform for automating customer conversations via Instagram DM, WhatsApp, and Facebook Messenger - targeting German service businesses (restaurants, salons, medical practices).
+
+## Features
+
+- **Visual Flow Builder** - Drag-and-drop conversation flows with React Flow
+- **Instagram DM Integration** - Receive and respond to messages automatically
+- **Reservation System** - Automatically extract and store bookings
+- **Templates** - Pre-built flows for common use cases (Restaurant, Salon, etc.)
+- **Flow Simulator** - Test conversations in the browser before going live
+
+## Tech Stack
+
+- **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS
+- **Backend:** Next.js API Routes, Supabase (PostgreSQL + Auth)
+- **Flow Editor:** React Flow
+- **Deployment:** Vercel
+- **Messaging:** Meta Graph API (Instagram, Messenger)
 
 ## Quick Start
-1. Upload all files to your GitHub repository.
-2. Ensure Vercel is connected to this repo.
-3. Vercel will automatically build and deploy.
 
-## Edit Content
-- Pages are in the `app/` folder:
-  - `/` → `app/page.tsx`
-  - `/contact` → `app/contact/page.tsx`
-  - `/impressum` → `app/impressum/page.tsx`
-  - `/privacy` → `app/privacy/page.tsx`
-  - `/terms` → `app/terms/page.tsx`
-- Navbar/Footer in `components/`.
-- Global styles in `app/globals.css`.
-- Tailwind config in `tailwind.config.ts`.
+### Prerequisites
+- Node.js 18+
+- Supabase account
+- Meta Developer account (for Instagram integration)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/DosiGus/Website.git
+cd Website
+
+# Install dependencies
+npm install
+
+# Copy environment variables
+cp .env.local.example .env.local
+
+# Edit .env.local with your credentials
+
+# Start development server
+npm run dev
+```
+
+### Environment Variables
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+NEXT_PUBLIC_SUPABASE_REDIRECT_URL=https://your-domain.com
+
+# Meta OAuth
+META_APP_ID=your_app_id
+META_APP_SECRET=your_app_secret
+META_REDIRECT_URI=https://your-domain.com/api/meta/oauth/callback
+NEXT_PUBLIC_META_APP_ID=your_app_id
+
+# Webhooks
+META_WEBHOOK_VERIFY_TOKEN=your_random_string
+```
+
+### Database Setup
+
+Run the SQL from `supabase/schema.sql` in your Supabase SQL Editor to create the required tables:
+- `flows` - Conversation flows
+- `flow_templates` - Pre-built templates
+- `integrations` - Meta/Instagram connections
+- `conversations` - Chat threads
+- `messages` - Individual messages
+- `reservations` - Bookings
+- `logs` - System logs
+
+## Project Structure
+
+```
+app/
+  page.tsx                  # Landing page
+  app/                      # Protected app area
+    dashboard/              # Overview
+    flows/                  # Flow management
+    integrations/           # Instagram/Meta connection
+    reservations/           # Booking management
+  api/
+    webhooks/instagram/     # Instagram webhook (main logic)
+    flows/                  # Flow CRUD
+    meta/oauth/             # OAuth flow
+
+lib/
+  webhook/                  # Message processing
+    flowExecutor.ts         # Execute flow nodes
+    flowMatcher.ts          # Match triggers
+    variableExtractor.ts    # Extract user data
+    reservationCreator.ts   # Create bookings
+
+components/
+  app/
+    FlowBuilderClient.tsx   # Main flow editor
+    FlowSimulator.tsx       # Test mode
+    ReservationsClient.tsx  # Booking dashboard
+```
+
+## How It Works
+
+### Flow Builder
+1. Create a flow in the visual editor
+2. Add nodes with messages and quick replies
+3. Set up triggers (keywords like "reservieren", "buchen")
+4. Publish the flow (set status to "Aktiv")
+
+### Message Processing
+1. User sends DM to your Instagram
+2. Webhook receives the message
+3. System matches against active flow triggers
+4. Executes flow, extracts variables (date, time, name, etc.)
+5. Sends response with quick replies
+6. At confirmation: creates reservation in database
+
+### Reservation Flow
+```
+User: "Reservieren"
+Bot:  "Für welches Datum?" [Heute] [Morgen] [Anderes]
+User: [Morgen]
+Bot:  "Um welche Uhrzeit?" [19:00] [20:00]
+User: [19:00]
+Bot:  "Für wie viele Personen?" [2] [3] [4]
+User: [3]
+Bot:  "Auf welchen Namen?"
+User: "Max"
+Bot:  "Telefonnummer?"
+User: "0176123456"
+Bot:  "Besondere Wünsche?"
+User: "Tisch am Fenster"
+Bot:  "Zusammenfassung: Max, 3 Personen, morgen 19:00. Bestätigen?"
+User: [Ja, bestätigen]
+Bot:  "Reservierung bestätigt!"
+→ Reservation saved to database
+```
 
 ## Scripts
-- `npm run dev` — Local development (optional)
-- `npm run build` — Build
-- `npm start` — Start production server
 
-## Notes
-- All content is placeholder. Replace with real info before launch.
-- For German legal compliance, ensure the Impressum & Privacy are correct.
-- Supabase Auth:  
-  1. Projekt in Supabase anlegen und URL + Keys kopieren.  
-  2. `.env.local` anhand `.env.local.example` ausfüllen (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_REDIRECT_URL`).  
-  3. Lokal `npm install` ausführen (neu: `lucide-react`, `reactflow`, `@supabase/supabase-js`).  
-  4. `npm run dev` starten und `/login` testen. Email-/Passwort-Login läuft über `components/PartnerLoginForm.tsx` (nutzt `lib/supabaseBrowserClient.ts`).  
-  5. Für serverseitige Logik (z. B. spätere Chatflow-APIs) steht `lib/supabaseServerClient.ts` bereit.
+```bash
+npm run dev      # Start development server
+npm run build    # Production build
+npm run start    # Start production server
+npm run lint     # Run ESLint
+```
 
-## App-Bereich (Beta)
-- Geschützter Bereich unter `/app` mit Sidebar + Topbar (`app/app/layout.tsx`).
-- Seiten:
-  - `/app/dashboard`: Übersicht & Kennzahlen
-  - `/app/flows`: Flow-Liste + `/app/flows/[id]` mit React Flow Canvas & Editor
-  - `/app/integrations`: Integrationskarten (Meta, WhatsApp etc.)
-  - `/app/settings`: Profil-, API- und Benachrichtigungs-Formulare
-- Auth-Gate: `components/AppAuthGate.tsx` prüft Supabase-Sessions und leitet sonst nach `/login`.
-- Flow Builder:
-  - API-Routen: `app/api/flows` & `app/api/flows/[id]` (CRUD via Supabase Service Client)
-  - Client-Komponenten: `components/app/FlowBuilderClient.tsx` (mit Autosave & Linting) & `components/app/FlowListClient.tsx`
-  - Flow-Daten werden als JSON (`nodes`, `edges`) in der Tabelle `flows` gespeichert.
-  - Templates: Tabelle `flow_templates` (+ Fallbacks) und Route `app/api/templates` → Auswahl in `/app/flows/new`
-  - Standard-Setup: siehe `supabase/schema.sql` – bitte im Supabase SQL-Editor ausführen (flows + flow_templates) und Policies aktivieren.
-- React Flow Canvas: `components/app/FlowBuilderCanvas.tsx` wird von `FlowBuilderClient` kontrolliert (Nodes hinzufügen, Eigenschaften bearbeiten, Autosave, Publish/Draft Select, Warnungs-Badge).
+## Deployment
+
+The app is deployed on Vercel with automatic deployments from the `main` branch.
+
+- **Production:** https://wesponde.com
+- **App:** https://wesponde.com/app
+
+## Documentation
+
+- `CLAUDE.md` - Technical documentation for Claude Code
+- `LAST_UPDATES.md` - Changelog and session notes
+
+## License
+
+Proprietary - All rights reserved
