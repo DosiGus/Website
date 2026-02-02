@@ -11,6 +11,9 @@ export type ExtractedVariables = {
   phone?: string;
   email?: string;
   specialRequests?: string;
+  reviewRating?: number;
+  reviewFeedback?: string;
+  googleReviewUrl?: string;
   [key: string]: string | number | undefined;
 };
 

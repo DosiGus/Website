@@ -106,9 +106,13 @@ create table if not exists public.integrations (
   page_id text,
   instagram_id text,
   account_name text,
+  google_review_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+alter table if exists public.integrations
+  add column if not exists google_review_url text;
 
 alter table public.integrations
   add constraint integrations_user_fk
@@ -305,3 +309,46 @@ create policy "Besitzer dürfen Reservations erstellen"
 create policy "Besitzer dürfen Reservations löschen"
   on public.reservations
   for delete using (auth.uid() = user_id);
+
+-- Review requests for Google review follow-ups
+create table if not exists public.review_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  integration_id uuid references public.integrations(id) on delete set null,
+  conversation_id uuid references public.conversations(id) on delete set null,
+  reservation_id uuid references public.reservations(id) on delete set null,
+  flow_id uuid references public.flows(id) on delete set null,
+
+  status text not null default 'pending'
+    check (status in ('pending', 'sent', 'rated', 'completed', 'skipped', 'failed')),
+  rating smallint check (rating between 1 and 5),
+  feedback_text text,
+
+  sent_at timestamptz,
+  rated_at timestamptz,
+  feedback_at timestamptz,
+  source text default 'instagram_dm',
+
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create unique index if not exists review_requests_reservation_idx on public.review_requests(reservation_id);
+create index if not exists review_requests_user_id_idx on public.review_requests(user_id);
+create index if not exists review_requests_status_idx on public.review_requests(status);
+create index if not exists review_requests_sent_at_idx on public.review_requests(sent_at);
+
+alter table public.review_requests enable row level security;
+
+create policy "Review Requests sind nur für Besitzer sichtbar"
+  on public.review_requests
+  for select using (auth.uid() = user_id);
+
+create policy "Besitzer dürfen Review Requests erstellen"
+  on public.review_requests
+  for insert with check (auth.uid() = user_id);
+
+create policy "Besitzer dürfen Review Requests bearbeiten"
+  on public.review_requests
+  for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

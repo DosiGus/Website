@@ -31,6 +31,52 @@ import {
   getMissingReservationFields,
 } from "../../../../lib/webhook/reservationCreator";
 
+function extractReviewRating(text: string): number | null {
+  if (!text) return null;
+  const digitMatch = text.match(/([1-5])/);
+  if (digitMatch) {
+    return Number.parseInt(digitMatch[1], 10);
+  }
+  const starMatches = text.match(/⭐/g);
+  if (starMatches && starMatches.length > 0 && starMatches.length <= 5) {
+    return starMatches.length;
+  }
+  return null;
+}
+
+async function updateReviewRequestFromMessage(params: {
+  supabase: ReturnType<typeof createSupabaseServerClient>;
+  reqLogger: ReturnType<typeof createRequestLogger>;
+  reviewRequestId: string;
+  rating?: number;
+  feedbackText?: string;
+}) {
+  const { supabase, reqLogger, reviewRequestId, rating, feedbackText } = params;
+  const updates: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (typeof rating === "number") {
+    updates.rating = rating;
+    updates.rated_at = new Date().toISOString();
+    updates.status = rating <= 2 ? "rated" : "completed";
+  }
+
+  if (feedbackText) {
+    updates.feedback_text = feedbackText;
+    updates.feedback_at = new Date().toISOString();
+    updates.status = "completed";
+  }
+
+  const { error } = await supabase
+    .from("review_requests")
+    .update(updates)
+    .eq("id", reviewRequestId);
+
+  if (error) {
+    await reqLogger.error("webhook", `Failed to update review request: ${error.message}`);
+  }
+}
 /**
  * GET: Webhook subscription verification from Meta.
  * Meta sends: hub.mode, hub.verify_token, hub.challenge
@@ -302,6 +348,20 @@ async function processMessagingEvent(
         overrideVariables.specialRequests = trimmedMessage;
       }
     }
+
+    // Review flow: capture rating and feedback
+    if (nodeKey.includes("review-rating")) {
+      const rating = extractReviewRating(trimmedMessage);
+      if (rating) {
+        overrideVariables.reviewRating = rating;
+      }
+    }
+
+    if (nodeKey.includes("review-feedback")) {
+      if (trimmedMessage.length > 0) {
+        overrideVariables.reviewFeedback = trimmedMessage;
+      }
+    }
   }
 
   const hasOverrides = Object.keys(overrideVariables).length > 0;
@@ -328,6 +388,39 @@ async function processMessagingEvent(
     await reqLogger.info("webhook", "Variables extracted from message", {
       metadata: { newVariables, overrideVariables, mergedVariables },
     });
+  }
+
+  const reviewRating = typeof overrideVariables.reviewRating === "number" ? overrideVariables.reviewRating : null;
+  const reviewFeedback =
+    typeof overrideVariables.reviewFeedback === "string" ? overrideVariables.reviewFeedback : null;
+
+  if (reviewRating !== null || reviewFeedback) {
+    let reviewRequestId =
+      typeof existingMetadata.reviewRequestId === "string"
+        ? existingMetadata.reviewRequestId
+        : null;
+
+    if (!reviewRequestId) {
+      const { data: latestReview } = await supabase
+        .from("review_requests")
+        .select("id")
+        .eq("conversation_id", conversation.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      reviewRequestId = latestReview?.id ?? null;
+    }
+
+    if (reviewRequestId) {
+      await updateReviewRequestFromMessage({
+        supabase,
+        reqLogger,
+        reviewRequestId,
+        rating: reviewRating ?? undefined,
+        feedbackText: reviewFeedback ?? undefined,
+      });
+    }
   }
 
   // Check for duplicate message (idempotency)
@@ -522,6 +615,8 @@ async function processMessagingEvent(
         variables: {},
         reservationId: undefined,
         flowCompleted: undefined,
+        reviewFlowId: undefined,
+        reviewRequestId: undefined,
       };
       const { error: resetError1 } = await supabase
         .from("conversations")
@@ -594,6 +689,8 @@ async function processMessagingEvent(
         variables: {},
         reservationId: undefined,
         flowCompleted: undefined,
+        reviewFlowId: undefined,
+        reviewRequestId: undefined,
       };
       const { error: resetError2 } = await supabase
         .from("conversations")
@@ -700,197 +797,209 @@ async function processMessagingEvent(
         },
       });
 
-      // Check if reservation actually exists in database (not just in metadata)
-      // AND belongs to the current conversation AND is still active (pending/confirmed)
-      let reservationAlreadyExists = false;
-      if (existingMetadata?.reservationId) {
-        const { data: existingReservation } = await supabase
-          .from("reservations")
-          .select("id, conversation_id, status")
-          .eq("id", existingMetadata.reservationId)
-          .single();
+      const isReviewFlow =
+        (matchedFlowId &&
+          typeof existingMetadata?.reviewFlowId === "string" &&
+          matchedFlowId === existingMetadata.reviewFlowId) ||
+        (matchedNodeId && matchedNodeId.toLowerCase().startsWith("review-"));
 
-        // Only consider it "already exists" if:
-        // 1. The reservation exists
-        // 2. It belongs to THIS conversation
-        // 3. It's still active (pending or confirmed)
-        const isActiveReservation = Boolean(existingReservation &&
-          existingReservation.conversation_id === conversation.id &&
-          (existingReservation.status === "pending" || existingReservation.status === "confirmed"));
+      if (!isReviewFlow) {
+        // Check if reservation actually exists in database (not just in metadata)
+        // AND belongs to the current conversation AND is still active (pending/confirmed)
+        let reservationAlreadyExists = false;
+        if (existingMetadata?.reservationId) {
+          const { data: existingReservation } = await supabase
+            .from("reservations")
+            .select("id, conversation_id, status")
+            .eq("id", existingMetadata.reservationId)
+            .single();
 
-        reservationAlreadyExists = isActiveReservation;
+          // Only consider it "already exists" if:
+          // 1. The reservation exists
+          // 2. It belongs to THIS conversation
+          // 3. It's still active (pending or confirmed)
+          const isActiveReservation = Boolean(existingReservation &&
+            existingReservation.conversation_id === conversation.id &&
+            (existingReservation.status === "pending" || existingReservation.status === "confirmed"));
 
-        // If metadata has reservationId but reservation doesn't exist or is inactive, clean up metadata
-        if (!isActiveReservation) {
-          await reqLogger.info("webhook", "Cleaning up old/orphaned reservationId from metadata", {
-            metadata: {
-              oldReservationId: existingMetadata.reservationId,
-              reason: !existingReservation ? "not_found" :
-                      existingReservation.conversation_id !== conversation.id ? "wrong_conversation" : "inactive",
-              preservedVariables: mergedVariables,
-            },
-          });
-          const cleanedMetadata: ConversationMetadata = {
-            ...existingMetadata,
-            variables: mergedVariables,
-            reservationId: undefined,
-            flowCompleted: undefined,
-          };
-          const { error: cleanupError } = await supabase
-            .from("conversations")
-            .update({ metadata: cleanedMetadata })
-            .eq("id", conversation.id);
+          reservationAlreadyExists = isActiveReservation;
 
-          if (cleanupError) {
-            await reqLogger.error("webhook", `Failed to cleanup orphaned metadata: ${cleanupError.message}`);
-          }
-        }
-      }
-
-      // Check if the current node is a confirmation node (multiple naming conventions)
-      const confirmationNodeIds = [
-        "confirmed",
-        "confirmation",
-        "bestätigung",
-        "bestaetigung",
-        "bestaetigt",
-        "bestätigt",
-        "abschluss",
-        "fertig",
-        "done",
-        "complete",
-        "end",
-        "ende",
-        "danke",
-        "thanks",
-        "thank",
-        "success",
-        "erfolgreich",
-      ];
-      const isConfirmationNode = matchedNodeId
-        ? confirmationNodeIds.some(id =>
-            matchedNodeId.toLowerCase().includes(id.toLowerCase())
-          )
-        : false;
-
-      // Check if the quick reply payload indicates confirmation
-      const confirmationPayloads = [
-        "confirm",
-        "bestätigen",
-        "bestaetigen",
-        "ja",
-        "yes",
-        "ok",
-        "buchen",
-        "reservieren",
-        "absenden",
-        "senden",
-      ];
-      const isConfirmationPayload = quickReplyPayload
-        ? confirmationPayloads.some(p =>
-            quickReplyPayload.toLowerCase().includes(p.toLowerCase())
-          )
-        : false;
-
-      // Check if all required reservation data is present and this looks like a final step
-      const hasAllReservationData = canCreateReservation(mergedVariables);
-
-      // List of nodes that are still collecting data - don't create reservation here
-      const dataCollectionNodes = [
-        "ask-name", "ask-phone", "ask-special", "ask-date", "ask-time", "ask-guests",
-        "ask-date-custom", "ask-time-custom", "ask-guests-large",
-        "special-allergy", "special-occasion"
-      ];
-      const isDataCollectionNode = matchedNodeId
-        ? dataCollectionNodes.some(n => matchedNodeId.toLowerCase().includes(n.toLowerCase().replace("ask-", "")))
-        : false;
-
-      // Only consider it a final step if the response text explicitly confirms the reservation
-      // AND we're not at a data collection node
-      const looksLikeFinalStep =
-        hasAllReservationData &&
-        !isDataCollectionNode &&
-        flowResponse.isEndOfFlow ||
-        (flowResponse.text &&
-          !isDataCollectionNode &&
-          (flowResponse.text.toLowerCase().includes("reservierung ist bestätigt") ||
-            flowResponse.text.toLowerCase().includes("vielen dank") ||
-            flowResponse.text.toLowerCase().includes("erfolgreich")));
-
-      const shouldCreateReservation =
-        !reservationAlreadyExists &&
-        !isDataCollectionNode &&
-        (flowResponse.isEndOfFlow ||
-          isConfirmationNode ||
-          isConfirmationPayload ||
-          looksLikeFinalStep);
-
-      // Log reservation check details for debugging
-      await reqLogger.info("webhook", "Reservation check", {
-        metadata: {
-          reservationAlreadyExists,
-          isEndOfFlow: flowResponse.isEndOfFlow,
-          isConfirmationNode,
-          isConfirmationPayload,
-          looksLikeFinalStep,
-          hasAllReservationData,
-          matchedNodeId,
-          quickReplyPayload,
-          responseText: flowResponse.text?.slice(0, 100),
-          shouldCreateReservation,
-          canCreate: canCreateReservation(mergedVariables),
-          missingFields: getMissingReservationFields(mergedVariables),
-          variables: mergedVariables,
-        },
-      });
-
-      if (shouldCreateReservation && canCreateReservation(mergedVariables)) {
-        const reservationResult = await createReservationFromVariables(
-          userId,
-          conversation.id,
-          matchedFlowId,
-          mergedVariables,
-          senderId
-        );
-
-        if (reservationResult.success) {
-          // Update conversation metadata with reservation ID
-          const finalMetadata: ConversationMetadata = {
-            ...existingMetadata,
-            variables: mergedVariables,
-            reservationId: reservationResult.reservationId,
-            flowCompleted: true,
-          };
-
-          const { error: finalMetaError } = await supabase
-            .from("conversations")
-            .update({ metadata: finalMetadata })
-            .eq("id", conversation.id);
-
-          if (finalMetaError) {
-            await reqLogger.error("webhook", `Failed to update final metadata: ${finalMetaError.message}`);
-          }
-
-          await reqLogger.info("webhook", "Reservation created from flow", {
-            metadata: {
-              reservationId: reservationResult.reservationId,
+          // If metadata has reservationId but reservation doesn't exist or is inactive, clean up metadata
+          if (!isActiveReservation) {
+            await reqLogger.info("webhook", "Cleaning up old/orphaned reservationId from metadata", {
+              metadata: {
+                oldReservationId: existingMetadata.reservationId,
+                reason: !existingReservation ? "not_found" :
+                        existingReservation.conversation_id !== conversation.id ? "wrong_conversation" : "inactive",
+                preservedVariables: mergedVariables,
+              },
+            });
+            const cleanedMetadata: ConversationMetadata = {
+              ...existingMetadata,
               variables: mergedVariables,
-            },
-          });
-        } else {
-          await reqLogger.warn("webhook", "Could not create reservation", {
-            metadata: {
-              missingFields: reservationResult.missingFields,
-              error: reservationResult.error,
-            },
-          });
+              reservationId: undefined,
+              flowCompleted: undefined,
+            };
+            const { error: cleanupError } = await supabase
+              .from("conversations")
+              .update({ metadata: cleanedMetadata })
+              .eq("id", conversation.id);
+
+            if (cleanupError) {
+              await reqLogger.error("webhook", `Failed to cleanup orphaned metadata: ${cleanupError.message}`);
+            }
+          }
         }
-      } else if (shouldCreateReservation) {
-        await reqLogger.warn("webhook", "Reservation data incomplete on confirmation", {
+
+        // Check if the current node is a confirmation node (multiple naming conventions)
+        const confirmationNodeIds = [
+          "confirmed",
+          "confirmation",
+          "bestätigung",
+          "bestaetigung",
+          "bestaetigt",
+          "bestätigt",
+          "abschluss",
+          "fertig",
+          "done",
+          "complete",
+          "end",
+          "ende",
+          "danke",
+          "thanks",
+          "thank",
+          "success",
+          "erfolgreich",
+        ];
+        const isConfirmationNode = matchedNodeId
+          ? confirmationNodeIds.some(id =>
+              matchedNodeId.toLowerCase().includes(id.toLowerCase())
+            )
+          : false;
+
+        // Check if the quick reply payload indicates confirmation
+        const confirmationPayloads = [
+          "confirm",
+          "bestätigen",
+          "bestaetigen",
+          "ja",
+          "yes",
+          "ok",
+          "buchen",
+          "reservieren",
+          "absenden",
+          "senden",
+        ];
+        const isConfirmationPayload = quickReplyPayload
+          ? confirmationPayloads.some(p =>
+              quickReplyPayload.toLowerCase().includes(p.toLowerCase())
+            )
+          : false;
+
+        // Check if all required reservation data is present and this looks like a final step
+        const hasAllReservationData = canCreateReservation(mergedVariables);
+
+        // List of nodes that are still collecting data - don't create reservation here
+        const dataCollectionNodes = [
+          "ask-name", "ask-phone", "ask-special", "ask-date", "ask-time", "ask-guests",
+          "ask-date-custom", "ask-time-custom", "ask-guests-large",
+          "special-allergy", "special-occasion"
+        ];
+        const isDataCollectionNode = matchedNodeId
+          ? dataCollectionNodes.some(n => matchedNodeId.toLowerCase().includes(n.toLowerCase().replace("ask-", "")))
+          : false;
+
+        // Only consider it a final step if the response text explicitly confirms the reservation
+        // AND we're not at a data collection node
+        const looksLikeFinalStep =
+          hasAllReservationData &&
+          !isDataCollectionNode &&
+          flowResponse.isEndOfFlow ||
+          (flowResponse.text &&
+            !isDataCollectionNode &&
+            (flowResponse.text.toLowerCase().includes("reservierung ist bestätigt") ||
+              flowResponse.text.toLowerCase().includes("vielen dank") ||
+              flowResponse.text.toLowerCase().includes("erfolgreich")));
+
+        const shouldCreateReservation =
+          !reservationAlreadyExists &&
+          !isDataCollectionNode &&
+          (flowResponse.isEndOfFlow ||
+            isConfirmationNode ||
+            isConfirmationPayload ||
+            looksLikeFinalStep);
+
+        // Log reservation check details for debugging
+        await reqLogger.info("webhook", "Reservation check", {
           metadata: {
+            reservationAlreadyExists,
+            isEndOfFlow: flowResponse.isEndOfFlow,
+            isConfirmationNode,
+            isConfirmationPayload,
+            looksLikeFinalStep,
+            hasAllReservationData,
+            matchedNodeId,
+            quickReplyPayload,
+            responseText: flowResponse.text?.slice(0, 100),
+            shouldCreateReservation,
+            canCreate: canCreateReservation(mergedVariables),
             missingFields: getMissingReservationFields(mergedVariables),
             variables: mergedVariables,
           },
+        });
+
+        if (shouldCreateReservation && canCreateReservation(mergedVariables)) {
+          const reservationResult = await createReservationFromVariables(
+            userId,
+            conversation.id,
+            matchedFlowId,
+            mergedVariables,
+            senderId
+          );
+
+          if (reservationResult.success) {
+            // Update conversation metadata with reservation ID
+            const finalMetadata: ConversationMetadata = {
+              ...existingMetadata,
+              variables: mergedVariables,
+              reservationId: reservationResult.reservationId,
+              flowCompleted: true,
+            };
+
+            const { error: finalMetaError } = await supabase
+              .from("conversations")
+              .update({ metadata: finalMetadata })
+              .eq("id", conversation.id);
+
+            if (finalMetaError) {
+              await reqLogger.error("webhook", `Failed to update final metadata: ${finalMetaError.message}`);
+            }
+
+            await reqLogger.info("webhook", "Reservation created from flow", {
+              metadata: {
+                reservationId: reservationResult.reservationId,
+                variables: mergedVariables,
+              },
+            });
+          } else {
+            await reqLogger.warn("webhook", "Could not create reservation", {
+              metadata: {
+                missingFields: reservationResult.missingFields,
+                error: reservationResult.error,
+              },
+            });
+          }
+        } else if (shouldCreateReservation) {
+          await reqLogger.warn("webhook", "Reservation data incomplete on confirmation", {
+            metadata: {
+              missingFields: getMissingReservationFields(mergedVariables),
+              variables: mergedVariables,
+            },
+          });
+        }
+      } else {
+        await reqLogger.info("webhook", "Skipping reservation creation for review flow", {
+          metadata: { matchedFlowId, matchedNodeId },
         });
       }
     } else {

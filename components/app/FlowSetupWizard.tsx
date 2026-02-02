@@ -130,6 +130,7 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
         text: config.greetingMessage,
         variant: "message",
         isStart: true,
+        inputMode: "buttons",
         quickReplies: [
           makeQuickReply("qr-yes", "Ja, reservieren", dateNodeId),
         ],
@@ -151,6 +152,7 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
         label: "Datum wählen",
         text: "Für welchen Tag möchtest du reservieren?",
         variant: "message",
+        inputMode: "buttons",
         quickReplies: dateQuickReplies,
       },
     });
@@ -175,6 +177,7 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
         label: "Uhrzeit wählen",
         text: "Um wie viel Uhr?",
         variant: "message",
+        inputMode: "buttons",
         quickReplies: timeQuickReplies,
       },
     });
@@ -189,9 +192,9 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
     });
 
     // Node 4: Guest count
-    const contactNodeId = makeNodeId();
+    const nameNodeId = makeNodeId();
     const guestQuickReplies = config.guestOptions.slice(0, 4).map((count) =>
-      makeQuickReply(`qr-guests-${count}`, `${count} ${count === 1 ? "Person" : "Personen"}`, contactNodeId)
+      makeQuickReply(`qr-guests-${count}`, `${count} ${count === 1 ? "Person" : "Personen"}`, nameNodeId)
     );
 
     nodes.push({
@@ -202,6 +205,7 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
         label: "Personenanzahl",
         text: "Für wie viele Personen?",
         variant: "message",
+        inputMode: "buttons",
         quickReplies: guestQuickReplies,
       },
     });
@@ -214,40 +218,112 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       });
     });
 
-    // Node 5: Contact info collection
-    let contactText = "Perfekt! Wie lautet dein Name";
-    if (config.collectPhone) contactText += " und deine Telefonnummer";
-    contactText += "?";
-    if (config.collectSpecialRequests) {
-      contactText += "\n\nGib auch gerne besondere Wünsche an (z.B. Kinderstuhl, Allergie).";
-    }
-
-    const confirmNodeId = makeNodeId();
+    // Node 5: Name (Freitext)
     nodes.push({
-      id: contactNodeId,
+      id: nameNodeId,
       position: { x: 100, y: 820 },
       type: "wesponde",
       data: {
-        label: "Kontaktdaten",
-        text: contactText,
+        label: "Name",
+        text: "Wie lautet dein Name?",
         variant: "message",
         quickReplies: [],
-        collectsInput: true,
+        inputMode: "free_text",
+        collects: "name",
+        placeholder: "z. B. Maria",
       },
     });
     guestQuickReplies.forEach((qr) => {
       edges.push({
-        id: makeEdgeId(guestNodeId, `${contactNodeId}-${qr.id}`),
+        id: makeEdgeId(guestNodeId, `${nameNodeId}-${qr.id}`),
         source: guestNodeId,
-        target: contactNodeId,
+        target: nameNodeId,
         data: { quickReplyId: qr.id },
       });
     });
 
-    // Node 6: Confirmation
+    let lastNodeId = nameNodeId;
+    let currentY = 1000;
+
+    if (config.collectPhone) {
+      const phoneNodeId = makeNodeId();
+      nodes.push({
+        id: phoneNodeId,
+        position: { x: 100, y: currentY },
+        type: "wesponde",
+        data: {
+          label: "Telefonnummer",
+          text: "Wie lautet deine Telefonnummer?",
+          variant: "message",
+          quickReplies: [],
+          inputMode: "free_text",
+          collects: "phone",
+          placeholder: "z. B. 0176 12345678",
+        },
+      });
+      edges.push({
+        id: makeEdgeId(lastNodeId, phoneNodeId),
+        source: lastNodeId,
+        target: phoneNodeId,
+      });
+      lastNodeId = phoneNodeId;
+      currentY += 180;
+    }
+
+    if (config.collectEmail) {
+      const emailNodeId = makeNodeId();
+      nodes.push({
+        id: emailNodeId,
+        position: { x: 100, y: currentY },
+        type: "wesponde",
+        data: {
+          label: "E‑Mail",
+          text: "Wie lautet deine E‑Mail‑Adresse?",
+          variant: "message",
+          quickReplies: [],
+          inputMode: "free_text",
+          collects: "email",
+          placeholder: "z. B. maria@example.com",
+        },
+      });
+      edges.push({
+        id: makeEdgeId(lastNodeId, emailNodeId),
+        source: lastNodeId,
+        target: emailNodeId,
+      });
+      lastNodeId = emailNodeId;
+      currentY += 180;
+    }
+
+    if (config.collectSpecialRequests) {
+      const specialNodeId = makeNodeId();
+      nodes.push({
+        id: specialNodeId,
+        position: { x: 100, y: currentY },
+        type: "wesponde",
+        data: {
+          label: "Wünsche",
+          text: "Gibt es besondere Wünsche?",
+          variant: "message",
+          quickReplies: [],
+          inputMode: "free_text",
+          collects: "specialRequests",
+          placeholder: "z. B. Kinderstuhl, Allergie",
+        },
+      });
+      edges.push({
+        id: makeEdgeId(lastNodeId, specialNodeId),
+        source: lastNodeId,
+        target: specialNodeId,
+      });
+      lastNodeId = specialNodeId;
+      currentY += 180;
+    }
+
+    const confirmNodeId = makeNodeId();
     nodes.push({
       id: confirmNodeId,
-      position: { x: 100, y: 1000 },
+      position: { x: 100, y: currentY },
       type: "wesponde",
       data: {
         label: "Bestätigung",
@@ -258,8 +334,8 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       },
     });
     edges.push({
-      id: makeEdgeId(contactNodeId, confirmNodeId),
-      source: contactNodeId,
+      id: makeEdgeId(lastNodeId, confirmNodeId),
+      source: lastNodeId,
       target: confirmNodeId,
     });
 
@@ -571,6 +647,9 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       </div>
       <p className="text-slate-500">
         Welche Informationen soll der Bot am Ende abfragen?
+      </p>
+      <p className="text-xs text-slate-400">
+        Der Name wird immer abgefragt.
       </p>
 
       <div className="space-y-3">

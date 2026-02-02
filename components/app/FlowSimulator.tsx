@@ -58,12 +58,36 @@ export default function FlowSimulator({
     [edges]
   );
 
+  const deriveInputMode = useCallback(
+    (node?: Node) => {
+      if (!node) return "buttons" as const;
+      const configured = (node.data as any)?.inputMode as "buttons" | "free_text" | undefined;
+      if (configured) return configured;
+      const quickReplies = (node.data?.quickReplies || []) as FlowQuickReply[];
+      if (quickReplies.length > 0) return "buttons" as const;
+      const hasFreeTextEdge = edges.some(
+        (edge) => edge.source === node.id && !(edge.data as any)?.quickReplyId,
+      );
+      return hasFreeTextEdge ? ("free_text" as const) : ("buttons" as const);
+    },
+    [edges],
+  );
+
+  const getEffectiveQuickReplies = useCallback(
+    (node?: Node) => {
+      const inputMode = deriveInputMode(node);
+      if (inputMode === "free_text") return [] as FlowQuickReply[];
+      return (node?.data?.quickReplies || []) as FlowQuickReply[];
+    },
+    [deriveInputMode],
+  );
+
   const executeNode = useCallback(
     (nodeId: string) => {
       const node = findNode(nodeId);
       if (!node) return;
 
-      const quickReplies = (node.data?.quickReplies || []) as FlowQuickReply[];
+      const quickReplies = getEffectiveQuickReplies(node);
 
       const botMessage: SimulatorMessage = {
         id: `bot-${Date.now()}`,
@@ -133,31 +157,35 @@ export default function FlowSimulator({
 
     // Find next node (if current node has no quick replies, follow first edge)
     const currentNode = findNode(currentNodeId);
-    const quickReplies = (currentNode?.data?.quickReplies ||
-      []) as FlowQuickReply[];
+    const quickReplies = getEffectiveQuickReplies(currentNode);
 
     if (quickReplies.length === 0) {
-      const outgoing = findOutgoingEdges(currentNodeId);
+      const outgoing = findOutgoingEdges(currentNodeId).filter(
+        (edge) => !(edge.data as any)?.quickReplyId,
+      );
       if (outgoing.length > 0) {
         setTimeout(() => {
           executeNode(outgoing[0].target);
         }, 300);
       }
     }
-  }, [userInput, currentNodeId, findNode, findOutgoingEdges, executeNode]);
+  }, [userInput, currentNodeId, findNode, findOutgoingEdges, executeNode, getEffectiveQuickReplies]);
 
   // Check if the flow has ended (no more outgoing edges or quick replies)
   const isFlowEnded = useMemo(() => {
     if (!currentNodeId) return false;
     const currentNode = findNode(currentNodeId);
-    const quickReplies = (currentNode?.data?.quickReplies ||
-      []) as FlowQuickReply[];
-    const outgoing = findOutgoingEdges(currentNodeId);
+    const quickReplies = getEffectiveQuickReplies(currentNode);
+    const inputMode = deriveInputMode(currentNode);
+    const outgoing = findOutgoingEdges(currentNodeId).filter(
+      (edge) =>
+        inputMode !== "free_text" || !(edge.data as any)?.quickReplyId,
+    );
     return (
       outgoing.length === 0 &&
       quickReplies.filter((qr) => qr.targetNodeId).length === 0
     );
-  }, [currentNodeId, findNode, findOutgoingEdges]);
+  }, [currentNodeId, findNode, findOutgoingEdges, deriveInputMode, getEffectiveQuickReplies]);
 
   // Check if flow has no start node
   const hasNoStartNode = !startNodeId;
@@ -166,11 +194,14 @@ export default function FlowSimulator({
   const expectsFreeText = useMemo(() => {
     if (!currentNodeId || isFlowEnded) return false;
     const currentNode = findNode(currentNodeId);
-    const quickReplies = (currentNode?.data?.quickReplies ||
-      []) as FlowQuickReply[];
-    const outgoing = findOutgoingEdges(currentNodeId);
-    return quickReplies.length === 0 && outgoing.length > 0;
-  }, [currentNodeId, isFlowEnded, findNode, findOutgoingEdges]);
+    const quickReplies = getEffectiveQuickReplies(currentNode);
+    const inputMode = deriveInputMode(currentNode);
+    const outgoing = findOutgoingEdges(currentNodeId).filter(
+      (edge) =>
+        inputMode !== "free_text" || !(edge.data as any)?.quickReplyId,
+    );
+    return inputMode === "free_text" && quickReplies.length === 0 && outgoing.length > 0;
+  }, [currentNodeId, isFlowEnded, findNode, findOutgoingEdges, deriveInputMode, getEffectiveQuickReplies]);
 
   return (
     <div className="flex flex-col h-[400px]">
@@ -300,7 +331,10 @@ export default function FlowSimulator({
                   handleFreeTextSubmit();
                 }
               }}
-              placeholder="Antwort eingeben..."
+              placeholder={
+                ((findNode(currentNodeId)?.data as any)?.placeholder as string | undefined) ||
+                "Antwort eingeben..."
+              }
               className="flex-1 rounded-2xl border border-slate-200 px-4 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand/20"
             />
             <button

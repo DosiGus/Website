@@ -17,6 +17,21 @@ export type FlowLintResult = {
   warnings: FlowLintWarning[];
 };
 
+type InputMode = "buttons" | "free_text";
+
+function deriveInputMode(node: Node, edges: Edge[]): InputMode {
+  const configured = (node.data as any)?.inputMode as InputMode | undefined;
+  if (configured) return configured;
+  const quickReplies = Array.isArray(node.data?.quickReplies)
+    ? (node.data?.quickReplies as FlowQuickReply[])
+    : [];
+  if (quickReplies.length > 0) return "buttons";
+  const hasFreeTextEdge = edges.some(
+    (edge) => edge.source === node.id && !(edge.data as any)?.quickReplyId,
+  );
+  return hasFreeTextEdge ? "free_text" : "buttons";
+}
+
 function buildWarning(
   message: string,
   options: {
@@ -108,9 +123,10 @@ export function lintFlow(
     // Check for missing labels - only for manually created edges (no quickReplyId)
     const isQuickReplyEdge = Boolean((edge.data as any)?.quickReplyId);
     const hasLabel = Boolean(edge.data?.condition || edge.label);
+    const sourceNode = nodes.find((n) => n.id === edge.source);
+    const sourceInputMode = sourceNode ? deriveInputMode(sourceNode, edges) : "buttons";
 
-    if (!hasLabel && !isQuickReplyEdge) {
-      const sourceNode = nodes.find((n) => n.id === edge.source);
+    if (!hasLabel && !isQuickReplyEdge && sourceInputMode !== "free_text") {
       const targetNode = nodes.find((n) => n.id === edge.target);
       const sourceLabel = sourceNode?.data?.label ?? "Unbekannt";
       const targetLabel = targetNode?.data?.label ?? "Unbekannt";
@@ -149,41 +165,75 @@ export function lintFlow(
       ? (node.data?.quickReplies as FlowQuickReply[])
       : [];
     const outgoingEdges = outgoingMap.get(node.id) ?? [];
+    const freeTextEdges = outgoingEdges.filter(
+      (edge) => !(edge.data as any)?.quickReplyId,
+    );
+    const inputMode = deriveInputMode(node, edges);
 
-    // Has edges but no quick replies
-    if (outgoingEdges.length > 0 && quickReplies.length === 0) {
-      warnings.push(
-        buildWarning(`"${nodeLabel}" hat keine Antwort-Buttons`, {
-          nodeId: node.id,
-          suggestion: "Füge Antwort-Buttons hinzu, damit Kunden auf diese Nachricht antworten können. Die Buttons führen dann zum nächsten Schritt.",
-          action: "Buttons hinzufügen",
-        }),
-      );
-    }
-
-    // Check quick replies
-    quickReplies.forEach((reply, index) => {
-      const replyLabel = reply.label || `Button ${index + 1}`;
-
-      // Missing target
-      if (!reply.targetNodeId) {
+    if (inputMode === "buttons") {
+      // Has edges but no quick replies
+      if (outgoingEdges.length > 0 && quickReplies.length === 0) {
         warnings.push(
-          buildWarning(`Button "${replyLabel}" führt nirgendwo hin`, {
+          buildWarning(`"${nodeLabel}" hat keine Antwort-Buttons`, {
             nodeId: node.id,
-            suggestion: `Wähle bei "${replyLabel}" unter 'Weiterleiten zu' aus, was nach dem Klick passieren soll.`,
-            action: "Ziel wählen",
-          }),
-        );
-      } else if (!nodeIds.has(reply.targetNodeId)) {
-        warnings.push(
-          buildWarning(`Button "${replyLabel}" verweist auf gelöschten Schritt`, {
-            nodeId: node.id,
-            suggestion: "Der Ziel-Schritt wurde gelöscht. Wähle ein neues Ziel aus.",
-            action: "Neues Ziel wählen",
+            suggestion: "Füge Antwort-Buttons hinzu, damit Kunden auf diese Nachricht antworten können. Die Buttons führen dann zum nächsten Schritt.",
+            action: "Buttons hinzufügen",
           }),
         );
       }
-    });
+
+      // Check quick replies
+      quickReplies.forEach((reply, index) => {
+        const replyLabel = reply.label || `Button ${index + 1}`;
+
+        // Missing target
+        if (!reply.targetNodeId) {
+          warnings.push(
+            buildWarning(`Button "${replyLabel}" führt nirgendwo hin`, {
+              nodeId: node.id,
+              suggestion: `Wähle bei "${replyLabel}" unter 'Weiterleiten zu' aus, was nach dem Klick passieren soll.`,
+              action: "Ziel wählen",
+            }),
+          );
+        } else if (!nodeIds.has(reply.targetNodeId)) {
+          warnings.push(
+            buildWarning(`Button "${replyLabel}" verweist auf gelöschten Schritt`, {
+              nodeId: node.id,
+              suggestion: "Der Ziel-Schritt wurde gelöscht. Wähle ein neues Ziel aus.",
+              action: "Neues Ziel wählen",
+            }),
+          );
+        }
+      });
+    } else {
+      if (quickReplies.length > 0) {
+        warnings.push(
+          buildWarning(`"${nodeLabel}" ist als Freitext markiert, hat aber Buttons`, {
+            nodeId: node.id,
+            suggestion: "Entferne die Buttons oder stelle den Schritt auf 'Buttons' um.",
+            action: "Buttons entfernen",
+            severity: "info",
+          }),
+        );
+      }
+      if (freeTextEdges.length === 0) {
+        warnings.push(
+          buildWarning(`"${nodeLabel}" (Freitext) hat keine Weiterleitung`, {
+            nodeId: node.id,
+            suggestion: "Wähle im Freitext-Schritt, was nach der Texteingabe passieren soll.",
+            action: "Weiterleitung wählen",
+          }),
+        );
+      } else if (freeTextEdges.length > 1) {
+        warnings.push(
+          buildWarning(`"${nodeLabel}" (Freitext) hat mehrere Weiterleitungen`, {
+            nodeId: node.id,
+            suggestion: "Freitext-Schritte brauchen genau eine Weiterleitung.",
+            action: "Verbindungen prüfen",
+          }),
+        );
+      }
+    }
   });
 
   // === REACHABILITY CHECK (BFS) ===

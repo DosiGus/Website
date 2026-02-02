@@ -119,6 +119,61 @@ function detectSections(nodes: Node[], edges: Edge[]): Section[] {
   return sections;
 }
 
+const deriveInputMode = (node: Node, edges: Edge[]) => {
+  const configured = (node.data as any)?.inputMode as "buttons" | "free_text" | undefined;
+  if (configured) return configured;
+  const quickReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
+  if (quickReplies.length > 0) return "buttons";
+  const hasFreeTextEdge = edges.some(
+    (edge) => edge.source === node.id && !(edge.data as any)?.quickReplyId,
+  );
+  return hasFreeTextEdge ? "free_text" : "buttons";
+};
+
+const buildFreeTextDefaults = (label?: string) => {
+  const lower = (label ?? "").toLowerCase();
+  if (lower.includes("datum")) {
+    return {
+      text: "Bitte gib dein Wunschdatum ein.",
+      collects: "date",
+      placeholder: "z. B. 14. Februar",
+    };
+  }
+  if (lower.includes("uhr") || lower.includes("zeit")) {
+    return {
+      text: "Bitte gib deine Wunschzeit ein.",
+      collects: "time",
+      placeholder: "z. B. 18:30",
+    };
+  }
+  if (lower.includes("name")) {
+    return {
+      text: "Wie lautet dein Name?",
+      collects: "name",
+      placeholder: "z. B. Maria",
+    };
+  }
+  if (lower.includes("telefon") || lower.includes("phone")) {
+    return {
+      text: "Wie lautet deine Telefonnummer?",
+      collects: "phone",
+      placeholder: "z. B. 0176 12345678",
+    };
+  }
+  if (lower.includes("mail")) {
+    return {
+      text: "Wie lautet deine E-Mail-Adresse?",
+      collects: "email",
+      placeholder: "z. B. maria@example.com",
+    };
+  }
+  return {
+    text: "Bitte gib deine Antwort ein.",
+    collects: "",
+    placeholder: "Antwort eingeben…",
+  };
+};
+
 export default function FlowListBuilder({
   nodes,
   edges,
@@ -166,6 +221,101 @@ export default function FlowListBuilder({
   const getNodeById = useCallback((nodeId: string) => {
     return nodes.find(n => n.id === nodeId);
   }, [nodes]);
+
+  const getFreeTextTarget = useCallback(
+    (nodeId: string) => {
+      const edge = edges.find(
+        (edge) => edge.source === nodeId && !(edge.data as any)?.quickReplyId,
+      );
+      return edge?.target ?? "";
+    },
+    [edges],
+  );
+
+  const setFreeTextTarget = useCallback(
+    (nodeId: string, targetId: string) => {
+      const filtered = edges.filter(
+        (edge) => !(edge.source === nodeId && !(edge.data as any)?.quickReplyId),
+      );
+      const next = targetId
+        ? [
+            ...filtered,
+            {
+              id: `ft-${nodeId}-${targetId}`,
+              source: nodeId,
+              target: targetId,
+              data: { tone: "neutral", condition: "Freitext" },
+              label: "Freitext",
+            },
+          ]
+        : filtered;
+      onEdgesChange(next);
+    },
+    [edges, onEdgesChange],
+  );
+
+  const updateInputMode = useCallback(
+    (nodeId: string, mode: "buttons" | "free_text") => {
+      const updatedNodes = nodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                inputMode: mode,
+                ...(mode === "free_text"
+                  ? (() => {
+                      const defaults = buildFreeTextDefaults(
+                        (node.data?.label as string | undefined) ?? "",
+                      );
+                      return {
+                        placeholder: (node.data as any)?.placeholder || defaults.placeholder,
+                        collects: (node.data as any)?.collects || defaults.collects,
+                      };
+                    })()
+                  : {}),
+              },
+            }
+          : node,
+      );
+      onNodesChange(updatedNodes);
+    },
+    [nodes, onNodesChange],
+  );
+
+  const updateFreeTextMeta = useCallback(
+    (nodeId: string, field: "placeholder" | "collects", value: string) => {
+      const updatedNodes = nodes.map((node) =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, [field]: value } }
+          : node,
+      );
+      onNodesChange(updatedNodes);
+    },
+    [nodes, onNodesChange],
+  );
+
+  const buildFreeTextNode = useCallback(
+    (label?: string) => {
+      const defaults = buildFreeTextDefaults(label);
+      const id = `ft-${Date.now()}`;
+      return {
+        id,
+        type: "wesponde",
+        position: { x: 120, y: 120 + nodes.length * 140 },
+        data: {
+          label: label ? `Freitext: ${label}` : "Freitext",
+          text: defaults.text,
+          variant: "message",
+          quickReplies: [],
+          inputMode: "free_text",
+          placeholder: defaults.placeholder,
+          collects: defaults.collects,
+        },
+      } as Node;
+    },
+    [nodes.length],
+  );
 
   const syncEdgesForNode = useCallback((nodeId: string, replies: FlowQuickReply[]) => {
     let next = edges
@@ -239,7 +389,7 @@ export default function FlowListBuilder({
       };
     });
     onNodesChange(updatedNodes);
-  }, [nodes, onNodesChange, syncEdgesForNode]);
+  }, [nodes, onNodesChange]);
 
   const addQuickReply = useCallback((nodeId: string) => {
     let updatedReplies: FlowQuickReply[] = [];
@@ -286,6 +436,34 @@ export default function FlowListBuilder({
     }
   }, [nodes, onNodesChange, syncEdgesForNode]);
 
+  const handleQuickReplyTargetChange = useCallback(
+    (nodeId: string, replyId: string, targetValue: string, label: string) => {
+      if (targetValue === "__NEW_FREETEXT__") {
+        const newNode = buildFreeTextNode(label);
+        let updatedReplies: FlowQuickReply[] = [];
+        const updatedNodes = nodes.map((node) => {
+          if (node.id !== nodeId) return node;
+          const currentReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
+          updatedReplies = currentReplies.map((r) =>
+            r.id === replyId ? { ...r, targetNodeId: newNode.id } : r,
+          );
+          return {
+            ...node,
+            data: { ...node.data, quickReplies: updatedReplies },
+          };
+        });
+        onNodesChange([...updatedNodes, newNode]);
+        if (updatedReplies.length > 0) {
+          syncEdgesForNode(nodeId, updatedReplies);
+        }
+        onSelectNode(newNode.id);
+        return;
+      }
+      updateQuickReply(nodeId, replyId, { targetNodeId: targetValue || null });
+    },
+    [buildFreeTextNode, onNodesChange, onSelectNode, syncEdgesForNode, updateQuickReply],
+  );
+
   const removeQuickReply = useCallback((nodeId: string, replyId: string) => {
     let updatedReplies: FlowQuickReply[] = [];
     const updatedNodes = nodes.map(node => {
@@ -302,7 +480,7 @@ export default function FlowListBuilder({
     });
     onNodesChange(updatedNodes);
     syncEdgesForNode(nodeId, updatedReplies);
-  }, [nodes, onNodesChange]);
+  }, [nodes, onNodesChange, syncEdgesForNode]);
 
   const getSectionIcon = (icon: Section["icon"]) => {
     switch (icon) {
@@ -388,6 +566,8 @@ export default function FlowListBuilder({
                 {sectionNodes.map((node) => {
                   const quickReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
                   const isSelected = selectedNodeId === node.id;
+                  const inputMode = deriveInputMode(node, edges);
+                  const freeTextTarget = getFreeTextTarget(node.id);
 
                   return (
                     <div
@@ -413,6 +593,11 @@ export default function FlowListBuilder({
                             Start
                           </span>
                         )}
+                        {inputMode === "free_text" && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                            Freitext
+                          </span>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -435,59 +620,142 @@ export default function FlowListBuilder({
                         rows={2}
                       />
 
-                      {/* Quick Replies */}
-                      {quickReplies.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            Antwort-Buttons
-                          </p>
-                          {quickReplies.map((reply) => (
-                            <div
-                              key={reply.id}
-                              className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white p-2"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <input
-                                type="text"
-                                value={reply.label}
-                                onChange={(e) => updateQuickReply(node.id, reply.id, { label: e.target.value })}
-                                placeholder="Button-Text"
-                                className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-sm focus:border-brand focus:outline-none"
-                              />
-                              <select
-                                value={reply.targetNodeId || ""}
-                                onChange={(e) => updateQuickReply(node.id, reply.id, { targetNodeId: e.target.value || null })}
-                                className="rounded border border-slate-200 bg-white px-2 py-1 text-sm focus:border-brand focus:outline-none"
-                              >
-                                <option value="">Ziel wählen...</option>
-                                {nodes.filter(n => n.id !== node.id).map((n) => (
-                                  <option key={n.id} value={n.id}>
-                                    {n.data?.label || "Ohne Titel"}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                onClick={() => removeQuickReply(node.id, reply.id)}
-                                className="rounded-full p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          ))}
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Antwortart
+                        </p>
+                        <div className="flex rounded-full bg-white p-1 text-xs font-semibold text-slate-600">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateInputMode(node.id, "buttons");
+                            }}
+                            className={`flex-1 rounded-full px-3 py-1 ${
+                              inputMode === "buttons"
+                                ? "bg-slate-900 text-white"
+                                : "text-slate-500 hover:text-slate-700"
+                            }`}
+                          >
+                            Buttons
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateInputMode(node.id, "free_text");
+                            }}
+                            className={`flex-1 rounded-full px-3 py-1 ${
+                              inputMode === "free_text"
+                                ? "bg-slate-900 text-white"
+                                : "text-slate-500 hover:text-slate-700"
+                            }`}
+                          >
+                            Freitext
+                          </button>
                         </div>
-                      )}
+                      </div>
 
-                      {/* Add Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addQuickReply(node.id);
-                        }}
-                        className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand-dark"
-                      >
-                        <Plus className="h-3 w-3" />
-                        Button hinzufügen
-                      </button>
+                      {inputMode === "free_text" ? (
+                        <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+                          <p className="text-xs text-slate-500">
+                            Der Kunde schreibt frei – du wählst nur den nächsten Schritt.
+                          </p>
+                          <input
+                            type="text"
+                            value={(node.data as any)?.placeholder ?? ""}
+                            onChange={(e) => updateFreeTextMeta(node.id, "placeholder", e.target.value)}
+                            placeholder="z. B. Datum eingeben…"
+                            className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-sm focus:border-brand focus:outline-none"
+                          />
+                          <select
+                            value={(node.data as any)?.collects ?? ""}
+                            onChange={(e) => updateFreeTextMeta(node.id, "collects", e.target.value)}
+                            className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-sm focus:border-brand focus:outline-none"
+                          >
+                            <option value="">Keine Zuordnung</option>
+                            <option value="name">Name</option>
+                            <option value="date">Datum</option>
+                            <option value="time">Uhrzeit</option>
+                            <option value="guestCount">Personen</option>
+                            <option value="phone">Telefon</option>
+                            <option value="email">E‑Mail</option>
+                            <option value="specialRequests">Wünsche</option>
+                          </select>
+                          <select
+                            value={freeTextTarget}
+                            onChange={(e) => setFreeTextTarget(node.id, e.target.value)}
+                            className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-sm focus:border-brand focus:outline-none"
+                          >
+                            <option value="">Weiterleiten zu…</option>
+                            {nodes.filter(n => n.id !== node.id).map((n) => (
+                              <option key={n.id} value={n.id}>
+                                {n.data?.label || "Ohne Titel"}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <>
+                          {quickReplies.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                Antwort-Buttons
+                              </p>
+                              {quickReplies.map((reply) => (
+                                <div
+                                  key={reply.id}
+                                  className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white p-2"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <input
+                                    type="text"
+                                    value={reply.label}
+                                    onChange={(e) => updateQuickReply(node.id, reply.id, { label: e.target.value })}
+                                    placeholder="Button-Text"
+                                    className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-sm focus:border-brand focus:outline-none"
+                                  />
+                                  <select
+                                    value={reply.targetNodeId || ""}
+                                    onChange={(e) =>
+                                      handleQuickReplyTargetChange(
+                                        node.id,
+                                        reply.id,
+                                        e.target.value,
+                                        reply.label,
+                                      )
+                                    }
+                                    className="rounded border border-slate-200 bg-white px-2 py-1 text-sm focus:border-brand focus:outline-none"
+                                  >
+                                    <option value="">Ziel wählen...</option>
+                                    <option value="__NEW_FREETEXT__">+ Freitext (neu)</option>
+                                    {nodes.filter(n => n.id !== node.id).map((n) => (
+                                      <option key={n.id} value={n.id}>
+                                        {n.data?.label || "Ohne Titel"}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    onClick={() => removeQuickReply(node.id, reply.id)}
+                                    className="rounded-full p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addQuickReply(node.id);
+                            }}
+                            className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand-dark"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Button hinzufügen
+                          </button>
+                        </>
+                      )}
                     </div>
                   );
                 })}

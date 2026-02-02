@@ -25,6 +25,9 @@ export type FlowNodeData = {
   quickReplies: FlowQuickReply[];
   label?: string;
   variant?: string;
+  inputMode?: "buttons" | "free_text";
+  placeholder?: string;
+  collects?: string;
 };
 
 export type FlowMetadata = {
@@ -51,6 +54,9 @@ export type ConversationVariables = {
   phone?: string;
   email?: string;
   specialRequests?: string;
+  reviewRating?: number;
+  reviewFeedback?: string;
+  googleReviewUrl?: string;
   [key: string]: string | number | undefined;
 };
 
@@ -58,5 +64,7 @@ export type ConversationMetadata = {
   variables?: ConversationVariables;
   reservationId?: string;
   flowCompleted?: boolean;
+  reviewFlowId?: string;
+  reviewRequestId?: string;
   [key: string]: unknown;
 };

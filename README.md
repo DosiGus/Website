@@ -7,6 +7,7 @@ B2B SaaS platform for automating customer conversations via Instagram DM, WhatsA
 - **Visual Flow Builder** - Drag-and-drop conversation flows with React Flow
 - **Instagram DM Integration** - Receive and respond to messages automatically
 - **Reservation System** - Automatically extract and store bookings
+- **Google Review Flow** - Ask for ratings after completed visits
 - **Templates** - Pre-built flows for common use cases (Restaurant, Salon, etc.)
 - **Flow Simulator** - Test conversations in the browser before going live
 
@@ -69,6 +70,7 @@ Run the SQL from `supabase/schema.sql` in your Supabase SQL Editor to create the
 - `flows` - Conversation flows
 - `flow_templates` - Pre-built templates
 - `integrations` - Meta/Instagram connections
+- `review_requests` - Review follow-ups (rating/feedback tracking)
 - `conversations` - Chat threads
 - `messages` - Individual messages
 - `reservations` - Bookings
@@ -95,6 +97,8 @@ lib/
     flowMatcher.ts          # Match triggers
     variableExtractor.ts    # Extract user data
     reservationCreator.ts   # Create bookings
+  reviews/                  # Review flow sending
+    reviewSender.ts         # Send Google review follow-ups
 
 components/
   app/

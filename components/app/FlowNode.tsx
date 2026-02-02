@@ -33,6 +33,11 @@ function FlowNode({ data, selected }: NodeProps<FlowNodeData>) {
             {data.text || "Neue Nachricht"}
           </p>
         </div>
+        {data.inputMode === "free_text" ? (
+          <span className="ml-auto rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+            Freitext
+          </span>
+        ) : null}
       </div>
       {data.imageUrl ? (
         <div className="mt-3 overflow-hidden rounded-2xl border border-slate-100">

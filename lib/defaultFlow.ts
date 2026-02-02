@@ -21,6 +21,7 @@ export const defaultNodes: Node[] = [
       label: "Willkommen bei Wesponde! Wie kann ich dir helfen?",
       text: "Willkommen bei Wesponde! Wie kann ich dir helfen?",
       variant: "message",
+      inputMode: "buttons",
       quickReplies: [
         makeQuickReply("qr-reservieren", "Reservieren", "option-reservation"),
         makeQuickReply("qr-fragen", "Fragen", "option-faq"),
@@ -35,6 +36,7 @@ export const defaultNodes: Node[] = [
       label: "Reservierung anstoßen",
       text: "Reservierung anstoßen",
       variant: "choice",
+      inputMode: "buttons",
       quickReplies: [],
     },
   },
@@ -46,6 +48,7 @@ export const defaultNodes: Node[] = [
       label: "Fragen beantworten",
       text: "Fragen beantworten",
       variant: "choice",
+      inputMode: "buttons",
       quickReplies: [],
     },
   },

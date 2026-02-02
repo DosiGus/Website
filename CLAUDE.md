@@ -37,6 +37,7 @@ Schema in `supabase/schema.sql`. All tables use RLS (Row-Level Security) scoped 
 | `flows` | User conversation flows (nodes/edges/triggers stored as JSONB) |
 | `flow_templates` | Pre-built templates (restaurant, salon, medical) |
 | `integrations` | Meta/Instagram OAuth tokens and connection status |
+| `review_requests` | Review follow-up tracking (rating, feedback, sent status) |
 | `oauth_states` | CSRF protection for OAuth flow |
 | `messages` | Incoming/outgoing messages from Instagram/WhatsApp |
 | `conversations` | Conversation threads with customers (includes `metadata.variables` and `metadata.reservationId`) |
@@ -109,6 +110,12 @@ Required reservation fields: `name`, `date`, `time`, `guestCount`
 Optional fields: `phone`, `email`, `specialRequests`
 
 Reservations UI: `app/app/reservations/page.tsx` with `components/app/ReservationsClient.tsx`
+
+### Review Flow (Google Reviews)
+- Triggered when a reservation status is set to **completed** in the dashboard
+- Uses a system template (`template-google-review`) with rating quick replies and optional feedback
+- Sends the Google review link stored in `integrations.google_review_url`
+- Tracking stored in `review_requests`
 
 ## Meta/Instagram Integration
 

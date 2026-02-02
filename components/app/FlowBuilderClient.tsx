@@ -63,6 +63,7 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 type InspectorTab = "content" | "logic" | "variables" | "preview";
 type EdgeTone = "neutral" | "positive" | "negative";
 type BuilderMode = "simple" | "pro";
+type InputMode = "buttons" | "free_text";
 
 const EDGE_TONE_META: Record<EdgeTone, { label: string; bg: string; text: string }> = {
   neutral: { label: "Neutral", bg: "#e2e8f0", text: "#0f172a" },
@@ -118,7 +119,77 @@ const normalizeNode = (node: Node): Node => {
       variant: data.variant ?? "message",
       imageUrl: data.imageUrl ?? null,
       quickReplies,
+      inputMode: data.inputMode,
+      placeholder: data.placeholder ?? "",
+      collects: data.collects ?? "",
     },
+  };
+};
+
+const deriveInputMode = (node: Node, edges: Edge[]): InputMode => {
+  const configured = (node.data as any)?.inputMode as InputMode | undefined;
+  if (configured) return configured;
+  const quickReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
+  if (quickReplies.length > 0) return "buttons";
+  const hasFreeTextEdge = edges.some(
+    (edge) => edge.source === node.id && !(edge.data as any)?.quickReplyId,
+  );
+  return hasFreeTextEdge ? "free_text" : "buttons";
+};
+
+const ensureInputMode = (nodes: Node[], edges: Edge[]): Node[] =>
+  nodes.map((node) => {
+    const inputMode = deriveInputMode(node, edges);
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        inputMode,
+      },
+    };
+  });
+
+const buildFreeTextDefaults = (label?: string) => {
+  const lower = (label ?? "").toLowerCase();
+  if (lower.includes("datum")) {
+    return {
+      text: "Bitte gib dein Wunschdatum ein.",
+      collects: "date",
+      placeholder: "z. B. 14. Februar",
+    };
+  }
+  if (lower.includes("uhr") || lower.includes("zeit")) {
+    return {
+      text: "Bitte gib deine Wunschzeit ein.",
+      collects: "time",
+      placeholder: "z. B. 18:30",
+    };
+  }
+  if (lower.includes("name")) {
+    return {
+      text: "Wie lautet dein Name?",
+      collects: "name",
+      placeholder: "z. B. Maria",
+    };
+  }
+  if (lower.includes("telefon") || lower.includes("phone")) {
+    return {
+      text: "Wie lautet deine Telefonnummer?",
+      collects: "phone",
+      placeholder: "z. B. 0176 12345678",
+    };
+  }
+  if (lower.includes("mail")) {
+    return {
+      text: "Wie lautet deine E-Mail-Adresse?",
+      collects: "email",
+      placeholder: "z. B. maria@example.com",
+    };
+  }
+  return {
+    text: "Bitte gib deine Antwort ein.",
+    collects: "",
+    placeholder: "Antwort eingeben…",
   };
 };
 
@@ -128,8 +199,12 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [nodes, setNodes] = useState<Node[]>(defaultNodes.map(normalizeNode));
   const initialEdges = useMemo(() => defaultEdges.map(ensureEdgeMeta), []);
+  const initialNodes = useMemo(
+    () => ensureInputMode(defaultNodes.map(normalizeNode), initialEdges),
+    [initialEdges],
+  );
+  const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [triggers, setTriggers] = useState<FlowTrigger[]>(defaultTriggers);
   const [metadata, setMetadata] = useState<FlowMetadata>(defaultMetadata);
@@ -301,12 +376,14 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       setFlowName(data.name);
       setStatus((data.status as "Entwurf" | "Aktiv") ?? "Entwurf");
       const normalized = ((data.nodes as Node[]) || defaultNodes).map(normalizeNode);
-      setNodes(normalized);
       const incomingEdges =
         Array.isArray(data.edges) && data.edges.length > 0
           ? (data.edges as Edge[])
           : defaultEdges;
-      setEdges(incomingEdges.map(ensureEdgeMeta));
+      const edgesToUse = incomingEdges.map(ensureEdgeMeta);
+      const nodesToUse = ensureInputMode(normalized, edgesToUse);
+      setEdges(edgesToUse);
+      setNodes(nodesToUse);
       setTriggers(Array.isArray(data.triggers) ? (data.triggers as FlowTrigger[]) : defaultTriggers);
       setMetadata((data.metadata as FlowMetadata) ?? defaultMetadata);
       setLoading(false);
@@ -356,10 +433,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     [],
   );
 
-  const addNode = useCallback((type: "message" | "choice", presetLabel?: string) => {
-    const id = uuid();
-
-    // Calculate position in the center of visible viewport
+  const getNewNodePosition = useCallback(() => {
     let posX = 200;
     let posY = 200;
     let currentZoom = 1;
@@ -367,19 +441,21 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     if (reactFlowInstance) {
       const viewport = reactFlowInstance.getViewport();
       currentZoom = viewport.zoom;
-      // Get the canvas container dimensions (approximate)
       const canvasWidth = 800;
       const canvasHeight = 500;
-
-      // Convert screen center to flow coordinates
       posX = (canvasWidth / 2 - viewport.x) / viewport.zoom;
       posY = (canvasHeight / 2 - viewport.y) / viewport.zoom;
-
-      // Add small offset to avoid exact overlap with existing nodes
       const offset = nodes.length * 20;
       posX += offset % 100;
-      posY += (offset % 60);
+      posY += offset % 60;
     }
+
+    return { posX, posY, currentZoom };
+  }, [reactFlowInstance, nodes.length]);
+
+  const addNode = useCallback((type: "message" | "choice", presetLabel?: string) => {
+    const id = uuid();
+    const { posX, posY, currentZoom } = getNewNodePosition();
 
     const newNode: Node = {
       id,
@@ -390,6 +466,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         text: presetLabel ?? (type === "message" ? "Neue Nachricht" : "Auswahl"),
         variant: type,
         quickReplies: [],
+        inputMode: "buttons",
+        placeholder: "",
+        collects: "",
       },
     };
     setNodes((prev) => [...prev, newNode]);
@@ -400,7 +479,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setTimeout(() => {
       reactFlowInstance?.setCenter(posX + 75, posY + 50, { zoom: currentZoom, duration: 300 });
     }, 50);
-  }, [reactFlowInstance, nodes.length]);
+  }, [getNewNodePosition, reactFlowInstance]);
 
   const handleNodeFieldChange = useCallback(
     (field: string, value: string) => {
@@ -422,6 +501,115 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       );
     },
     [selectedNodeId],
+  );
+
+  const handleInputModeChange = useCallback(
+    (mode: InputMode) => {
+      if (!selectedNodeId) return;
+      setNodes((prev) =>
+        prev.map((node) =>
+          node.id === selectedNodeId
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  inputMode: mode,
+                  ...(mode === "free_text"
+                    ? (() => {
+                        const defaults = buildFreeTextDefaults(
+                          (node.data?.label as string | undefined) ?? "",
+                        );
+                        return {
+                          placeholder: node.data?.placeholder || defaults.placeholder,
+                          collects: node.data?.collects || defaults.collects,
+                        };
+                      })()
+                    : {}),
+                },
+              }
+            : node,
+        ),
+      );
+    },
+    [selectedNodeId],
+  );
+
+  const handleFreeTextMetaChange = useCallback(
+    (field: "placeholder" | "collects", value: string) => {
+      if (!selectedNodeId) return;
+      setNodes((prev) =>
+        prev.map((node) =>
+          node.id === selectedNodeId
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  [field]: value,
+                },
+              }
+            : node,
+        ),
+      );
+    },
+    [selectedNodeId],
+  );
+
+  const getFreeTextTarget = useCallback(
+    (nodeId?: string | null) => {
+      if (!nodeId) return null;
+      const edge = edges.find(
+        (item) => item.source === nodeId && !(item.data as any)?.quickReplyId,
+      );
+      return edge?.target ?? null;
+    },
+    [edges],
+  );
+
+  const setFreeTextTarget = useCallback(
+    (nodeId: string, targetId: string | null) => {
+      setEdges((prev) => {
+        const filtered = prev.filter(
+          (edge) => !(edge.source === nodeId && !(edge.data as any)?.quickReplyId),
+        );
+        if (!targetId) return filtered;
+        return [
+          ...filtered,
+          {
+            id: `ft-${nodeId}-${targetId}`,
+            source: nodeId,
+            target: targetId,
+            data: { tone: "neutral", condition: "Freitext" },
+            label: "Freitext",
+            markerEnd: { type: MarkerType.ArrowClosed },
+          },
+        ];
+      });
+    },
+    [],
+  );
+
+  const buildFreeTextNode = useCallback(
+    (label?: string) => {
+      const id = uuid();
+      const { posX, posY, currentZoom } = getNewNodePosition();
+      const defaults = buildFreeTextDefaults(label);
+      const node: Node = {
+        id,
+        type: "wesponde",
+        position: { x: posX, y: posY },
+        data: {
+          label: label ? `Freitext: ${label}` : "Freitext",
+          text: defaults.text,
+          variant: "message",
+          quickReplies: [],
+          inputMode: "free_text",
+          placeholder: defaults.placeholder,
+          collects: defaults.collects,
+        },
+      };
+      return { node, focus: { x: posX, y: posY, zoom: currentZoom } };
+    },
+    [getNewNodePosition],
   );
 
   const syncEdgesForNode = useCallback(
@@ -520,6 +708,49 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       }
     },
     [selectedNodeId, syncEdgesForNode],
+  );
+
+  const handleQuickReplyTargetChange = useCallback(
+    (replyId: string, targetValue: string, label: string) => {
+      if (!selectedNodeId) return;
+      if (targetValue === "__NEW_FREETEXT__") {
+        const { node: newNode, focus } = buildFreeTextNode(label);
+        let updatedReplies: FlowQuickReply[] | null = null;
+        setNodes((prev) => {
+          const updatedNodes = prev.map((node) => {
+            if (node.id !== selectedNodeId) return node;
+            const currentReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
+            updatedReplies = currentReplies.map((reply) =>
+              reply.id === replyId ? { ...reply, targetNodeId: newNode.id } : reply,
+            );
+            return { ...node, data: { ...node.data, quickReplies: updatedReplies } };
+          });
+          return [...updatedNodes, newNode];
+        });
+        if (updatedReplies) {
+          syncEdgesForNode(selectedNodeId, updatedReplies);
+        }
+        setSelectedNodeId(newNode.id);
+        setSelectedEdgeId(null);
+        setInspectorTab("content");
+        setTimeout(() => {
+          reactFlowInstance?.setCenter(
+            focus.x + 75,
+            focus.y + 50,
+            { zoom: focus.zoom, duration: 300 },
+          );
+        }, 50);
+        return;
+      }
+      updateQuickReply(replyId, { targetNodeId: targetValue || null });
+    },
+    [
+      selectedNodeId,
+      buildFreeTextNode,
+      syncEdgesForNode,
+      updateQuickReply,
+      reactFlowInstance,
+    ],
   );
 
   const removeQuickReply = useCallback(
@@ -987,6 +1218,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const selectedNodeReplies =
     ((selectedNode?.data?.quickReplies as FlowQuickReply[]) ?? []);
+  const selectedInputMode = selectedNode ? deriveInputMode(selectedNode, edges) : "buttons";
+  const selectedFreeTextTarget = getFreeTextTarget(selectedNodeId);
 
   return (
     <div className="space-y-8">
@@ -1313,78 +1546,166 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                       className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
                     />
                   </div>
-                  <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-slate-600">Quick Replies</p>
+                  <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                    <p className="text-sm font-semibold text-slate-600">Antwortart</p>
+                    <div className="flex rounded-full bg-white p-1 text-sm font-semibold text-slate-600">
                       <button
-                        onClick={addQuickReply}
-                        className="text-xs font-semibold text-brand hover:text-brand-dark"
+                        onClick={() => handleInputModeChange("buttons")}
+                        className={`flex-1 rounded-full px-3 py-1 ${
+                          selectedInputMode === "buttons"
+                            ? "bg-slate-900 text-white"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
                       >
-                        + Quick Reply
+                        Buttons
+                      </button>
+                      <button
+                        onClick={() => handleInputModeChange("free_text")}
+                        className={`flex-1 rounded-full px-3 py-1 ${
+                          selectedInputMode === "free_text"
+                            ? "bg-slate-900 text-white"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        Freitext
                       </button>
                     </div>
-                    {selectedNodeReplies.length === 0 ? (
+                    {selectedInputMode === "free_text" && (
                       <p className="text-xs text-slate-500">
-                        Noch keine Buttons. Füge Quick Replies hinzu, um Antworten zu verlinken.
+                        Der Kunde schreibt hier frei. Du bestimmst, wohin es danach weitergeht.
                       </p>
-                    ) : (
-                      <div className="space-y-3">
-                        {selectedNodeReplies.map((reply) => (
-                          <div
-                            key={reply.id}
-                            className="space-y-2 rounded-2xl border border-slate-200 bg-white p-3"
-                          >
-                            <div className="flex items-center justify-between text-xs text-slate-500">
-                              <span>Button</span>
-                              <button
-                                onClick={() => removeQuickReply(reply.id)}
-                                className="text-rose-500"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            </div>
-                            <input
-                              value={reply.label}
-                              onChange={(event) =>
-                                updateQuickReply(reply.id, { label: event.target.value })
-                              }
-                              placeholder="Button-Text"
-                              className="w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
-                            />
-                            <input
-                              value={reply.payload}
-                              onChange={(event) =>
-                                updateQuickReply(reply.id, { payload: event.target.value })
-                              }
-                              placeholder="Payload / interne Aktion"
-                              className="w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
-                            />
-                            <div>
-                              <label className="text-xs font-semibold text-slate-500">
-                                Weiterleiten zu
-                              </label>
-                              <select
-                                value={reply.targetNodeId ?? ""}
-                                onChange={(event) =>
-                                  updateQuickReply(reply.id, {
-                                    targetNodeId: event.target.value || null,
-                                  })
-                                }
-                                className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
-                              >
-                                <option value="">Node wählen …</option>
-                                {nodes.map((node) => (
-                                  <option key={node.id} value={node.id}>
-                                    {node.data?.label ?? node.id}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
                     )}
                   </div>
+
+                  {selectedInputMode === "free_text" ? (
+                    <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-500">Platzhalter im Chat</label>
+                        <input
+                          value={selectedNode.data?.placeholder ?? ""}
+                          onChange={(event) =>
+                            handleFreeTextMetaChange("placeholder", event.target.value)
+                          }
+                          placeholder="z. B. Datum eingeben…"
+                          className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-slate-500">Dieses Feld sammelt</label>
+                        <select
+                          value={selectedNode.data?.collects ?? ""}
+                          onChange={(event) =>
+                            handleFreeTextMetaChange("collects", event.target.value)
+                          }
+                          className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                        >
+                          <option value="">Keine Zuordnung</option>
+                          <option value="name">Name</option>
+                          <option value="date">Datum</option>
+                          <option value="time">Uhrzeit</option>
+                          <option value="guestCount">Personen</option>
+                          <option value="phone">Telefon</option>
+                          <option value="email">E‑Mail</option>
+                          <option value="specialRequests">Wünsche</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-slate-500">Weiterleiten zu</label>
+                        <select
+                          value={selectedFreeTextTarget ?? ""}
+                          onChange={(event) =>
+                            setFreeTextTarget(selectedNode.id, event.target.value || null)
+                          }
+                          className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                        >
+                          <option value="">Node wählen …</option>
+                          {nodes
+                            .filter((node) => node.id !== selectedNode.id)
+                            .map((node) => (
+                              <option key={node.id} value={node.id}>
+                                {node.data?.label ?? node.id}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-slate-600">Antwort-Buttons</p>
+                        <button
+                          onClick={addQuickReply}
+                          className="text-xs font-semibold text-brand hover:text-brand-dark"
+                        >
+                          + Button
+                        </button>
+                      </div>
+                      {selectedNodeReplies.length === 0 ? (
+                        <p className="text-xs text-slate-500">
+                          Noch keine Buttons. Füge Buttons hinzu, um Antworten zu verlinken.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {selectedNodeReplies.map((reply) => (
+                            <div
+                              key={reply.id}
+                              className="space-y-2 rounded-2xl border border-slate-200 bg-white p-3"
+                            >
+                              <div className="flex items-center justify-between text-xs text-slate-500">
+                                <span>Button</span>
+                                <button
+                                  onClick={() => removeQuickReply(reply.id)}
+                                  className="text-rose-500"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                              <input
+                                value={reply.label}
+                                onChange={(event) =>
+                                  updateQuickReply(reply.id, { label: event.target.value })
+                                }
+                                placeholder="Button-Text"
+                                className="w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                              />
+                              <input
+                                value={reply.payload}
+                                onChange={(event) =>
+                                  updateQuickReply(reply.id, { payload: event.target.value })
+                                }
+                                placeholder="Payload / interne Aktion"
+                                className="w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                              />
+                              <div>
+                                <label className="text-xs font-semibold text-slate-500">
+                                  Weiterleiten zu
+                                </label>
+                                <select
+                                  value={reply.targetNodeId ?? ""}
+                                  onChange={(event) =>
+                                    handleQuickReplyTargetChange(
+                                      reply.id,
+                                      event.target.value,
+                                      reply.label,
+                                    )
+                                  }
+                                  className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                                >
+                                  <option value="">Node wählen …</option>
+                                  <option value="__NEW_FREETEXT__">+ Freitext (neu)</option>
+                                  {nodes.map((node) => (
+                                    <option key={node.id} value={node.id}>
+                                      {node.data?.label ?? node.id}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <button
                     onClick={deleteSelection}
                     className="w-full rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600"

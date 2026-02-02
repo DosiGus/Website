@@ -1,11 +1,36 @@
 # Wesponde - Letzte Updates
 
-**Letzte Session:** 1. Februar 2026
-**Status:** Reservierungsflow komplett überarbeitet - Telefon & Sonderwünsche werden jetzt korrekt gespeichert
+**Letzte Session:** 2. Februar 2026
+**Status:** Google‑Review‑Flow integriert + Dashboard‑UI für Review‑Link, Reservierungsabschluss triggert Bewertung
 
 ---
 
-## Was wurde gemacht (1. Februar 2026)
+## Was wurde gemacht (2. Februar 2026)
+
+### 1. Google‑Review‑Flow (Erledigt ✅)
+- **Neu:** Review‑Flow als eigenes Template (Kategorie „Bewertungen“) mit Sternen‑Abfrage
+- **Logik:** 1–2 Sterne → Feedback‑Frage, 3–5 Sterne → direkt Google‑Link
+- **Variablen:** `{{googleReviewUrl}}` wird in der Nachricht ersetzt
+
+### 2. Trigger bei „Besuch abgeschlossen“ (Erledigt ✅)
+- **Jetzt:** Wenn eine Reservierung im Dashboard auf **completed** gesetzt wird, wird der Review‑Flow ausgelöst
+- **Stabilität:** Versand wird serverseitig abgewartet (kein „Fire‑and‑forget“ mehr)
+
+### 3. Google‑Review‑Link im Dashboard (Erledigt ✅)
+- **Neu im UI:** Feld in **Integrationen → Meta/Instagram**
+- Kein manuelles Eintragen in der DB nötig
+
+### 4. Vercel Hobby Limit berücksichtigt (Erledigt ✅)
+- Cron‑Job/Endpoint entfernt
+- Review‑Flow läuft aktuell **nur** über „Besuch abgeschlossen“
+
+### 5. Sichtbarkeit & Feedback (Erledigt ✅)
+- Review‑Template ist in den Templates sichtbar und anpassbar
+- Dashboard zeigt eine verständliche Meldung, falls der Review‑Flow nicht gesendet werden kann
+
+---
+
+## Vorherige Session (1. Februar 2026)
 
 ### 1. Reservierungs-Timing Fix (Erledigt ✅)
 - **Problem:** Reservierung wurde zu früh erstellt (sobald Name/Datum/Zeit/Gäste da waren) - BEVOR Telefon und Sonderwünsche eingegeben werden konnten
@@ -51,6 +76,7 @@
 | Bestehende Reservierung prüfen | ✅ | User wird gefragt: Stornieren/Behalten/Neu |
 | Reservierungs-Dashboard | ✅ | UI zum Verwalten von Buchungen |
 | Logging | ✅ | Webhook-Events werden geloggt |
+| Google‑Review‑Flow | ✅ | Bewertung nach „Besuch abgeschlossen“ inkl. Google‑Link |
 
 ### In Arbeit 🔄
 
@@ -69,12 +95,10 @@
 
 ---
 
-## Commits dieser Session (1. Februar 2026)
+## Commits dieser Session (2. Februar 2026)
 
 ```
-7349472f Fix: existingMetadata wird korrekt aktualisiert bei neuem Flow
-a7466e16 Fix: Reservierung wird jetzt korrekt erstellt
-157bf611 Fix: Reservierung wird nicht mehr zu früh erstellt
+Lokale Änderungen (noch nicht gepusht)
 ```
 
 ---
@@ -112,6 +136,7 @@ d0b4793a Fix: Name, Telefon und Wünsche werden korrekt gespeichert
 | `components/app/FlowBuilderClient.tsx` | Flow-Editor UI |
 | `components/app/FlowSimulator.tsx` | Testmodus im FlowBuilder |
 | `components/app/ReservationsClient.tsx` | Reservierungs-Dashboard |
+| `lib/reviews/reviewSender.ts` | Review‑Flow Versand (bei completed) |
 
 ---
 
@@ -139,6 +164,15 @@ d0b4793a Fix: Name, Telefon und Wünsche werden korrekt gespeichert
    - Behalten
    - Neue Reservierung
 
+### Review‑Flow testen (ohne Cron)
+1. Google‑Review‑Link in **Integrationen → Meta** speichern
+2. Eine Reservierung haben (Status **confirmed**)
+3. Im Dashboard auf **„Besuch abgeschlossen“** setzen
+4. Ergebnis:
+   - Gast erhält Stern‑Abfrage im Instagram‑Chat
+   - 1–2 Sterne → Feedback‑Frage
+   - 3–5 Sterne → Google‑Link
+
 ---
 
 ## Bekannte Einschränkungen
@@ -146,6 +180,7 @@ d0b4793a Fix: Name, Telefon und Wünsche werden korrekt gespeichert
 - **Test-Modus:** Instagram-Permissions erfordern Test-User in Meta Developer Portal
 - **60-Tage Token:** Access Token muss alle 60 Tage erneuert werden
 - **Webhook-Delay:** Instagram kann 1-2 Sekunden Verzögerung haben
+- **Review‑Flow:** Aktuell nur per „Besuch abgeschlossen“ (kein Cron auf Hobby‑Plan)
 
 ---
 

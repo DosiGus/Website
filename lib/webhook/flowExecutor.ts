@@ -23,7 +23,22 @@ type FlowEdge = {
   id: string;
   source: string;
   target: string;
+  data?: Record<string, unknown>;
 };
+
+type InputMode = "buttons" | "free_text";
+
+function deriveInputMode(node: FlowNode, edges: FlowEdge[]): InputMode {
+  const data = node.data as FlowNodeData;
+  const configured = data.inputMode as InputMode | undefined;
+  if (configured) return configured;
+  const quickReplies = Array.isArray(data.quickReplies) ? data.quickReplies : [];
+  if (quickReplies.length > 0) return "buttons";
+  const hasFreeTextEdge = edges.some(
+    (edge) => edge.source === node.id && !(edge.data as any)?.quickReplyId,
+  );
+  return hasFreeTextEdge ? "free_text" : "buttons";
+}
 
 /**
  * Executes a flow node and generates a response.
@@ -44,6 +59,7 @@ export function executeFlowNode(
   }
 
   const nodeData = node.data;
+  const inputMode = deriveInputMode(node, edges);
   // Apply variable substitution to the text
   const rawText = nodeData.text || nodeData.label || "";
   let text = substituteVariables(rawText, variables);
@@ -56,12 +72,16 @@ export function executeFlowNode(
   }
 
   // Find outgoing edges to determine next node(s)
-  const outgoingEdges = edges.filter((e) => e.source === nodeId);
+  const outgoingEdges = edges.filter(
+    (e) =>
+      e.source === nodeId &&
+      (inputMode !== "free_text" || !(e.data as any)?.quickReplyId),
+  );
 
   // Build quick replies
   const quickReplies: FlowResponse["quickReplies"] = [];
 
-  if (nodeData.quickReplies && nodeData.quickReplies.length > 0) {
+  if (inputMode === "buttons" && nodeData.quickReplies && nodeData.quickReplies.length > 0) {
     // Use configured quick replies
     for (const qr of nodeData.quickReplies) {
       const targetNodeId = qr.targetNodeId || findNextNode(nodeId, edges);
@@ -72,9 +92,9 @@ export function executeFlowNode(
           : qr.payload || qr.label,
       });
     }
-  } else if (outgoingEdges.length === 1) {
+  } else if (inputMode === "buttons" && outgoingEdges.length === 1) {
     // Single path - no quick replies needed, auto-advance later
-  } else if (outgoingEdges.length > 1) {
+  } else if (inputMode === "buttons" && outgoingEdges.length > 1) {
     // Multiple paths without quick replies - create default options
     for (const edge of outgoingEdges) {
       const targetNode = nodes.find((n) => n.id === edge.target);
@@ -180,14 +200,23 @@ export function handleFreeTextInput(
     return null;
   }
 
-  // Check if this node expects free text input:
-  // - Has no quick replies (or empty array)
-  // - Has at least one outgoing edge
-  const hasQuickReplies = currentNode.data.quickReplies && currentNode.data.quickReplies.length > 0;
-  const outgoingEdges = edges.filter((e) => e.source === currentNodeId);
+  const inputMode = deriveInputMode(currentNode, edges);
 
-  if (hasQuickReplies || outgoingEdges.length === 0) {
-    // Node has quick replies or is an end node - don't handle as free text
+  // Check if this node expects free text input:
+  // - inputMode is free_text (explicit or derived)
+  // - Has at least one non-quick-reply outgoing edge
+  const outgoingEdges = edges.filter(
+    (e) =>
+      e.source === currentNodeId &&
+      (inputMode !== "free_text" || !(e.data as any)?.quickReplyId),
+  );
+
+  if (inputMode !== "free_text") {
+    // Node is configured for buttons, don't handle as free text
+    return null;
+  }
+
+  if (outgoingEdges.length === 0) {
     return null;
   }
 
