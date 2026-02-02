@@ -82,6 +82,19 @@ export default function FlowSimulator({
     [deriveInputMode],
   );
 
+  const currentNode = useMemo(
+    () => (currentNodeId ? findNode(currentNodeId) : undefined),
+    [currentNodeId, findNode],
+  );
+
+  const currentPlaceholder = useMemo(() => {
+    const raw = (currentNode?.data as any)?.placeholder;
+    if (typeof raw === "string" && raw.trim().length > 0) {
+      return raw;
+    }
+    return "Antwort eingeben...";
+  }, [currentNode]);
+
   const executeNode = useCallback(
     (nodeId: string) => {
       const node = findNode(nodeId);
@@ -106,7 +119,7 @@ export default function FlowSimulator({
         onNodeSelect(nodeId);
       }
     },
-    [findNode, onNodeSelect]
+    [findNode, getEffectiveQuickReplies, onNodeSelect]
   );
 
   const handleStart = useCallback(() => {
@@ -331,10 +344,7 @@ export default function FlowSimulator({
                   handleFreeTextSubmit();
                 }
               }}
-              placeholder={
-                ((findNode(currentNodeId)?.data as any)?.placeholder as string | undefined) ||
-                "Antwort eingeben..."
-              }
+              placeholder={currentPlaceholder}
               className="flex-1 rounded-2xl border border-slate-200 px-4 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand/20"
             />
             <button

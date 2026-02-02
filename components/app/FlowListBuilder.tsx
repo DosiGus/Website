@@ -461,7 +461,7 @@ export default function FlowListBuilder({
       }
       updateQuickReply(nodeId, replyId, { targetNodeId: targetValue || null });
     },
-    [buildFreeTextNode, onNodesChange, onSelectNode, syncEdgesForNode, updateQuickReply],
+    [buildFreeTextNode, nodes, onNodesChange, onSelectNode, syncEdgesForNode, updateQuickReply],
   );
 
   const removeQuickReply = useCallback((nodeId: string, replyId: string) => {
