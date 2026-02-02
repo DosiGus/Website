@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import PartnerLoginForm from "../../components/PartnerLoginForm";
 
 export const metadata = {
@@ -33,7 +34,15 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <PartnerLoginForm />
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-sm text-slate-600 shadow-lg">
+            Login wird geladen …
+          </div>
+        }
+      >
+        <PartnerLoginForm />
+      </Suspense>
     </section>
   );
 }

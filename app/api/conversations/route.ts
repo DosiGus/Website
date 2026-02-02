@@ -3,6 +3,8 @@ import { requireUser } from "../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/conversations
  * List conversations with optional filters
