@@ -8,10 +8,21 @@ import {
 } from "../../../lib/defaultFlow";
 import { requireUser } from "../../../lib/apiAuth";
 import { fallbackTemplates } from "../../../lib/flowTemplates";
+import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
 export async function GET(request: Request) {
   try {
     const user = await requireUser(request);
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(`flows:${user.id}`, RATE_LIMITS.generous);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
+
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from("flows")
@@ -32,6 +43,16 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await requireUser(request);
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(`flows:${user.id}`, RATE_LIMITS.standard);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
+
     const body = await request.json();
     const name = body.name ?? "Neuer Flow";
     const templateId: string | undefined = body.templateId;

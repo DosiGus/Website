@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
+import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
 export async function GET(request: Request) {
   try {
     const user = await requireUser(request);
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(`integrations:${user.id}`, RATE_LIMITS.generous);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
+
     const supabase = createSupabaseServerClient();
 
     const { data, error } = await supabase
@@ -27,6 +38,16 @@ export async function GET(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const user = await requireUser(request);
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(`integrations:${user.id}`, RATE_LIMITS.strict);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
+
     const body = (await request.json()) as { provider?: string };
     const provider = body?.provider;
 

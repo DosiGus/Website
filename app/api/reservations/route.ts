@@ -12,6 +12,7 @@ import {
   reservationQuerySchema,
   formatZodErrors,
 } from "../../../lib/validation/reservationSchema";
+import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
 /**
  * GET /api/reservations
@@ -20,6 +21,16 @@ import {
 export async function GET(request: Request) {
   try {
     const user = await requireUser(request);
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(`reservations:${user.id}`, RATE_LIMITS.generous);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
 
     // Parse and validate query parameters
@@ -104,6 +115,16 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await requireUser(request);
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(`reservations:${user.id}`, RATE_LIMITS.standard);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
+
     const body = await request.json();
 
     // Validate input
@@ -168,6 +189,16 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const user = await requireUser(request);
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(`reservations:${user.id}`, RATE_LIMITS.standard);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
+
     const body = await request.json();
 
     // Validate input
@@ -242,6 +273,16 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const user = await requireUser(request);
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(`reservations:${user.id}`, RATE_LIMITS.standard);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 

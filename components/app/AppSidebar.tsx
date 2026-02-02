@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Workflow, Plug, Settings, CalendarCheck } from "lucide-react";
+import { LayoutDashboard, Workflow, Plug, Settings, CalendarCheck, MessageCircle } from "lucide-react";
 
 const navItems = [
   { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/app/flows", label: "Flows", icon: Workflow },
   { href: "/app/reservations", label: "Reservierungen", icon: CalendarCheck },
+  { href: "/app/conversations", label: "Konversationen", icon: MessageCircle },
   { href: "/app/integrations", label: "Integrationen", icon: Plug },
   { href: "/app/settings", label: "Einstellungen", icon: Settings },
 ];
