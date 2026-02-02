@@ -53,6 +53,7 @@ export default function ReservationsClient() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
   // Filters
@@ -216,6 +217,7 @@ export default function ReservationsClient() {
   const updateStatus = async (id: string, status: ReservationStatus) => {
     setPendingAction(id);
     setError(null);
+    setNotice(null);
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
@@ -233,8 +235,27 @@ export default function ReservationsClient() {
         body: JSON.stringify({ id, status }),
       });
 
+      const payload = await response.json().catch(() => null);
+
       if (!response.ok) {
-        throw new Error("Fehler beim Aktualisieren");
+        throw new Error(payload?.error ?? "Fehler beim Aktualisieren");
+      }
+
+      if (status === "completed" && payload?.review) {
+        const reviewStatus = payload.review.status as string | undefined;
+        if (payload.review.success) {
+          setNotice("✅ Bewertungs-Flow wurde an den Gast gesendet.");
+        } else if (reviewStatus === "missing_review_url") {
+          setNotice("⚠️ Kein Google-Bewertungslink hinterlegt. Bitte in Integrationen speichern.");
+        } else if (reviewStatus === "missing_sender") {
+          setNotice("⚠️ Diese Reservierung hat keinen Instagram-Kontakt (nur IG-Reservierungen).");
+        } else if (reviewStatus === "missing_integration") {
+          setNotice("⚠️ Integration nicht verbunden. Bitte Meta/Instagram verbinden.");
+        } else if (reviewStatus === "already_sent") {
+          setNotice("ℹ️ Bewertungs-Flow wurde bereits gesendet.");
+        } else {
+          setNotice("⚠️ Bewertungs-Flow konnte nicht gesendet werden.");
+        }
       }
 
       await loadReservations();
@@ -525,6 +546,12 @@ export default function ReservationsClient() {
       {error && (
         <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
           {error}
+        </div>
+      )}
+
+      {notice && (
+        <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+          {notice}
         </div>
       )}
 

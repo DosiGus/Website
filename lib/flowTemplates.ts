@@ -1180,4 +1180,60 @@ export const fallbackTemplates: FlowTemplate[] = [
     ],
     metadata: { version: "2.0" },
   },
+  {
+    id: "template-google-review",
+    slug: "google-review-followup",
+    name: "Google Bewertung — Nach dem Besuch",
+    vertical: "Bewertungen",
+    description: "Bewertungsflow für Google Reviews (anpassbar für Ton & Text).",
+    nodes: [
+      {
+        id: "review-rating",
+        type: "input",
+        position: { x: 0, y: 120 },
+        data: {
+          label: "Bewertung abfragen",
+          text: "Danke für deinen Besuch! ⭐️\n\nWie würdest du deinen Aufenthalt bewerten?",
+          variant: "message",
+          quickReplies: [
+            { id: "qr-review-1", label: "⭐️ 1", payload: "1", targetNodeId: "review-feedback" },
+            { id: "qr-review-2", label: "⭐️ 2", payload: "2", targetNodeId: "review-feedback" },
+            { id: "qr-review-3", label: "⭐️ 3", payload: "3", targetNodeId: "review-link" },
+            { id: "qr-review-4", label: "⭐️ 4", payload: "4", targetNodeId: "review-link" },
+            { id: "qr-review-5", label: "⭐️ 5", payload: "5", targetNodeId: "review-link" },
+          ],
+        },
+      },
+      {
+        id: "review-feedback",
+        position: { x: 320, y: 60 },
+        data: {
+          label: "Feedback einholen",
+          text: "Es tut uns leid, dass es nicht perfekt war. Was können wir verbessern?",
+          variant: "message",
+          quickReplies: [],
+        },
+      },
+      {
+        id: "review-link",
+        position: { x: 320, y: 220 },
+        data: {
+          label: "Google Bewertung",
+          text: "Danke dir! 🙏 Wenn du magst, kannst du hier eine Google Bewertung hinterlassen:\n{{googleReviewUrl}}",
+          variant: "message",
+          quickReplies: [],
+        },
+      },
+    ],
+    edges: [
+      { id: "e-review-1", source: "review-rating", target: "review-feedback", data: { condition: "1 Stern", tone: "negative" } },
+      { id: "e-review-2", source: "review-rating", target: "review-feedback", data: { condition: "2 Sterne", tone: "negative" } },
+      { id: "e-review-3", source: "review-rating", target: "review-link", data: { condition: "3 Sterne", tone: "neutral" } },
+      { id: "e-review-4", source: "review-rating", target: "review-link", data: { condition: "4 Sterne", tone: "positive" } },
+      { id: "e-review-5", source: "review-rating", target: "review-link", data: { condition: "5 Sterne", tone: "positive" } },
+      { id: "e-review-feedback-link", source: "review-feedback", target: "review-link", data: { condition: "Feedback erhalten", tone: "neutral" } },
+    ],
+    triggers: [],
+    metadata: { version: "1.0", reviewFlow: true, startNodeId: "review-rating", systemTemplate: true },
+  },
 ];

@@ -13,6 +13,7 @@ import {
   formatZodErrors,
 } from "../../../lib/validation/reservationSchema";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
+import { sendReviewRequestForReservation } from "../../../lib/reviews/reviewSender";
 
 /**
  * GET /api/reservations
@@ -253,7 +254,17 @@ export async function PATCH(request: Request) {
       );
     }
 
-    return NextResponse.json(data);
+    let reviewResult = null;
+    if (status === "completed") {
+      try {
+        reviewResult = await sendReviewRequestForReservation(data.id, "manual_completed");
+      } catch (error) {
+        console.error("Review request trigger failed:", error);
+        reviewResult = { success: false, status: "error" };
+      }
+    }
+
+    return NextResponse.json({ reservation: data, review: reviewResult });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
