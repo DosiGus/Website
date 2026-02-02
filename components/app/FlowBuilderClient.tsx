@@ -27,17 +27,20 @@ import {
   CheckCircle2,
   Edit2,
   Focus,
+  MessageSquare,
   Plus,
   Search,
+  Settings2,
   Shapes,
   Sparkles,
   Trash2,
   TriangleAlert,
   X,
+  Zap,
 } from "lucide-react";
 import FlowBuilderCanvas from "./FlowBuilderCanvas";
 import FlowListBuilder from "./FlowListBuilder";
-import FlowSimulator from "./FlowSimulator";
+import InspectorSlideOver from "./InspectorSlideOver";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import {
   defaultNodes,
@@ -155,35 +158,35 @@ const buildFreeTextDefaults = (label?: string) => {
     return {
       text: "Bitte gib dein Wunschdatum ein.",
       collects: "date",
-      placeholder: "z. B. 14. Februar",
+      placeholder: "z. B. 14. Februar",
     };
   }
   if (lower.includes("uhr") || lower.includes("zeit")) {
     return {
       text: "Bitte gib deine Wunschzeit ein.",
       collects: "time",
-      placeholder: "z. B. 18:30",
+      placeholder: "z. B. 18:30",
     };
   }
   if (lower.includes("name")) {
     return {
       text: "Wie lautet dein Name?",
       collects: "name",
-      placeholder: "z. B. Maria",
+      placeholder: "z. B. Maria",
     };
   }
   if (lower.includes("telefon") || lower.includes("phone")) {
     return {
       text: "Wie lautet deine Telefonnummer?",
       collects: "phone",
-      placeholder: "z. B. 0176 12345678",
+      placeholder: "z. B. 0176 12345678",
     };
   }
   if (lower.includes("mail")) {
     return {
       text: "Wie lautet deine E-Mail-Adresse?",
       collects: "email",
-      placeholder: "z. B. maria@example.com",
+      placeholder: "z. B. maria@example.com",
     };
   }
   return {
@@ -231,7 +234,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [keywordInput, setKeywordInput] = useState("");
   const [nodeSearchQuery, setNodeSearchQuery] = useState("");
   const [nodeSearchOpen, setNodeSearchOpen] = useState(false);
-  const [builderMode, setBuilderMode] = useState<BuilderMode>("simple");
+  const [builderMode, setBuilderMode] = useState<BuilderMode>("pro");
+  const [isInspectorOpen, setInspectorOpen] = useState(false);
+  const [isAddMenuOpen, setAddMenuOpen] = useState(false);
   const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -295,6 +300,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setSelectedEdgeId(null);
     setNodeSearchOpen(false);
     setNodeSearchQuery("");
+    setInspectorOpen(true);
     if (reactFlowInstance) {
       reactFlowInstance.setCenter(
         targetNode.position.x + 100,
@@ -317,6 +323,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setEdges((prev) => prev.filter((e) => e.source !== nodeId && e.target !== nodeId));
     if (selectedNodeId === nodeId) {
       setSelectedNodeId(null);
+      setInspectorOpen(false);
     }
   }, [selectedNodeId]);
 
@@ -396,6 +403,13 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setLintWarnings(lintFlow(nodes, edges, triggers).warnings);
   }, [nodes, edges, triggers]);
 
+  // Open inspector when node or edge is selected
+  useEffect(() => {
+    if (selectedNodeId || selectedEdgeId) {
+      setInspectorOpen(true);
+    }
+  }, [selectedNodeId, selectedEdgeId]);
+
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
     [],
@@ -474,6 +488,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setNodes((prev) => [...prev, newNode]);
     setSelectedNodeId(id);
     setSelectedEdgeId(null);
+    setInspectorOpen(true);
+    setAddMenuOpen(false);
 
     // Pan to the new node
     setTimeout(() => {
@@ -897,6 +913,10 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const deleteSelection = useCallback(() => {
     if (!selection.nodes.length && !selection.edges.length) {
+      // If no multi-selection, delete the single selected item
+      if (selectedNodeId) {
+        handleDeleteNode(selectedNodeId);
+      }
       return;
     }
     const nodeIds = new Set(selection.nodes.map((node) => node.id));
@@ -913,7 +933,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
     setSelection({ nodes: [], edges: [] });
-  }, [selection]);
+    setInspectorOpen(false);
+  }, [selection, selectedNodeId, handleDeleteNode]);
 
   const handleCopy = useCallback(() => {
     if (!selection.nodes.length) return;
@@ -1056,6 +1077,11 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         event.preventDefault();
         reactFlowInstance?.fitView({ padding: 0.2, duration: 600 });
       }
+      if (event.key === "Escape") {
+        setInspectorOpen(false);
+        setSelectedNodeId(null);
+        setSelectedEdgeId(null);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -1159,6 +1185,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           setSelectedEdgeId(targetEdge.id);
           setSelectedNodeId(null);
           setInspectorTab("logic");
+          setInspectorOpen(true);
           // Focus on the source node of the edge
           const sourceNode = nodes.find((node) => node.id === targetEdge.source);
           if (sourceNode) {
@@ -1179,6 +1206,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         setSelectedNodeId(targetNode.id);
         setSelectedEdgeId(null);
         setInspectorTab("content");
+        setInspectorOpen(true);
         reactFlowInstance?.setCenter(
           targetNode.position.x + 50,
           targetNode.position.y,
@@ -1189,155 +1217,122 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     [nodes, edges, reactFlowInstance],
   );
 
+  // Computed values for inspector
+  const selectedNodeReplies = ((selectedNode?.data?.quickReplies as FlowQuickReply[]) ?? []);
+  const selectedInputMode = selectedNode ? deriveInputMode(selectedNode, edges) : "buttons";
+  const selectedFreeTextTarget = getFreeTextTarget(selectedNodeId);
+
   if (loading || !userId) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
-        Flow wird geladen …
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
+          <div className="inline-flex h-10 w-10 animate-spin items-center justify-center rounded-full border-2 border-primary border-t-transparent" />
+          <p className="mt-4 text-sm text-slate-500">Flow wird geladen…</p>
+        </div>
       </div>
     );
   }
 
   if (errorMessage) {
     return (
-      <div className="rounded-3xl border border-rose-200 bg-rose-50 p-10 text-center text-sm text-rose-700">
-        {errorMessage}
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-10 text-center max-w-md">
+          <TriangleAlert className="mx-auto h-12 w-12 text-rose-400" />
+          <p className="mt-4 text-sm text-rose-700">{errorMessage}</p>
+        </div>
       </div>
     );
   }
 
   const warningBadge =
     lintWarnings.length > 0 ? (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-        <TriangleAlert className="h-3 w-3" /> {lintWarnings.length} Warnungen
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700">
+        <TriangleAlert className="h-3.5 w-3.5" /> {lintWarnings.length}
       </span>
     ) : (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-        <CheckCircle2 className="h-3 w-3" /> Flow valide
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+        <CheckCircle2 className="h-3.5 w-3.5" /> OK
       </span>
     );
 
-  const selectedNodeReplies =
-    ((selectedNode?.data?.quickReplies as FlowQuickReply[]) ?? []);
-  const selectedInputMode = selectedNode ? deriveInputMode(selectedNode, edges) : "buttons";
-  const selectedFreeTextTarget = getFreeTextTarget(selectedNodeId);
-
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <input
-            value={flowName}
-            onChange={(event) => setFlowName(event.target.value)}
-            className="text-3xl font-semibold text-slate-900 focus:outline-none"
-          />
-          <p className="text-sm text-slate-500">
-            Bearbeite deinen Flow und speichere, um die Änderungen live zu schalten.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {warningBadge}
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value as "Entwurf" | "Aktiv")}
-            className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 focus:border-brand focus:outline-none"
-          >
-            <option value="Entwurf">Entwurf</option>
-            <option value="Aktiv">Aktiv</option>
-          </select>
-          <button
-            onClick={() => handleSave()}
-            className="rounded-full bg-brand px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-brand/30"
-            disabled={saveState === "saving"}
-          >
-            {saveState === "saving"
-              ? "Speichert …"
-              : saveState === "saved"
-              ? "Gespeichert"
-              : "Speichern"}
-          </button>
-          <button
-            onClick={handleExport}
-            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand"
-            disabled={exporting}
-          >
-            {exporting ? "Exportiert…" : "JSON exportieren"}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[280px,1fr,340px]">
-        <aside className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Trigger</p>
-              <h2 className="text-lg font-semibold text-slate-900">Einstiegspunkte</h2>
+    <div className="relative min-h-screen bg-canvas">
+      {/* Header */}
+      <header className="sticky top-0 z-20 border-b border-slate-200/50 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto max-w-screen-2xl px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            {/* Left: Flow Name */}
+            <div className="flex items-center gap-4">
+              <input
+                value={flowName}
+                onChange={(event) => setFlowName(event.target.value)}
+                className="font-display text-2xl font-semibold italic text-slate-900 bg-transparent focus:outline-none focus:ring-0 border-0 p-0"
+                style={{ minWidth: '200px' }}
+              />
+              {warningBadge}
             </div>
-            <button
-              onClick={() => openTriggerModal()}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-brand"
-            >
-              <Plus className="h-4 w-4" />
-              Neuer Trigger
-            </button>
+
+            {/* Right: Actions */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Trigger Button */}
+              <button
+                onClick={() => openTriggerModal()}
+                className="btn-press inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
+              >
+                <Zap className="h-4 w-4" />
+                Trigger ({triggers.length})
+              </button>
+
+              {/* Status */}
+              <select
+                value={status}
+                onChange={(event) => setStatus(event.target.value as "Entwurf" | "Aktiv")}
+                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 focus:border-primary focus:outline-none transition-colors"
+              >
+                <option value="Entwurf">Entwurf</option>
+                <option value="Aktiv">Aktiv</option>
+              </select>
+
+              {/* Test Button */}
+              <button
+                onClick={() => {
+                  setInspectorTab("preview");
+                  setInspectorOpen(true);
+                }}
+                className="btn-press rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
+              >
+                Test
+              </button>
+
+              {/* Save Button */}
+              <button
+                onClick={() => handleSave()}
+                className="btn-press rounded-full bg-primary px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 hover:bg-primary-dark transition-colors"
+                disabled={saveState === "saving"}
+              >
+                {saveState === "saving"
+                  ? "Speichert…"
+                  : saveState === "saved"
+                  ? "Gespeichert ✓"
+                  : "Speichern"}
+              </button>
+            </div>
           </div>
-          {triggers.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-sm text-slate-500">
-              Noch keine Trigger angelegt. Lege Schlüsselwörter an, um deinen Flow zu starten.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {triggers.map((trigger) => (
-                <div key={trigger.id} className="rounded-2xl border border-slate-100 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    User sends a message
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {trigger.config.keywords.map((keyword) => (
-                      <span
-                        key={keyword}
-                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
-                      >
-                        {keyword}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Match: {trigger.config.matchType === "CONTAINS" ? "enthält" : "exakt"}
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    Startet bei: <span className="font-semibold">{getNodeLabel(trigger.startNodeId)}</span>
-                  </p>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => openTriggerModal(trigger)}
-                      className="flex flex-1 items-center justify-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600"
-                    >
-                      <Edit2 className="h-3 w-3" />
-                      Bearbeiten
-                    </button>
-                    <button
-                      onClick={() => deleteTrigger(trigger.id)}
-                      className="flex items-center justify-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-rose-600"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      Löschen
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </aside>
+        </div>
+      </header>
 
-        <div className="relative space-y-4">
+      {/* Main Content */}
+      <main className="relative">
+        {/* Toolbar */}
+        <div className="mx-auto max-w-screen-2xl px-6 py-4">
           <div className="flex flex-wrap items-center gap-3">
             {/* Mode Toggle */}
             <div className="flex rounded-full bg-slate-100 p-1">
               <button
                 onClick={() => setBuilderMode("simple")}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${
                   builderMode === "simple"
-                    ? "bg-white text-slate-900 shadow"
+                    ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
@@ -1345,9 +1340,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               </button>
               <button
                 onClick={() => setBuilderMode("pro")}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${
                   builderMode === "pro"
-                    ? "bg-white text-slate-900 shadow"
+                    ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
@@ -1360,50 +1355,38 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
             {builderMode === "pro" && (
               <>
                 <button
-                  onClick={() => addNode("message")}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nachricht
-                </button>
-                <button
-                  onClick={() => addNode("choice")}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
-                >
-                  <Shapes className="h-4 w-4" />
-                  Auswahl
-                </button>
-                <button
                   onClick={runAutoLayout}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
+                  className="btn-press inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
                 >
                   <Focus className="h-4 w-4" />
                   Auto-Layout
                 </button>
                 <button
                   onClick={fitToView}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
+                  className="btn-press inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
                 >
                   Zoom to Fit
                 </button>
               </>
             )}
+
+            {/* Search */}
             <div className="relative ml-auto">
               <button
                 onClick={() => setNodeSearchOpen(!nodeSearchOpen)}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand hover:text-brand"
+                className="btn-press inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
               >
                 <Search className="h-4 w-4" />
                 Suchen
               </button>
               {nodeSearchOpen && (
-                <div className="absolute right-0 top-12 z-20 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
+                <div className="absolute right-0 top-12 z-20 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl animate-scale-in">
                   <input
                     type="text"
                     placeholder="Schritt suchen..."
                     value={nodeSearchQuery}
                     onChange={(e) => setNodeSearchQuery(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
                     autoFocus
                   />
                   {searchResults.length > 0 && (
@@ -1412,7 +1395,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                         <button
                           key={node.id}
                           onClick={() => jumpToNode(node.id)}
-                          className="flex w-full items-start gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-slate-50"
+                          className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                         >
                           <Focus className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                           <div>
@@ -1430,6 +1413,10 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Canvas Area */}
+        <div className="mx-auto max-w-screen-2xl px-6 pb-6">
           {builderMode === "pro" ? (
             <FlowBuilderCanvas
               nodes={displayNodes}
@@ -1456,7 +1443,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               onFitView={fitToView}
             />
           ) : (
-            <div className="h-[640px] overflow-y-auto rounded-3xl border border-slate-200 bg-slate-50/50 p-6">
+            <div className="h-[calc(100vh-200px)] min-h-[500px] overflow-y-auto rounded-2xl border border-slate-200/50 bg-white p-6">
               <FlowListBuilder
                 nodes={nodes}
                 edges={edges}
@@ -1464,19 +1451,24 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                 onNodesChange={handleListNodesChange}
                 onEdgesChange={handleListEdgesChange}
                 selectedNodeId={selectedNodeId}
-                onSelectNode={setSelectedNodeId}
+                onSelectNode={(id) => {
+                  setSelectedNodeId(id);
+                  setInspectorOpen(true);
+                }}
                 onAddNode={addNode}
                 onDeleteNode={handleDeleteNode}
               />
             </div>
           )}
-          {inlineEditNodeId ? (
-            <div className="absolute bottom-6 right-10 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
+
+          {/* Inline Editor Overlay */}
+          {inlineEditNodeId && (
+            <div className="absolute bottom-10 right-10 w-72 rounded-xl border border-slate-200 bg-white p-4 shadow-xl animate-scale-in">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Inline bearbeiten
               </p>
               <input
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none"
                 value={inlineEditValue}
                 onChange={(event) => setInlineEditValue(event.target.value)}
                 onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -1485,406 +1477,156 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                     applyInlineEdit();
                   }
                 }}
+                autoFocus
               />
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={applyInlineEdit}
-                  className="flex-1 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white"
+                  className="btn-press flex-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white"
                 >
                   Speichern
                 </button>
                 <button
                   onClick={() => setInlineEditNodeId(null)}
-                  className="flex-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600"
+                  className="btn-press flex-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600"
                 >
                   Abbrechen
                 </button>
               </div>
             </div>
-          ) : null}
+          )}
         </div>
-        <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex gap-2 rounded-full bg-slate-100 p-1 text-sm font-semibold text-slate-600">
-            {(["content", "logic", "variables", "preview"] as InspectorTab[]).map((tab) => (
+
+        {/* Floating Add Button */}
+        {builderMode === "pro" && (
+          <div className="fixed left-6 top-1/2 -translate-y-1/2 z-10">
+            <div className="relative">
               <button
-                key={tab}
-                onClick={() => setInspectorTab(tab)}
-                className={`flex-1 rounded-full px-3 py-1 capitalize ${
-                  inspectorTab === tab ? "bg-white shadow text-slate-900" : ""
+                onClick={() => setAddMenuOpen(!isAddMenuOpen)}
+                className={`fab flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-xl transition-all ${
+                  isAddMenuOpen ? "rotate-45" : ""
                 }`}
               >
-                {tab === "content"
-                  ? "Inhalt"
-                  : tab === "logic"
-                  ? "Logik"
-                  : tab === "variables"
-                  ? "Variablen"
-                  : "Vorschau"}
+                <Plus className="h-6 w-6" />
               </button>
-            ))}
-          </div>
 
-          {inspectorTab === "content" && (
-            <>
-              {selectedNode ? (
-                <>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-500">Textnachricht</label>
-                    <textarea
-                      value={selectedNode.data?.text ?? ""}
-                      onChange={(event) => handleNodeFieldChange("text", event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
-                      rows={4}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-500">Bild (URL)</label>
-                    <input
-                      value={selectedNode.data?.imageUrl ?? ""}
-                      onChange={(event) => handleNodeFieldChange("imageUrl", event.target.value)}
-                      placeholder="https://..."
-                      className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
-                    />
-                  </div>
-                  <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                    <p className="text-sm font-semibold text-slate-600">Antwortart</p>
-                    <div className="flex rounded-full bg-white p-1 text-sm font-semibold text-slate-600">
-                      <button
-                        onClick={() => handleInputModeChange("buttons")}
-                        className={`flex-1 rounded-full px-3 py-1 ${
-                          selectedInputMode === "buttons"
-                            ? "bg-slate-900 text-white"
-                            : "text-slate-500 hover:text-slate-700"
-                        }`}
-                      >
-                        Buttons
-                      </button>
-                      <button
-                        onClick={() => handleInputModeChange("free_text")}
-                        className={`flex-1 rounded-full px-3 py-1 ${
-                          selectedInputMode === "free_text"
-                            ? "bg-slate-900 text-white"
-                            : "text-slate-500 hover:text-slate-700"
-                        }`}
-                      >
-                        Freitext
-                      </button>
-                    </div>
-                    {selectedInputMode === "free_text" && (
-                      <p className="text-xs text-slate-500">
-                        Der Kunde schreibt hier frei. Du bestimmst, wohin es danach weitergeht.
-                      </p>
-                    )}
-                  </div>
-
-                  {selectedInputMode === "free_text" ? (
-                    <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                      <div>
-                        <label className="text-xs font-semibold text-slate-500">Platzhalter im Chat</label>
-                        <input
-                          value={selectedNode.data?.placeholder ?? ""}
-                          onChange={(event) =>
-                            handleFreeTextMetaChange("placeholder", event.target.value)
-                          }
-                          placeholder="z. B. Datum eingeben…"
-                          className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-slate-500">Dieses Feld sammelt</label>
-                        <select
-                          value={selectedNode.data?.collects ?? ""}
-                          onChange={(event) =>
-                            handleFreeTextMetaChange("collects", event.target.value)
-                          }
-                          className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
-                        >
-                          <option value="">Keine Zuordnung</option>
-                          <option value="name">Name</option>
-                          <option value="date">Datum</option>
-                          <option value="time">Uhrzeit</option>
-                          <option value="guestCount">Personen</option>
-                          <option value="phone">Telefon</option>
-                          <option value="email">E‑Mail</option>
-                          <option value="specialRequests">Wünsche</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-slate-500">Weiterleiten zu</label>
-                        <select
-                          value={selectedFreeTextTarget ?? ""}
-                          onChange={(event) =>
-                            setFreeTextTarget(selectedNode.id, event.target.value || null)
-                          }
-                          className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
-                        >
-                          <option value="">Node wählen …</option>
-                          {nodes
-                            .filter((node) => node.id !== selectedNode.id)
-                            .map((node) => (
-                              <option key={node.id} value={node.id}>
-                                {node.data?.label ?? node.id}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-slate-600">Antwort-Buttons</p>
-                        <button
-                          onClick={addQuickReply}
-                          className="text-xs font-semibold text-brand hover:text-brand-dark"
-                        >
-                          + Button
-                        </button>
-                      </div>
-                      {selectedNodeReplies.length === 0 ? (
-                        <p className="text-xs text-slate-500">
-                          Noch keine Buttons. Füge Buttons hinzu, um Antworten zu verlinken.
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {selectedNodeReplies.map((reply) => (
-                            <div
-                              key={reply.id}
-                              className="space-y-2 rounded-2xl border border-slate-200 bg-white p-3"
-                            >
-                              <div className="flex items-center justify-between text-xs text-slate-500">
-                                <span>Button</span>
-                                <button
-                                  onClick={() => removeQuickReply(reply.id)}
-                                  className="text-rose-500"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                              <input
-                                value={reply.label}
-                                onChange={(event) =>
-                                  updateQuickReply(reply.id, { label: event.target.value })
-                                }
-                                placeholder="Button-Text"
-                                className="w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
-                              />
-                              <input
-                                value={reply.payload}
-                                onChange={(event) =>
-                                  updateQuickReply(reply.id, { payload: event.target.value })
-                                }
-                                placeholder="Payload / interne Aktion"
-                                className="w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
-                              />
-                              <div>
-                                <label className="text-xs font-semibold text-slate-500">
-                                  Weiterleiten zu
-                                </label>
-                                <select
-                                  value={reply.targetNodeId ?? ""}
-                                  onChange={(event) =>
-                                    handleQuickReplyTargetChange(
-                                      reply.id,
-                                      event.target.value,
-                                      reply.label,
-                                    )
-                                  }
-                                  className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
-                                >
-                                  <option value="">Node wählen …</option>
-                                  <option value="__NEW_FREETEXT__">+ Freitext (neu)</option>
-                                  {nodes.map((node) => (
-                                    <option key={node.id} value={node.id}>
-                                      {node.data?.label ?? node.id}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+              {/* Add Menu */}
+              {isAddMenuOpen && (
+                <div className="absolute left-16 top-1/2 -translate-y-1/2 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl animate-scale-in">
                   <button
-                    onClick={deleteSelection}
-                    className="w-full rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600"
+                    onClick={() => addNode("message")}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                   >
-                    Node entfernen
-                  </button>
-                </>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-sm text-slate-500">
-                  Wähle einen Node im Canvas aus, um die Inhalte zu bearbeiten.
-                </div>
-              )}
-              <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                <p className="text-sm font-semibold text-slate-600">Snippets</p>
-                <div className="flex flex-wrap gap-2">
-                  {snippets.map((snippet) => (
-                    <button
-                      key={snippet.label}
-                      onClick={() => handleSnippetInsert(snippet.text)}
-                      className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-brand"
-                    >
-                      {snippet.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                <p className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                  <Sparkles className="h-4 w-4 text-brand" />
-                  Smart Prompt
-                </p>
-                <textarea
-                  className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
-                  rows={3}
-                  placeholder="z. B. 'Erzeuge eine freundliche Begrüßung für ein italienisches Restaurant...'"
-                  value={smartPrompt}
-                  onChange={(event) => setSmartPrompt(event.target.value)}
-                />
-                <button
-                  onClick={handleSmartPrompt}
-                  className="w-full rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-brand"
-                >
-                  Vorschlag einsetzen
-                </button>
-              </div>
-            </>
-          )}
-
-          {inspectorTab === "logic" && (
-            <>
-              {selectedEdge ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-semibold text-slate-500">Edge Label</label>
-                    <input
-                      value={(selectedEdge.data as any)?.condition ?? ""}
-                      onChange={(event) => handleEdgeFieldChange("condition", event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-500">
-                      Bedeutung / Ton
-                    </label>
-                    <select
-                      value={((selectedEdge.data as any)?.tone as EdgeTone) ?? "neutral"}
-                      onChange={(event) =>
-                        handleEdgeFieldChange("tone", event.target.value as EdgeTone)
-                      }
-                      className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none"
-                    >
-                      {Object.entries(EDGE_TONE_META).map(([value, meta]) => (
-                        <option key={value} value={value}>
-                          {meta.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">
-                  Wähle eine Verbindung, um Bedingungen und Labels zu pflegen.
-                </p>
-              )}
-            </>
-          )}
-
-          {inspectorTab === "variables" && (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-4 text-sm text-slate-500">
-              Variablen-Support folgt. Plane hier Platzhalter wie {"{{customer_name}}"} ein.
-            </div>
-          )}
-
-          {inspectorTab === "preview" && (
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <FlowSimulator
-                nodes={nodes}
-                edges={edges}
-                triggers={triggers}
-                onNodeSelect={setSelectedNodeId}
-              />
-            </div>
-          )}
-
-          <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-            <p className="text-sm font-semibold text-slate-600">Qualitäts-Check</p>
-            {lintWarnings.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" /> Keine Warnungen
-              </div>
-            ) : (
-              <ul className="space-y-2 text-sm">
-                {lintWarnings.map((warning) => (
-                  <li
-                    key={warning.id}
-                    className={`rounded-2xl border p-3 text-slate-700 ${
-                      warning.severity === "info"
-                        ? "border-blue-100 bg-blue-50/50"
-                        : "border-amber-100 bg-amber-50/50"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`font-semibold ${
-                        warning.severity === "info" ? "text-blue-700" : "text-amber-700"
-                      }`}>
-                        {warning.message}
-                      </p>
-                      {(warning as any).action ? (
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                          warning.severity === "info"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}>
-                          {(warning as any).action}
-                        </span>
-                      ) : null}
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500">
+                      <MessageSquare className="h-4 w-4 text-white" />
                     </div>
-                    {warning.suggestion ? (
-                      <p className="mt-1 text-xs text-slate-500">{warning.suggestion}</p>
-                    ) : null}
-                    {(warning.nodeId || (warning as any).edgeId) ? (
-                      <button
-                        onClick={() => focusWarning(warning)}
-                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:text-brand-dark"
-                      >
-                        <Focus className="h-3 w-3" />
-                        {(warning as any).edgeId ? "Zur Verbindung springen" : "Zum Node springen"}
-                      </button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
+                    Nachricht
+                  </button>
+                  <button
+                    onClick={() => addNode("choice")}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-violet-500 to-purple-600">
+                      <Shapes className="h-4 w-4 text-white" />
+                    </div>
+                    Auswahl
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
+        )}
+      </main>
 
-          {saveState === "saved" && (
-            <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-              <CheckCircle2 className="h-4 w-4" /> Änderungen gespeichert
-            </div>
-          )}
-          {saveState === "error" && (
-            <div className="flex items-center gap-2 rounded-2xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
-              <TriangleAlert className="h-4 w-4" /> Speichern fehlgeschlagen
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Inspector Slide-Over */}
+      <InspectorSlideOver
+        isOpen={isInspectorOpen}
+        onClose={() => {
+          setInspectorOpen(false);
+          setSelectedNodeId(null);
+          setSelectedEdgeId(null);
+        }}
+        inspectorTab={inspectorTab}
+        onTabChange={setInspectorTab}
+        selectedNode={selectedNode}
+        selectedNodeReplies={selectedNodeReplies}
+        selectedInputMode={selectedInputMode}
+        onNodeFieldChange={handleNodeFieldChange}
+        onInputModeChange={handleInputModeChange}
+        onFreeTextMetaChange={handleFreeTextMetaChange}
+        selectedFreeTextTarget={selectedFreeTextTarget}
+        onFreeTextTargetChange={setFreeTextTarget}
+        onAddQuickReply={addQuickReply}
+        onUpdateQuickReply={updateQuickReply}
+        onRemoveQuickReply={removeQuickReply}
+        onQuickReplyTargetChange={handleQuickReplyTargetChange}
+        selectedEdge={selectedEdge}
+        onEdgeFieldChange={handleEdgeFieldChange}
+        onDeleteSelection={deleteSelection}
+        snippets={snippets}
+        smartPrompt={smartPrompt}
+        onSmartPromptChange={setSmartPrompt}
+        onSmartPromptSubmit={handleSmartPrompt}
+        onSnippetInsert={handleSnippetInsert}
+        nodes={nodes}
+        edges={edges}
+        triggers={triggers}
+        onNodeSelect={setSelectedNodeId}
+        lintWarnings={lintWarnings}
+        onFocusWarning={focusWarning}
+        saveState={saveState}
+      />
 
-      {isTriggerModalOpen && triggerForm ? (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+      {/* Trigger Modal */}
+      {isTriggerModalOpen && triggerForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-slate-900">
+              <h3 className="font-display text-xl font-semibold italic text-slate-900">
                 {editingTriggerId ? "Trigger bearbeiten" : "Neuen Trigger anlegen"}
               </h3>
-              <button onClick={closeTriggerModal} className="text-slate-400">
+              <button onClick={closeTriggerModal} className="btn-press rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
+
+            {/* Existing Triggers List */}
+            {!editingTriggerId && triggers.length > 0 && (
+              <div className="mt-5 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Bestehende Trigger</p>
+                <div className="max-h-40 overflow-y-auto space-y-2">
+                  {triggers.map((trigger) => (
+                    <div key={trigger.id} className="flex items-center justify-between rounded-lg border border-slate-100 p-3">
+                      <div className="flex flex-wrap gap-1">
+                        {trigger.config.keywords.slice(0, 3).map((keyword) => (
+                          <span key={keyword} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                            {keyword}
+                          </span>
+                        ))}
+                        {trigger.config.keywords.length > 3 && (
+                          <span className="text-xs text-slate-400">+{trigger.config.keywords.length - 3}</span>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => openTriggerModal(trigger)}
+                          className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteTrigger(trigger.id)}
+                          className="rounded-full p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mt-5 space-y-5">
               <div>
                 <p className="text-sm font-semibold text-slate-600">Keywords</p>
@@ -1892,12 +1634,12 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                   {triggerForm.config.keywords.map((keyword) => (
                     <span
                       key={keyword}
-                      className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
                     >
                       {keyword}
                       <button
                         onClick={() => removeKeywordFromTrigger(keyword)}
-                        className="text-slate-400"
+                        className="text-primary/60 hover:text-primary"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -1908,12 +1650,18 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                   <input
                     value={keywordInput}
                     onChange={(event) => setKeywordInput(event.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addKeywordToTrigger();
+                      }
+                    }}
                     placeholder="Keyword hinzufügen"
-                    className="flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                   <button
                     onClick={addKeywordToTrigger}
-                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+                    className="btn-press rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary"
                   >
                     Hinzufügen
                   </button>
@@ -1936,7 +1684,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                         : prev,
                     )
                   }
-                  className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 >
                   <option value="CONTAINS">enthält Schlagwort</option>
                   <option value="EXACT">exaktes Schlagwort</option>
@@ -1951,9 +1699,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                       prev ? { ...prev, startNodeId: event.target.value || null } : prev,
                     )
                   }
-                  className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 >
-                  <option value="">Node wählen …</option>
+                  <option value="">Node wählen…</option>
                   {nodes.map((node) => (
                     <option key={node.id} value={node.id}>
                       {node.data?.label ?? node.id}
@@ -1965,7 +1713,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
             <div className="mt-6 flex gap-2">
               <button
                 onClick={saveTrigger}
-                className="flex-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
+                className="btn-press flex-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white"
                 disabled={
                   !triggerForm.config.keywords.length || !triggerForm.startNodeId
                 }
@@ -1974,14 +1722,22 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               </button>
               <button
                 onClick={closeTriggerModal}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+                className="btn-press rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
               >
                 Abbrechen
               </button>
             </div>
           </div>
         </div>
-      ) : null}
+      )}
+
+      {/* Click outside to close add menu */}
+      {isAddMenuOpen && (
+        <div
+          className="fixed inset-0 z-0"
+          onClick={() => setAddMenuOpen(false)}
+        />
+      )}
     </div>
   );
 }

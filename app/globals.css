@@ -2,10 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Google Fonts - Geometric Elegance Design System */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
 :root {
   --bg: #f7f2eb;
   --fg: #0e1116;
+
+  /* New Design System Colors */
+  --color-primary: #4F46E5;
+  --color-primary-soft: #EEF2FF;
+  --color-surface: #FAFBFC;
+  --color-canvas: #F8FAFC;
+
+  /* Node Colors */
+  --node-start: #10B981;
+  --node-message: #6366F1;
+  --node-input: #F59E0B;
+  --node-condition: #8B5CF6;
+  --node-end: #EC4899;
+
+  /* Accent Colors */
+  --accent-success: #34D399;
+  --accent-warning: #FBBF24;
+  --accent-error: #F87171;
 }
+
 html, body {
   height: 100%;
   scroll-behavior: smooth;
@@ -15,11 +38,15 @@ html, body {
 }
 
 body {
-  font-family: var(--font-body), system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', var(--font-body), system-ui, sans-serif;
 }
 
 .font-display {
-  font-family: var(--font-display), serif;
+  font-family: 'Instrument Serif', var(--font-display), serif;
+}
+
+.font-sans {
+  font-family: 'Plus Jakarta Sans', var(--font-body), system-ui, sans-serif;
 }
 
 .text-balance {
@@ -27,9 +54,10 @@ body {
 }
 
 ::selection {
-  background: rgba(55, 105, 255, 0.25);
+  background: rgba(79, 70, 229, 0.25);
 }
 
+/* Legacy Animations */
 @keyframes messageIn {
   0% {
     opacity: 0;
@@ -57,4 +85,159 @@ body {
   40% {
     opacity: 1;
   }
+}
+
+/* New Design System Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes edgeDraw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Flow Builder Node Styles */
+.flow-node {
+  transition: all 200ms ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.flow-node:hover {
+  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+
+.flow-node.selected {
+  box-shadow: 0 12px 35px rgba(99, 102, 241, 0.25);
+  transform: translateY(-4px);
+}
+
+/* Staggered fade-in for nodes */
+.flow-node:nth-child(1) { animation: fadeInUp 400ms ease 0ms forwards; }
+.flow-node:nth-child(2) { animation: fadeInUp 400ms ease 100ms forwards; }
+.flow-node:nth-child(3) { animation: fadeInUp 400ms ease 200ms forwards; }
+.flow-node:nth-child(4) { animation: fadeInUp 400ms ease 300ms forwards; }
+.flow-node:nth-child(5) { animation: fadeInUp 400ms ease 400ms forwards; }
+
+/* Inspector Slide-Over Panel */
+.inspector-panel {
+  transform: translateX(100%);
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.inspector-panel.open {
+  transform: translateX(0);
+}
+
+/* Button click feedback */
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Quick Reply Pills */
+.quick-reply-pill {
+  transition: all 150ms ease;
+}
+
+.quick-reply-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Floating Action Button */
+.fab {
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fab:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.4);
+}
+
+.fab:active {
+  transform: scale(0.98);
+}
+
+/* Canvas Background Pattern */
+.canvas-gradient {
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, rgba(238, 242, 255, 0.3) 100%);
+}
+
+/* Node Header Gradients */
+.node-header-start {
+  background: linear-gradient(135deg, #10B981 0%, #14B8A6 100%);
+}
+
+.node-header-message {
+  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+}
+
+.node-header-input {
+  background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+}
+
+.node-header-confirmation {
+  background: linear-gradient(135deg, #EC4899 0%, #F43F5E 100%);
+}
+
+/* Edge styles */
+.react-flow__edge-path {
+  stroke-width: 2;
+  stroke: #94a3b8;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #6366F1;
+  stroke-width: 3;
+}
+
+/* Smooth transitions for React Flow */
+.react-flow__node {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+/* Hide React Flow attribution */
+.react-flow__attribution {
+  display: none !important;
 }

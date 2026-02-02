@@ -3,6 +3,7 @@
 import { memo, useMemo } from "react";
 import ReactFlow, {
   Background,
+  BackgroundVariant,
   Connection,
   Controls,
   Edge,
@@ -33,6 +34,29 @@ type FlowBuilderCanvasProps = {
   onFitView?: () => void;
 };
 
+// Custom edge styles based on tone
+const getEdgeStyle = (edge: Edge) => {
+  const tone = (edge.data as any)?.tone ?? 'neutral';
+
+  switch (tone) {
+    case 'positive':
+      return {
+        stroke: '#10B981',
+        strokeWidth: 2.5,
+      };
+    case 'negative':
+      return {
+        stroke: '#F87171',
+        strokeWidth: 2.5,
+      };
+    default:
+      return {
+        stroke: '#94a3b8',
+        strokeWidth: 2,
+      };
+  }
+};
+
 function Canvas({
   nodes,
   edges,
@@ -48,11 +72,21 @@ function Canvas({
 }: FlowBuilderCanvasProps) {
   const nodeTypes = useMemo(() => ({ wesponde: FlowNode }), []);
 
+  // Apply custom edge styles
+  const styledEdges = useMemo(() =>
+    edges.map(edge => ({
+      ...edge,
+      style: getEdgeStyle(edge),
+      animated: edge.selected,
+    })),
+    [edges]
+  );
+
   return (
-    <div className="relative h-[640px] rounded-3xl border border-slate-200 bg-white shadow-inner shadow-slate-200/70">
+    <div className="relative h-[calc(100vh-200px)] min-h-[500px] overflow-hidden rounded-2xl canvas-gradient border border-slate-200/50">
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={styledEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -71,24 +105,43 @@ function Canvas({
         multiSelectionKeyCode="Meta"
         selectionKeyCode="Shift"
         snapToGrid
-        snapGrid={[24, 24]}
+        snapGrid={[20, 20]}
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
-          markerEnd: { type: MarkerType.ArrowClosed },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
+          style: { stroke: '#94a3b8', strokeWidth: 2 },
         }}
+        className="bg-transparent"
       >
+        {/* Dot Grid Background */}
+        <Background
+          gap={20}
+          size={1.5}
+          color="#cbd5e1"
+          variant={BackgroundVariant.Dots}
+        />
+
+        {/* MiniMap with updated styling */}
         <MiniMap
           pannable
           zoomable
           position="bottom-right"
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
             border: '1px solid #e2e8f0',
             borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
           }}
-          nodeColor={(node) => node.data?.isStart ? '#3769FF' : '#94a3b8'}
-          maskColor="rgba(0, 0, 0, 0.08)"
+          nodeColor={(node) => {
+            if (node.data?.isStart) return '#10B981';
+            if (node.data?.inputMode === 'free_text') return '#F59E0B';
+            if (node.data?.variant === 'choice') return '#8B5CF6';
+            return '#6366F1';
+          }}
+          maskColor="rgba(0, 0, 0, 0.05)"
         />
+
+        {/* Controls with updated styling */}
         <Controls
           position="bottom-left"
           style={{
@@ -99,16 +152,17 @@ function Canvas({
             border: '1px solid #e2e8f0',
             borderRadius: '12px',
             padding: '4px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
           }}
           showInteractive={false}
         />
-        <Background gap={24} size={1} />
       </ReactFlow>
+
+      {/* Zoom to Fit Button */}
       <div className="pointer-events-none absolute right-4 top-4 flex gap-2">
         <button
           type="button"
-          className="pointer-events-auto rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm hover:border-brand"
+          className="pointer-events-auto btn-press rounded-full border border-slate-200 bg-white/90 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:border-primary hover:text-primary transition-colors"
           onClick={onFitView}
         >
           Zoom to Fit
