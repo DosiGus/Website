@@ -25,8 +25,8 @@ export default function Footer() {
         <div className="max-w-sm space-y-4">
           <p className="font-display text-lg font-semibold text-ink">Wesponde</p>
           <p>
-            Automatisierte Chat-Workflows für Restaurants, Salons und Praxen. Wir verbinden
-            Social Messenger, POS und CRM, damit dein Team wachsen kann.
+            Messenger-Workflows für Restaurants, Salons und Praxen. Wir verbinden Social Messenger,
+            POS und CRM, damit dein Team skalieren kann.
           </p>
           <div className="flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
             {socialLinks.map((social) => (
@@ -83,7 +83,7 @@ export default function Footer() {
             href="#beta"
             className="inline-flex items-center justify-center rounded-full bg-ink px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-ink/30 transition hover:bg-ink/90"
           >
-            Join Beta Waitlist
+            Beta anfragen
           </a>
         </div>
       </div>

@@ -50,7 +50,7 @@ export default function WatchDemoButton({ className, label = "Demo ansehen" }: W
               />
             </div>
             <div className="bg-slate-900/60 px-6 py-4 text-sm text-white/80">
-              Placeholder-Video: Ersetze den Link durch deine echte Produktdemo.
+              Produktdemo – Kurzfassung.
             </div>
           </div>
         </div>

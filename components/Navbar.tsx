@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 
 const navLinks = [
-  { href: "#outcomes", label: "Ergebnisse" },
-  { href: "#how", label: "So funktioniert's" },
-  { href: "#use-cases", label: "Branchen" },
   { href: "#product", label: "Produkt" },
+  { href: "#outcomes", label: "Ergebnisse" },
+  { href: "#workflow", label: "Ablauf" },
+  { href: "#use-cases", label: "Branchen" },
   { href: "/about", label: "Über uns" },
   { href: "/contact", label: "Support" },
 ];
@@ -61,7 +61,7 @@ export default function Navbar() {
             href="#beta"
             className="hidden rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink shadow-lg shadow-white/20 transition hover:bg-sand md:inline-flex md:items-center"
           >
-            Join Beta
+            Beta anfragen
           </a>
           <button
             type="button"
@@ -102,7 +102,7 @@ export default function Navbar() {
               className="rounded-full bg-white px-4 py-2 text-center text-sm font-semibold text-ink shadow-lg shadow-white/20 transition hover:bg-sand"
               onClick={() => setMenuOpen(false)}
             >
-              Join Beta
+              Beta anfragen
             </a>
           </div>
         </div>

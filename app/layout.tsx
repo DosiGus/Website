@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   description:
     "Automatisiere Reservierungen, Kundenchats und Buchungen mit Wesponde. Gebaut für Restaurants, Salons und Praxen, die Instagram, Facebook und WhatsApp effizient nutzen wollen.",
   keywords:
-    "chatbot, restaurant booking tool, automated reservations, instagram business bot, messenger automation, friseur online termin, AI assistant for service business",
+    "messenger automation, instagram dm reservations, service business booking, whatsapp business, restaurant booking tool, friseur online termin, customer messaging",
   openGraph: {
     title: "Wesponde – Messenger Automation for Service Brands",
     description:
