@@ -80,7 +80,7 @@ export default function Footer() {
             Trage dich in die Beta ein und erhalte Zugang, sobald neue Plätze frei werden.
           </p>
           <a
-            href="#beta"
+            href="/#beta"
             className="inline-flex items-center justify-center rounded-full bg-ink px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-ink/30 transition hover:bg-ink/90"
           >
             Beta anfragen

@@ -2,7 +2,7 @@ import Link from "next/link";
 import BetaWaitlistForm from "../components/BetaWaitlistForm";
 import WatchDemoButton from "../components/WatchDemoButton";
 
-const logoClassName = "h-6 w-auto text-white/60";
+const logoClassName = "block h-5 w-auto text-white/55";
 
 const trustLogos = [
   {
@@ -12,11 +12,12 @@ const trustLogos = [
         <title>Meta</title>
         <text
           x="0"
-          y="16"
+          y="12"
           fill="currentColor"
           fontSize="12"
           fontFamily="var(--font-body)"
           letterSpacing="0.28em"
+          dominantBaseline="middle"
         >
           META
         </text>
@@ -40,11 +41,12 @@ const trustLogos = [
         <circle cx="14.5" cy="7.5" r="1.2" fill="url(#igGradient)" />
         <text
           x="26"
-          y="16"
+          y="12"
           fill="currentColor"
           fontSize="12"
           fontFamily="var(--font-body)"
           letterSpacing="0.18em"
+          dominantBaseline="middle"
         >
           INSTAGRAM
         </text>
@@ -73,11 +75,12 @@ const trustLogos = [
         />
         <text
           x="24"
-          y="16"
+          y="12"
           fill="currentColor"
           fontSize="12"
           fontFamily="var(--font-body)"
           letterSpacing="0.16em"
+          dominantBaseline="middle"
         >
           WHATSAPP
         </text>
@@ -96,11 +99,12 @@ const trustLogos = [
         />
         <text
           x="24"
-          y="16"
+          y="12"
           fill="currentColor"
           fontSize="12"
           fontFamily="var(--font-body)"
           letterSpacing="0.14em"
+          dominantBaseline="middle"
         >
           LIGHTSPEED
         </text>
@@ -128,11 +132,12 @@ const trustLogos = [
         />
         <text
           x="30"
-          y="16"
+          y="12"
           fill="currentColor"
           fontSize="12"
           fontFamily="var(--font-body)"
           letterSpacing="0.2em"
+          dominantBaseline="middle"
         >
           SHORE
         </text>
@@ -154,11 +159,12 @@ const trustLogos = [
         <circle cx="5" cy="13" r="1" fill="currentColor" />
         <text
           x="30"
-          y="16"
+          y="12"
           fill="currentColor"
           fontSize="12"
           fontFamily="var(--font-body)"
           letterSpacing="0.12em"
+          dominantBaseline="middle"
         >
           ORDERBIRD
         </text>
@@ -170,7 +176,7 @@ const trustLogos = [
 const heroStats = [
   { label: "Antwortzeit", value: "< 30s" },
   { label: "No-Shows", value: "-28%" },
-  { label: "Reviews", value: "+41%" },
+  { label: "Bewertungen", value: "+41%" },
 ];
 
 const outcomes = [
@@ -199,15 +205,15 @@ const outcomes = [
 const steps = [
   {
     title: "Verbinden",
-    description: "Kanäle verbinden, OAuth inklusive.",
+    description: "Instagram, Facebook und WhatsApp verbinden – inkl. OAuth & Freigaben.",
   },
   {
     title: "Ablauf definieren",
-    description: "Templates übernehmen, Tonalität anpassen.",
+    description: "Templates übernehmen, Wording und Eskalationen finalisieren.",
   },
   {
     title: "Live schalten",
-    description: "Antworten, Buchungen und Reviews laufen zuverlässig.",
+    description: "Antworten, Buchungen und Reviews laufen stabil – mit Reporting.",
   },
 ];
 
@@ -215,17 +221,17 @@ const useCases = [
   {
     title: "Restaurants & Bars",
     scenario: "DM → Tischanfrage → Bestätigung",
-    outcome: "Mehr Reservierungen aus Stories.",
+    outcome: "Mehr Reservierungen aus Stories – ohne Zusatzaufwand.",
   },
   {
     title: "Salons & Beauty",
     scenario: "DM → Termin → Zusatzleistung",
-    outcome: "Mehr Umsatz pro Termin.",
+    outcome: "Mehr Umsatz pro Termin, weniger Ausfälle.",
   },
   {
     title: "Praxen & Kliniken",
     scenario: "DM → Vorqualifizierung → Termin",
-    outcome: "Weniger Telefon, klare Infos.",
+    outcome: "Weniger Telefon, klar vorbereitete Termine.",
   },
   {
     title: "Fitness & Wellness",
@@ -238,39 +244,39 @@ const productActions = [
   {
     tag: "Routing",
     title: "Anfragen verstehen",
-    description: "Startet den passenden Ablauf pro Intent.",
+    description: "Intent-Erkennung startet den passenden Ablauf automatisch.",
   },
   {
     tag: "Buchung",
     title: "Termine erfassen",
-    description: "Datum, Uhrzeit, Personenanzahl – sauber erfasst.",
+    description: "Datum, Uhrzeit, Personenanzahl und Wünsche werden strukturiert erfasst.",
   },
   {
     tag: "Sync",
     title: "Systeme synchronisieren",
-    description: "Kalender und POS automatisch aktuell.",
+    description: "Kalender und POS bleiben in Echtzeit aktuell.",
   },
   {
     tag: "Reminder",
     title: "Erinnerungen senden",
-    description: "Bestätigungen reduzieren No-Shows.",
+    description: "Bestätigungen und Reminder senken No-Shows messbar.",
   },
   {
     tag: "Reviews",
     title: "Bewertungen auslösen",
-    description: "Review-Flow nach dem Besuch.",
+    description: "Review-Flow nach dem Besuch erhöht Bewertungsquote.",
   },
   {
     tag: "Dashboard",
     title: "Team-Übersicht",
-    description: "Konversationen und Status zentral.",
+    description: "Konversationen, Buchungen und Statusmeldungen zentral.",
   },
 ];
 
 const actionCards = [
   { title: "Reservierung bestätigt", status: "LIVE" },
   { title: "Reminder 4h vorher", status: "SCHEDULED" },
-  { title: "Review-Link vorbereitet", status: "READY" },
+  { title: "Review-Link bereit", status: "READY" },
 ];
 
 export default function HomePage() {
@@ -279,7 +285,7 @@ export default function HomePage() {
       <section className="relative isolate overflow-hidden bg-ink text-white">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(55,105,255,0.35),_transparent_55%),radial-gradient(circle_at_20%_80%,_rgba(199,162,115,0.25),_transparent_45%)]" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-br from-ink via-ink/95 to-black" />
-        <div className="mx-auto max-w-6xl px-4 pb-24 pt-20">
+        <div className="mx-auto max-w-6xl px-4 pb-24 pt-12">
           <div className="grid gap-12 lg:grid-cols-[1.05fr,0.95fr] lg:items-center">
             <div>
               <span className="inline-flex items-center rounded-full border border-white/15 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
@@ -289,7 +295,9 @@ export default function HomePage() {
                 Aus DMs werden Buchungen.
               </h1>
               <p className="mt-6 text-lg text-white/75">
-                Präzise Journeys für Reservierung, Reminder und Reviews – im Ton deiner Marke.
+                Wesponde orchestriert Instagram-, Facebook- und WhatsApp-Konversationen, bestätigt
+                Reservierungen, sendet Reminder und aktiviert Reviews – konsistent im Markenton und
+                mit klarer Kontrolle.
               </p>
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
                 <a
@@ -317,9 +325,9 @@ export default function HomePage() {
                 ))}
               </dl>
               <p className="mt-4 text-xs text-white/45">Pilotdaten aus Teams in der DACH-Region.</p>
-              <div className="mt-8 grid grid-cols-2 gap-4 text-white/60 sm:flex sm:flex-wrap sm:items-center sm:gap-6">
+              <div className="mt-8 grid grid-cols-3 gap-x-6 gap-y-3 text-white/60 sm:flex sm:flex-wrap sm:items-center sm:gap-6">
                 {trustLogos.map((logo) => (
-                  <div key={logo.name} className="flex items-center">
+                  <div key={logo.name} className="flex h-6 items-center">
                     {logo.svg}
                   </div>
                 ))}
@@ -329,10 +337,20 @@ export default function HomePage() {
             <div className="relative">
               <div className="absolute -left-10 top-10 h-40 w-40 rounded-full bg-brand/30 blur-3xl" />
               <div className="absolute -right-10 bottom-10 h-40 w-40 rounded-full bg-copper/40 blur-3xl" />
-              <div className="relative mx-auto w-full max-w-[380px] animate-[floatSlow_12s_ease-in-out_infinite]">
-                <div className="rounded-[52px] border border-white/15 bg-gradient-to-b from-white/10 to-black/80 p-[6px] shadow-[0_40px_90px_-60px_rgba(15,17,22,0.85)]">
-                  <div className="relative overflow-hidden rounded-[46px] bg-[#0f1116]">
-                    <div className="absolute left-1/2 top-2 h-6 w-36 -translate-x-1/2 rounded-b-[18px] border border-white/10 bg-black/80" />
+              <div
+                className="relative mx-auto w-full max-w-[380px] animate-[floatSlow_12s_ease-in-out_infinite]"
+                style={{ aspectRatio: "9 / 19.5" }}
+              >
+                <div className="absolute -left-2 top-24 h-12 w-1 rounded-full bg-white/10" />
+                <div className="absolute -left-2 top-40 h-8 w-1 rounded-full bg-white/10" />
+                <div className="absolute -left-2 top-52 h-8 w-1 rounded-full bg-white/10" />
+                <div className="absolute -right-2 top-32 h-14 w-1 rounded-full bg-white/10" />
+                <div className="h-full rounded-[56px] border border-white/15 bg-gradient-to-b from-white/10 to-black/80 p-[6px] shadow-[0_40px_90px_-60px_rgba(15,17,22,0.85)]">
+                  <div className="relative h-full overflow-hidden rounded-[50px] bg-[#0f1116]">
+                    <div className="absolute left-1/2 top-2 h-6 w-32 -translate-x-1/2 rounded-b-[18px] border border-white/10 bg-black/80">
+                      <div className="mx-auto mt-1 h-1.5 w-12 rounded-full bg-white/10" />
+                      <div className="absolute right-4 top-2 h-2 w-2 rounded-full bg-white/20" />
+                    </div>
                     <div className="flex items-center justify-between px-6 pt-3 text-[11px] text-white/80">
                       <span className="font-semibold tracking-[0.1em]">9:41</span>
                       <div className="flex items-center gap-2">
@@ -366,7 +384,7 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between border-b border-white/10 px-4 py-3">
+                    <div className="mt-8 flex items-center justify-between border-b border-white/10 px-4 py-3">
                       <div className="flex items-center gap-3">
                         <svg viewBox="0 0 24 24" className="h-4 w-4 text-white/70" aria-hidden="true">
                           <path d="M14 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -395,21 +413,21 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    <div className="space-y-4 px-4 py-4 text-[13px]">
+                    <div className="space-y-3 px-4 pb-4 pt-3 text-[12px]">
                       <div
-                        className="flex items-start gap-2 opacity-0 animate-[messageIn_0.7s_ease_forwards]"
-                        style={{ animationDelay: "0.2s" }}
+                        className="flex items-start gap-2 opacity-0 animate-[messageIn_1s_ease_forwards]"
+                        style={{ animationDelay: "0.6s" }}
                       >
                         <div className="h-7 w-7 rounded-full bg-white/10" />
-                        <div className="max-w-[70%] rounded-2xl bg-white/10 px-3 py-2 text-white/80">
+                        <div className="max-w-[72%] rounded-2xl bg-white/10 px-3 py-1.5 text-white/80">
                           Hi! 2 Plätze heute um 20:00?
                         </div>
                       </div>
                       <div
-                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_0.7s_ease_forwards]"
-                        style={{ animationDelay: "1.1s" }}
+                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1s_ease_forwards]"
+                        style={{ animationDelay: "2.4s" }}
                       >
-                        <div className="max-w-[70%] rounded-2xl bg-white px-3 py-2 text-ink">
+                        <div className="max-w-[72%] rounded-2xl bg-white px-3 py-1.5 text-ink">
                           20:00 ist frei. Auf welchen Namen?
                         </div>
                         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand to-copper text-[11px] font-semibold text-white">
@@ -417,35 +435,31 @@ export default function HomePage() {
                         </div>
                       </div>
                       <div
-                        className="flex items-start gap-2 opacity-0 animate-[messageIn_0.7s_ease_forwards]"
-                        style={{ animationDelay: "2s" }}
+                        className="flex items-start gap-2 opacity-0 animate-[messageIn_1s_ease_forwards]"
+                        style={{ animationDelay: "4.2s" }}
                       >
                         <div className="h-7 w-7 rounded-full bg-white/10" />
-                        <div className="max-w-[70%] rounded-2xl bg-white/10 px-3 py-2 text-white/80">
+                        <div className="max-w-[72%] rounded-2xl bg-white/10 px-3 py-1.5 text-white/80">
                           Lisa Müller.
                         </div>
                       </div>
                       <div
-                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_0.7s_ease_forwards]"
-                        style={{ animationDelay: "2.8s" }}
+                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1s_ease_forwards]"
+                        style={{ animationDelay: "6s" }}
                       >
-                        <div className="max-w-[70%] rounded-2xl bg-white/10 px-3 py-2 text-white/80">
-                          Bestätigt. Reminder in 4 Stunden. Fensterplatz ok?
+                        <div className="max-w-[72%] rounded-2xl bg-white px-3 py-1.5 text-ink">
+                          Bestätigt. Reminder 4h vorher. Fensterplatz ok?
                         </div>
                         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand to-copper text-[11px] font-semibold text-white">
                           W
                         </div>
                       </div>
                       <div
-                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_0.7s_ease_forwards]"
-                        style={{ animationDelay: "3.6s" }}
+                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1s_ease_forwards]"
+                        style={{ animationDelay: "7.8s" }}
                       >
-                        <div className="rounded-2xl bg-white/10 px-4 py-2 text-white/70">
-                          <span className="inline-flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-white/60 animate-[dotPulse_1.2s_ease-in-out_infinite]" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-white/60 animate-[dotPulse_1.2s_ease-in-out_infinite]" style={{ animationDelay: "0.2s" }} />
-                            <span className="h-1.5 w-1.5 rounded-full bg-white/60 animate-[dotPulse_1.2s_ease-in-out_infinite]" style={{ animationDelay: "0.4s" }} />
-                          </span>
+                        <div className="max-w-[72%] rounded-2xl bg-white px-3 py-1.5 text-ink">
+                          Perfekt. Bestätigung ist raus.
                         </div>
                         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand to-copper text-[11px] font-semibold text-white">
                           W
@@ -478,9 +492,9 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-4 text-xs text-white/75 shadow-[0_20px_50px_-40px_rgba(15,17,22,0.7)] lg:absolute lg:-right-10 lg:bottom-8 lg:mt-0 lg:w-56">
+              <div className="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-4 text-xs text-white/75 shadow-[0_20px_50px_-40px_rgba(15,17,22,0.7)] lg:absolute lg:bottom-6 lg:left-full lg:ml-6 lg:mt-0 lg:w-52">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
-                  Status
+                  Systemstatus
                 </p>
                 <div className="mt-3 space-y-2">
                   {actionCards.map((item) => (
@@ -512,7 +526,7 @@ export default function HomePage() {
               Messbare Wirkung ab Woche 1.
             </h2>
             <p className="mt-4 text-lg text-slate-600">
-              Mehr Buchungen, weniger No-Shows, mehr Reviews.
+              Mehr Buchungen, weniger No-Shows, bessere Bewertungen – nachvollziehbar im Dashboard.
             </p>
           </div>
           <div className="mt-14 grid gap-6 md:grid-cols-2">
@@ -539,6 +553,9 @@ export default function HomePage() {
             <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink">
               In Tagen live, nicht in Monaten.
             </h2>
+            <p className="mt-4 text-lg text-slate-600">
+              Wir übernehmen Setup, QA und die ersten Abläufe gemeinsam mit deinem Team.
+            </p>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {steps.map((step, index) => (
@@ -568,7 +585,7 @@ export default function HomePage() {
               Branchen-Playbooks mit fertiger Tonalität.
             </h2>
             <p className="mt-4 text-lg text-slate-600">
-              Die Abläufe sind auf typische Anfragen und Upsells optimiert.
+              Schneller live – mit Abläufen, die zu Sprache, Service und Upsells passen.
             </p>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-2">
@@ -598,7 +615,7 @@ export default function HomePage() {
               Präzise, steuerbar, markentreu.
             </h2>
             <p className="mt-4 text-lg text-slate-600">
-              Regeln, Tonalität und Eskalationen bleiben jederzeit transparent und kontrollierbar.
+              Regeln, Tonalität und Eskalationen bleiben transparent – mit klaren Freigaben für dein Team.
             </p>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-2">
@@ -642,13 +659,13 @@ export default function HomePage() {
           <div className="grid gap-10 lg:grid-cols-[0.95fr,1.05fr] lg:items-center">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-                Pilot-Zugang
+                Early Access
               </p>
               <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink">
-                Enterprise-Onboarding für erste Partner.
+                Enterprise-Onboarding für ausgewählte Partner.
               </h2>
               <p className="mt-4 text-lg text-slate-600">
-                Persönlicher Setup, klare Playbooks, Live in unter zwei Wochen.
+                Persönlicher Setup, geprüfte Abläufe, live in unter zwei Wochen.
               </p>
               <ul className="mt-6 space-y-3 text-sm text-slate-600">
                 <li>• Persönliches Onboarding & Flow-Setup</li>
@@ -669,12 +686,12 @@ export default function HomePage() {
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
                 Success-Team
               </p>
-              <h3 className="font-display text-balance mt-4 text-3xl font-semibold sm:text-4xl">
-                Wir machen dein Messaging live.
-              </h3>
-              <p className="mt-4 text-white/70">
-                Setup, Integrationen und QA – gemeinsam mit deinem Team.
-              </p>
+            <h3 className="font-display text-balance mt-4 text-3xl font-semibold sm:text-4xl">
+              Wir machen dein Messaging live – sauber und schnell.
+            </h3>
+            <p className="mt-4 text-white/70">
+              Setup, Integrationen, QA und Launch-Begleitung – gemeinsam mit deinem Team.
+            </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
