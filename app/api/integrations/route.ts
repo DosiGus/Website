@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from("integrations")
       .select(
-        "provider,status,account_name,instagram_id,instagram_username,page_id,expires_at,updated_at",
+        "provider,status,account_name,instagram_id,instagram_username,page_id,expires_at,updated_at,google_review_url",
       )
       .eq("user_id", user.id);
 
@@ -78,6 +78,59 @@ export async function DELETE(request: Request) {
     }
 
     return NextResponse.json({ status: "disconnected" });
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const user = await requireUser(request);
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(`integrations:${user.id}:update`, RATE_LIMITS.standard);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
+
+    const body = (await request.json()) as { provider?: string; google_review_url?: string | null };
+    const provider = body?.provider;
+
+    if (!provider) {
+      return NextResponse.json({ error: "Provider fehlt." }, { status: 400 });
+    }
+
+    if (!("google_review_url" in body)) {
+      return NextResponse.json({ error: "Kein Feld zum Aktualisieren angegeben." }, { status: 400 });
+    }
+
+    const supabase = createSupabaseServerClient();
+
+    const { data, error } = await supabase
+      .from("integrations")
+      .update({
+        google_review_url: body.google_review_url || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", user.id)
+      .eq("provider", provider)
+      .select(
+        "provider,status,account_name,instagram_id,instagram_username,page_id,expires_at,updated_at,google_review_url",
+      )
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: "Integration nicht gefunden." }, { status: 404 });
+    }
+
+    return NextResponse.json({ integration: data });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

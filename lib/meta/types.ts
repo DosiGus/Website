@@ -55,6 +55,7 @@ export type IntegrationStatus = {
   page_id: string | null;
   expires_at: string | null;
   updated_at: string | null;
+  google_review_url: string | null;
 };
 
 // Instagram Webhook Types

@@ -16,6 +16,10 @@ export default function IntegrationsClient() {
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [reviewUrl, setReviewUrl] = useState("");
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewSaved, setReviewSaved] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   const successParam = useMemo(
     () => searchParams?.get("success"),
@@ -115,6 +119,12 @@ export default function IntegrationsClient() {
     loadStatus();
   }, [loadStatus]);
 
+  useEffect(() => {
+    setReviewUrl(metaIntegration?.google_review_url ?? "");
+    setReviewSaved(false);
+    setReviewError(null);
+  }, [metaIntegration?.google_review_url]);
+
   const handleConnect = useCallback(async () => {
     try {
       setConnecting(true);
@@ -169,6 +179,53 @@ export default function IntegrationsClient() {
       setDisconnecting(false);
     }
   }, [getAccessToken, loadStatus]);
+
+  const handleSaveReviewUrl = useCallback(async () => {
+    try {
+      setReviewSaving(true);
+      setReviewSaved(false);
+      setReviewError(null);
+
+      if (!metaConnected) {
+        setReviewError("Bitte zuerst Meta/Instagram verbinden.");
+        return;
+      }
+
+      const token = await getAccessToken();
+      if (!token) {
+        setReviewError("Bitte erneut anmelden, um fortzufahren.");
+        return;
+      }
+
+      const response = await fetch("/api/integrations", {
+        method: "PATCH",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          provider: "meta",
+          google_review_url: reviewUrl.trim() || null,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        setReviewError(payload.error ?? "Speichern fehlgeschlagen.");
+        return;
+      }
+
+      if (payload.integration) {
+        setMetaIntegration(payload.integration);
+      }
+
+      setReviewSaved(true);
+    } catch {
+      setReviewError("Speichern fehlgeschlagen.");
+    } finally {
+      setReviewSaving(false);
+    }
+  }, [getAccessToken, metaConnected, reviewUrl]);
 
   const metaStatusLabel = metaConnected ? "Verbunden" : "Nicht verbunden";
 
@@ -247,6 +304,43 @@ export default function IntegrationsClient() {
             )}
           </div>
         )}
+
+        <div className="mt-4 rounded-2xl border border-slate-100 bg-white px-4 py-4 text-sm">
+          <div className="font-semibold text-slate-700">Google‑Bewertungslink</div>
+          <p className="mt-1 text-xs text-slate-500">
+            Dieser Link wird im Review‑Flow an deine Gäste geschickt.
+          </p>
+          <input
+            className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
+            placeholder="https://g.page/…/review"
+            value={reviewUrl}
+            onChange={(event) => {
+              setReviewUrl(event.target.value);
+              setReviewSaved(false);
+            }}
+            disabled={!metaConnected}
+          />
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
+              onClick={handleSaveReviewUrl}
+              disabled={reviewSaving || !metaConnected}
+            >
+              {reviewSaving ? "Speichern..." : "Link speichern"}
+            </button>
+            {reviewSaved && (
+              <span className="text-xs font-semibold text-emerald-600">Gespeichert ✓</span>
+            )}
+            {reviewError && (
+              <span className="text-xs font-semibold text-rose-600">{reviewError}</span>
+            )}
+          </div>
+          {!metaConnected && (
+            <p className="mt-2 text-xs text-slate-400">
+              Verbinde zuerst Meta/Instagram, um den Link zu speichern.
+            </p>
+          )}
+        </div>
 
         {/* Token Expiry Warning */}
         {metaConnected && tokenExpiryInfo?.isExpired && (
