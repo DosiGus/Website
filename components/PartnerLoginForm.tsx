@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "../lib/supabaseBrowserClient";
 
 type AuthView = "login" | "signup";
@@ -9,6 +10,12 @@ export default function PartnerLoginForm() {
   const [view, setView] = useState<AuthView>("login");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string>("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get("redirect");
+  const fallbackRedirect =
+    typeof window !== "undefined" ? `${window.location.origin}/app` : "https://app.wesponde.com";
+  const redirectTarget = redirectParam || fallbackRedirect;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,15 +32,14 @@ export default function PartnerLoginForm() {
         if (error) throw error;
         setStatus("success");
         setMessage("Login erfolgreich! Du wirst gleich weitergeleitet.");
-        const redirectUrl = process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || "https://app.wesponde.com";
-        window.location.href = redirectUrl;
+        router.replace(redirectTarget);
       } else {
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo:
-              process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || "https://app.wesponde.com",
+              process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || fallbackRedirect,
           },
         });
         if (error) throw error;
@@ -112,7 +118,7 @@ export default function PartnerLoginForm() {
             provider: "facebook",
             options: {
               redirectTo:
-                process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || "https://app.wesponde.com",
+                process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || fallbackRedirect,
             },
           });
           if (error) {
