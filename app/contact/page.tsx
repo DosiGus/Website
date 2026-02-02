@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Kontakt & Support — Wesponde",
   description:
-    "Brauche Hilfe bei deiner Wesponde-Integration oder möchtest du Teil der Beta werden? Unser Team antwortet schnell.",
+    "Brauche Hilfe bei deiner Wesponde-Integration oder möchtest du Pilotzugang? Unser Team antwortet schnell.",
 };
 
 export default function ContactPage() {
@@ -12,11 +12,11 @@ export default function ContactPage() {
           Support
         </span>
         <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl">
-          Need help integrating your account? We respond.
+          Fragen zur Integration? Wir unterstützen persönlich.
         </h1>
         <p className="text-lg leading-7 text-slate-600">
-          Unser Success-Team hilft bei OAuth-Verbindungen, POS-Integrationen und Conversational
-          Design. Schreib uns – wir melden uns in der Regel innerhalb eines Werktags.
+          Unser Success-Team hilft bei Messenger-Verbindungen, Kassensystemen und dem Ablauf-Design.
+          Schreib uns – wir melden uns in der Regel innerhalb eines Werktags.
         </p>
 
         <div className="grid gap-6 rounded-3xl border border-slate-200 bg-slate-50/70 p-6">

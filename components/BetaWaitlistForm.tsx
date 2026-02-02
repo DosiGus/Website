@@ -87,7 +87,7 @@ export default function BetaWaitlistForm() {
         disabled={status === "loading"}
         className="w-full rounded-2xl bg-ink px-5 py-3 text-base font-semibold text-white shadow-lg shadow-ink/30 transition hover:bg-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-70"
       >
-        {status === "loading" ? "Wird gesendet..." : "Beta anfragen"}
+        {status === "loading" ? "Wird gesendet..." : "Pilotzugang anfragen"}
       </button>
       {message ? (
         <p

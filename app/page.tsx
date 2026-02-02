@@ -2,7 +2,7 @@ import Link from "next/link";
 import BetaWaitlistForm from "../components/BetaWaitlistForm";
 import WatchDemoButton from "../components/WatchDemoButton";
 
-const logoClassName = "block h-5 w-auto text-white/55";
+const logoClassName = "block h-4 w-auto text-white/55 sm:h-5";
 
 const trustLogos = [
   {
@@ -205,7 +205,7 @@ const outcomes = [
 const steps = [
   {
     title: "Verbinden",
-    description: "Instagram, Facebook und WhatsApp verbinden – inkl. OAuth & Freigaben.",
+    description: "Instagram, Facebook und WhatsApp verbinden – wir übernehmen den Setup.",
   },
   {
     title: "Ablauf definieren",
@@ -244,7 +244,7 @@ const productActions = [
   {
     tag: "Routing",
     title: "Anfragen verstehen",
-    description: "Intent-Erkennung startet den passenden Ablauf automatisch.",
+    description: "Anfragen werden erkannt und automatisch richtig zugeordnet.",
   },
   {
     tag: "Buchung",
@@ -254,7 +254,7 @@ const productActions = [
   {
     tag: "Sync",
     title: "Systeme synchronisieren",
-    description: "Kalender und POS bleiben in Echtzeit aktuell.",
+    description: "Kalender und Kassensysteme bleiben in Echtzeit aktuell.",
   },
   {
     tag: "Reminder",
@@ -279,14 +279,84 @@ const actionCards = [
   { title: "Review-Link bereit", status: "READY" },
 ];
 
+const caseStudies = [
+  {
+    label: "Pilot-Case (anonymisiert)",
+    name: "Restaurantgruppe, Berlin",
+    focus: "Tischreservierungen via Instagram DM",
+    period: "6 Wochen",
+    metrics: ["+38% DM-Reservierungen", "Antwortzeit < 1 Min", "-22% No-Shows"],
+  },
+  {
+    label: "Pilot-Case (anonymisiert)",
+    name: "Salon-Kette, München",
+    focus: "Terminbuchung + Upsells",
+    period: "5 Wochen",
+    metrics: ["+27% Umsatz je Termin", "+41% Bewertungen", "-18% Ausfälle"],
+  },
+  {
+    label: "Pilot-Case (anonymisiert)",
+    name: "Praxisgruppe, Hamburg",
+    focus: "Vorqualifizierung & Terminvergabe",
+    period: "4 Wochen",
+    metrics: ["-33% Telefonzeit", "Antwortzeit < 2 Min", "+19% Termintreue"],
+  },
+];
+
+const insights = [
+  {
+    title: "Wie 30 % mehr Reservierungen über Instagram DMs möglich werden",
+    tag: "Playbook",
+    href: "/blog",
+  },
+  {
+    title: "Reminder-Design: der präzise Ablauf gegen No-Shows",
+    tag: "Best Practice",
+    href: "/blog",
+  },
+  {
+    title: "Bewertungen skalieren: von Besuch zu 5-Sterne-Review",
+    tag: "Guide",
+    href: "/blog",
+  },
+];
+
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Wesponde",
+    url: "https://wesponde.com",
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "sales",
+      email: "hello@wesponde.com",
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Wesponde",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    url: "https://wesponde.com",
+    description:
+      "Messenger-Automation für Service-Brands: Reservierungen, Reminder und Bewertungen über Instagram, WhatsApp und Facebook.",
+  },
+];
+
 export default function HomePage() {
   return (
     <div className="bg-sand text-ink">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <section className="relative isolate overflow-hidden bg-ink text-white">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(55,105,255,0.35),_transparent_55%),radial-gradient(circle_at_20%_80%,_rgba(199,162,115,0.25),_transparent_45%)]" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-br from-ink via-ink/95 to-black" />
         <div className="mx-auto max-w-6xl px-4 pb-24 pt-12">
-          <div className="grid gap-12 lg:grid-cols-[1.05fr,0.95fr] lg:items-center">
+          <div className="grid gap-12 lg:grid-cols-[1fr,1fr] lg:items-center lg:gap-16">
             <div>
               <span className="inline-flex items-center rounded-full border border-white/15 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
                 Enterprise Messaging für Service-Brands
@@ -296,17 +366,20 @@ export default function HomePage() {
               </h1>
               <p className="mt-6 text-lg text-white/75">
                 Wesponde orchestriert Instagram-, Facebook- und WhatsApp-Konversationen, bestätigt
-                Reservierungen, sendet Reminder und aktiviert Reviews – konsistent im Markenton und
-                mit klarer Kontrolle.
+                Reservierungen, sendet Reminder und aktiviert Reviews – konsistent im Markenton,
+                mit klaren Freigaben und voller Transparenz.
               </p>
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+                <WatchDemoButton
+                  className="border-transparent bg-white text-ink hover:bg-sand hover:text-ink"
+                  label="Kostenlose Demo ansehen"
+                />
                 <a
                   href="#beta"
-                  className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink shadow-lg shadow-white/20 transition hover:bg-sand"
+                  className="inline-flex items-center justify-center rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/50 hover:text-white"
                 >
-                  Beta anfragen
+                  Pilotzugang anfragen
                 </a>
-                <WatchDemoButton className="border-white/30 text-white" label="Live-Demo ansehen" />
                 <Link
                   href="/login"
                   className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white/70 transition hover:border-white/40 hover:text-white"
@@ -325,6 +398,19 @@ export default function HomePage() {
                 ))}
               </dl>
               <p className="mt-4 text-xs text-white/45">Pilotdaten aus Teams in der DACH-Region.</p>
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-white/60">
+                <span>Fragen?</span>
+                <Link href="/contact" className="font-semibold text-white/80 hover:text-white">
+                  Direkt sprechen
+                </Link>
+                <span className="text-white/30">oder</span>
+                <a
+                  href="mailto:hello@wesponde.com"
+                  className="font-semibold text-white/80 hover:text-white"
+                >
+                  hello@wesponde.com
+                </a>
+              </div>
               <div className="mt-8 grid grid-cols-3 gap-x-6 gap-y-3 text-white/60 sm:flex sm:flex-wrap sm:items-center sm:gap-6">
                 {trustLogos.map((logo) => (
                   <div key={logo.name} className="flex h-6 items-center">
@@ -337,54 +423,53 @@ export default function HomePage() {
             <div className="relative">
               <div className="absolute -left-10 top-10 h-40 w-40 rounded-full bg-brand/30 blur-3xl" />
               <div className="absolute -right-10 bottom-10 h-40 w-40 rounded-full bg-copper/40 blur-3xl" />
-              <div
-                className="relative mx-auto w-full max-w-[380px] animate-[floatSlow_12s_ease-in-out_infinite]"
-                style={{ aspectRatio: "9 / 19.5" }}
-              >
+              <div className="relative mx-auto w-full max-w-[380px] aspect-[9/19.5] animate-[floatSlow_12s_ease-in-out_infinite]">
                 <div className="absolute -left-2 top-24 h-12 w-1 rounded-full bg-white/10" />
                 <div className="absolute -left-2 top-40 h-8 w-1 rounded-full bg-white/10" />
                 <div className="absolute -left-2 top-52 h-8 w-1 rounded-full bg-white/10" />
                 <div className="absolute -right-2 top-32 h-14 w-1 rounded-full bg-white/10" />
-                <div className="h-full rounded-[56px] border border-white/15 bg-gradient-to-b from-white/10 to-black/80 p-[6px] shadow-[0_40px_90px_-60px_rgba(15,17,22,0.85)]">
-                  <div className="relative h-full overflow-hidden rounded-[50px] bg-[#0f1116]">
-                    <div className="absolute left-1/2 top-2 h-6 w-32 -translate-x-1/2 rounded-b-[18px] border border-white/10 bg-black/80">
-                      <div className="mx-auto mt-1 h-1.5 w-12 rounded-full bg-white/10" />
-                      <div className="absolute right-4 top-2 h-2 w-2 rounded-full bg-white/20" />
-                    </div>
-                    <div className="flex items-center justify-between px-6 pt-3 text-[11px] text-white/80">
-                      <span className="font-semibold tracking-[0.1em]">9:41</span>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-[2px]">
-                          <span className="h-1.5 w-0.5 rounded-full bg-white/70" />
-                          <span className="h-2 w-0.5 rounded-full bg-white/70" />
-                          <span className="h-2.5 w-0.5 rounded-full bg-white/70" />
-                          <span className="h-3 w-0.5 rounded-full bg-white/70" />
-                        </div>
-                        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true">
-                          <path
-                            d="M3 9c2.8-3 6.2-4.5 9-4.5S18.2 6 21 9"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            fill="none"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M6 12c1.8-2 3.9-3 6-3s4.2 1 6 3"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            fill="none"
-                            strokeLinecap="round"
-                          />
-                          <circle cx="12" cy="15" r="1.2" fill="currentColor" />
-                        </svg>
-                        <div className="flex items-center gap-1">
-                          <div className="h-3 w-5 rounded-sm border border-white/60" />
-                          <div className="h-1.5 w-1 rounded-sm bg-white/60" />
+                <div className="h-full rounded-[60px] border border-white/15 bg-gradient-to-b from-white/12 to-black/85 p-[6px] shadow-[0_40px_90px_-60px_rgba(15,17,22,0.85)]">
+                  <div className="relative h-full overflow-hidden rounded-[52px] bg-[#0f1116]">
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-50" />
+                    <div className="relative z-10 flex h-full flex-col">
+                      <div className="absolute left-1/2 top-2 h-6 w-32 -translate-x-1/2 rounded-b-[18px] border border-white/10 bg-black/80">
+                        <div className="mx-auto mt-1 h-1.5 w-12 rounded-full bg-white/10" />
+                        <div className="absolute right-4 top-2 h-2 w-2 rounded-full bg-white/20" />
+                      </div>
+                      <div className="flex items-center justify-between px-6 pt-3 text-[11px] text-white/80">
+                        <span className="font-semibold tracking-[0.1em]">9:41</span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-[2px]">
+                            <span className="h-1.5 w-0.5 rounded-full bg-white/70" />
+                            <span className="h-2 w-0.5 rounded-full bg-white/70" />
+                            <span className="h-2.5 w-0.5 rounded-full bg-white/70" />
+                            <span className="h-3 w-0.5 rounded-full bg-white/70" />
+                          </div>
+                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true">
+                            <path
+                              d="M3 9c2.8-3 6.2-4.5 9-4.5S18.2 6 21 9"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              fill="none"
+                              strokeLinecap="round"
+                            />
+                            <path
+                              d="M6 12c1.8-2 3.9-3 6-3s4.2 1 6 3"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              fill="none"
+                              strokeLinecap="round"
+                            />
+                            <circle cx="12" cy="15" r="1.2" fill="currentColor" />
+                          </svg>
+                          <div className="flex items-center gap-1">
+                            <div className="h-3 w-5 rounded-sm border border-white/60" />
+                            <div className="h-1.5 w-1 rounded-sm bg-white/60" />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="mt-8 flex items-center justify-between border-b border-white/10 px-4 py-3">
+                    <div className="mt-7 flex items-center justify-between border-b border-white/10 px-4 py-3">
                       <div className="flex items-center gap-3">
                         <svg viewBox="0 0 24 24" className="h-4 w-4 text-white/70" aria-hidden="true">
                           <path d="M14 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -413,10 +498,10 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    <div className="space-y-3 px-4 pb-4 pt-3 text-[12px]">
+                    <div className="flex-1 space-y-3 overflow-hidden px-4 pb-4 pt-3 text-[12px]">
                       <div
-                        className="flex items-start gap-2 opacity-0 animate-[messageIn_1s_ease_forwards]"
-                        style={{ animationDelay: "0.6s" }}
+                        className="flex items-start gap-2 opacity-0 animate-[messageIn_1.2s_ease_forwards]"
+                        style={{ animationDelay: "0.8s" }}
                       >
                         <div className="h-7 w-7 rounded-full bg-white/10" />
                         <div className="max-w-[72%] rounded-2xl bg-white/10 px-3 py-1.5 text-white/80">
@@ -424,8 +509,8 @@ export default function HomePage() {
                         </div>
                       </div>
                       <div
-                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1s_ease_forwards]"
-                        style={{ animationDelay: "2.4s" }}
+                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1.2s_ease_forwards]"
+                        style={{ animationDelay: "2.8s" }}
                       >
                         <div className="max-w-[72%] rounded-2xl bg-white px-3 py-1.5 text-ink">
                           20:00 ist frei. Auf welchen Namen?
@@ -435,8 +520,8 @@ export default function HomePage() {
                         </div>
                       </div>
                       <div
-                        className="flex items-start gap-2 opacity-0 animate-[messageIn_1s_ease_forwards]"
-                        style={{ animationDelay: "4.2s" }}
+                        className="flex items-start gap-2 opacity-0 animate-[messageIn_1.2s_ease_forwards]"
+                        style={{ animationDelay: "4.8s" }}
                       >
                         <div className="h-7 w-7 rounded-full bg-white/10" />
                         <div className="max-w-[72%] rounded-2xl bg-white/10 px-3 py-1.5 text-white/80">
@@ -444,8 +529,8 @@ export default function HomePage() {
                         </div>
                       </div>
                       <div
-                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1s_ease_forwards]"
-                        style={{ animationDelay: "6s" }}
+                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1.2s_ease_forwards]"
+                        style={{ animationDelay: "6.8s" }}
                       >
                         <div className="max-w-[72%] rounded-2xl bg-white px-3 py-1.5 text-ink">
                           Bestätigt. Reminder 4h vorher. Fensterplatz ok?
@@ -455,8 +540,8 @@ export default function HomePage() {
                         </div>
                       </div>
                       <div
-                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1s_ease_forwards]"
-                        style={{ animationDelay: "7.8s" }}
+                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1.2s_ease_forwards]"
+                        style={{ animationDelay: "8.8s" }}
                       >
                         <div className="max-w-[72%] rounded-2xl bg-white px-3 py-1.5 text-ink">
                           Perfekt. Bestätigung ist raus.
@@ -488,11 +573,12 @@ export default function HomePage() {
                     <div className="flex justify-center pb-3 pt-1">
                       <div className="h-1.5 w-28 rounded-full bg-white/20" />
                     </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-4 text-xs text-white/75 shadow-[0_20px_50px_-40px_rgba(15,17,22,0.7)] lg:absolute lg:bottom-6 lg:left-full lg:ml-6 lg:mt-0 lg:w-52">
+              <div className="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-4 text-xs text-white/75 shadow-[0_20px_50px_-40px_rgba(15,17,22,0.7)] lg:absolute lg:bottom-6 lg:left-full lg:ml-10 lg:mt-0 lg:w-56">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
                   Systemstatus
                 </p>
@@ -538,6 +624,45 @@ export default function HomePage() {
                 <p className="text-3xl font-semibold text-ink">{outcome.value}</p>
                 <p className="mt-3 text-base font-semibold text-slate-800">{outcome.label}</p>
                 <p className="mt-2 text-sm text-slate-500">{outcome.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="cases" className="bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-24">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+              Case Studies
+            </p>
+            <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink sm:text-4xl">
+              Konkrete Ergebnisse aus Pilot-Teams.
+            </h2>
+            <p className="mt-4 text-lg text-slate-600">
+              Drei Beispiele, wie Wesponde Buchungen, Bewertungen und Termintreue messbar verbessert.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-6 lg:grid-cols-3">
+            {caseStudies.map((caseStudy) => (
+              <div
+                key={caseStudy.name}
+                className="rounded-[28px] border border-slate-200/70 bg-sand/50 p-6 shadow-[0_20px_60px_-45px_rgba(15,17,22,0.2)]"
+              >
+                <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.25em] text-slate-400">
+                  <span>{caseStudy.label}</span>
+                  <span>{caseStudy.period}</span>
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-ink">{caseStudy.name}</h3>
+                <p className="mt-2 text-sm text-slate-600">{caseStudy.focus}</p>
+                <ul className="mt-4 space-y-2 text-sm font-semibold text-ink">
+                  {caseStudy.metrics.map((metric) => (
+                    <li key={metric} className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-ink/70" />
+                      {metric}
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>
@@ -641,7 +766,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl px-4 py-24">
           <div className="rounded-[32px] border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/5 p-10 text-white shadow-[0_40px_80px_-60px_rgba(15,17,22,0.9)] sm:p-16">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-              Stimmen aus der Beta
+              Stimmen aus dem Pilot
             </p>
             <blockquote className="font-display text-balance mt-6 text-2xl font-semibold leading-snug sm:text-3xl">
               „Wir beantworten jede Instagram-Anfrage automatisch – inklusive Terminbuchung. Das
@@ -654,12 +779,58 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section id="insights" className="bg-sand">
+        <div className="mx-auto max-w-6xl px-4 py-24">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                Insights
+              </p>
+              <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink sm:text-4xl">
+                Playbooks, Benchmarks und bewährte Abläufe.
+              </h2>
+              <p className="mt-4 text-lg text-slate-600">
+                Für Teams, die ihr Instagram-Messaging messbar skalieren wollen.
+              </p>
+            </div>
+            <Link
+              href="/blog"
+              className="inline-flex items-center justify-center rounded-full border border-ink/20 px-5 py-2 text-sm font-semibold text-ink transition hover:border-ink/40"
+            >
+              Alle Artikel
+            </Link>
+          </div>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {insights.map((insight) => (
+              <Link
+                key={insight.title}
+                href={insight.href}
+                className="group rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-[0_20px_60px_-45px_rgba(15,17,22,0.2)] transition hover:-translate-y-1"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                  {insight.tag}
+                </p>
+                <h3 className="mt-4 text-lg font-semibold text-ink group-hover:text-brand-dark">
+                  {insight.title}
+                </h3>
+                <p className="mt-4 text-sm text-slate-600">
+                  Lesen →{" "}
+                  <span className="font-semibold text-ink group-hover:text-brand-dark">
+                    Artikel öffnen
+                  </span>
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="beta" className="bg-sand">
         <div className="mx-auto max-w-6xl px-4 py-24">
           <div className="grid gap-10 lg:grid-cols-[0.95fr,1.05fr] lg:items-center">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-                Early Access
+                Pilotzugang
               </p>
               <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink">
                 Enterprise-Onboarding für ausgewählte Partner.
@@ -669,7 +840,7 @@ export default function HomePage() {
               </p>
               <ul className="mt-6 space-y-3 text-sm text-slate-600">
                 <li>• Persönliches Onboarding & Flow-Setup</li>
-                <li>• Integration von Meta, WhatsApp und POS-Systemen</li>
+                <li>• Integration von Meta, WhatsApp und Kassensystemen</li>
                 <li>• Dashboard-Zugang für dein Team</li>
               </ul>
             </div>
@@ -698,7 +869,7 @@ export default function HomePage() {
                 href="/contact"
                 className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink shadow-lg shadow-white/20 transition hover:bg-sand"
               >
-                Beratung anfragen
+                Ergebnis-Check anfragen
               </Link>
               <Link
                 href="/login"

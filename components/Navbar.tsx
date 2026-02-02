@@ -6,8 +6,10 @@ import { useState } from "react";
 const navLinks = [
   { href: "/#product", label: "Produkt" },
   { href: "/#outcomes", label: "Ergebnisse" },
+  { href: "/#cases", label: "Cases" },
   { href: "/#workflow", label: "Ablauf" },
   { href: "/#use-cases", label: "Branchen" },
+  { href: "/blog", label: "Insights" },
   { href: "/about", label: "Über uns" },
   { href: "/contact", label: "Support" },
 ];
@@ -50,7 +52,7 @@ export default function Navbar() {
             href="/#beta"
             className="hidden rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink shadow-lg shadow-white/20 transition hover:bg-sand md:inline-flex md:items-center"
           >
-            Beta anfragen
+            Pilotzugang
           </Link>
           <button
             type="button"
@@ -91,7 +93,7 @@ export default function Navbar() {
               className="rounded-full bg-white px-4 py-2 text-center text-sm font-semibold text-ink shadow-lg shadow-white/20 transition hover:bg-sand"
               onClick={() => setMenuOpen(false)}
             >
-              Beta anfragen
+              Pilotzugang
             </Link>
           </div>
         </div>

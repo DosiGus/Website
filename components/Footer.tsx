@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const infoLinks = [
   { href: "/about", label: "About" },
-  { href: "/blog", label: "Blog (Soon)" },
+  { href: "/blog", label: "Insights" },
   { href: "/contact", label: "Support" },
   { href: "/privacy", label: "Privacy" },
   { href: "/login", label: "Login" },
@@ -77,13 +77,13 @@ export default function Footer() {
             Bereit für automatisierte Gespräche?
           </p>
           <p className="text-xs text-slate-500">
-            Trage dich in die Beta ein und erhalte Zugang, sobald neue Plätze frei werden.
+            Sichere dir den Pilotzugang, sobald neue Plätze frei werden.
           </p>
           <a
             href="/#beta"
             className="inline-flex items-center justify-center rounded-full bg-ink px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-ink/30 transition hover:bg-ink/90"
           >
-            Beta anfragen
+            Pilotzugang anfragen
           </a>
         </div>
       </div>
