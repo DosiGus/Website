@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from "react";
+import { ArrowRight, CheckCircle, Loader2 } from "lucide-react";
 
 export default function BetaWaitlistForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -39,75 +40,116 @@ export default function BetaWaitlistForm() {
     }
   }
 
+  if (status === "success") {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-8 text-center backdrop-blur-sm">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
+          <CheckCircle className="h-8 w-8 text-emerald-400" />
+        </div>
+        <h3 className="mt-4 text-xl font-semibold text-white">Erfolgreich angemeldet!</h3>
+        <p className="mt-2 text-sm text-zinc-400">{message}</p>
+      </div>
+    );
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-5 rounded-[32px] border border-slate-200/70 bg-white/85 p-8 shadow-[0_30px_80px_-50px_rgba(15,17,22,0.45)] backdrop-blur"
+      className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-sm sm:p-8"
     >
-      <div>
-        <label className="block text-sm font-semibold text-slate-600">Vollständiger Name</label>
-        <input
-          required
-          name="name"
-          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-          placeholder="Laura Weber"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-semibold text-slate-600">Geschäfts-E-Mail</label>
-        <input
-          required
-          type="email"
-          name="email"
-          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-          placeholder="laura@studio.co"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-semibold text-slate-600">Branche</label>
-        <select
-          required
-          name="industry"
-          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-          defaultValue=""
+      {/* Gradient glow effect */}
+      <div className="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-indigo-500/20 blur-[60px]" />
+      <div className="pointer-events-none absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-violet-500/20 blur-[60px]" />
+
+      <div className="relative space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-zinc-300">
+            Vollständiger Name
+          </label>
+          <input
+            required
+            name="name"
+            className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            placeholder="Max Mustermann"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-300">
+            Geschäfts-E-Mail
+          </label>
+          <input
+            required
+            type="email"
+            name="email"
+            className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            placeholder="max@beispiel.de"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-300">
+            Branche
+          </label>
+          <select
+            required
+            name="industry"
+            className="mt-2 w-full appearance-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white transition-colors focus:border-indigo-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            defaultValue=""
+          >
+            <option value="" disabled className="bg-zinc-900 text-zinc-500">
+              Bitte auswählen
+            </option>
+            <option className="bg-zinc-900">Restaurant & Bar</option>
+            <option className="bg-zinc-900">Friseur & Beauty</option>
+            <option className="bg-zinc-900">Spa, Wellness & Massage</option>
+            <option className="bg-zinc-900">Medizin & Praxis</option>
+            <option className="bg-zinc-900">Fitness & Coaching</option>
+            <option className="bg-zinc-900">Andere Dienstleistung</option>
+          </select>
+        </div>
+
+        <button
+          type="submit"
+          disabled={status === "loading"}
+          className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          <option value="" disabled>
-            Bitte auswählen
-          </option>
-          <option>Restaurant & Bar</option>
-          <option>Friseur & Beauty</option>
-          <option>Spa, Wellness & Massage</option>
-          <option>Medizin & Praxis</option>
-          <option>Fitness & Coaching</option>
-          <option>Andere Dienstleistung</option>
-        </select>
-      </div>
-      <button
-        type="submit"
-        disabled={status === "loading"}
-        className="w-full rounded-2xl bg-ink px-5 py-3 text-base font-semibold text-white shadow-lg shadow-ink/30 transition hover:bg-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-70"
-      >
-        {status === "loading" ? "Wird gesendet..." : "Pilotzugang anfragen"}
-      </button>
-      {message ? (
-        <p
-          role="status"
-          aria-live="polite"
-          className={`text-sm ${status === "success" ? "text-emerald-600" : "text-rose-500"}`}
-        >
-          {message}
+          <span className="relative flex items-center justify-center gap-2">
+            {status === "loading" ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Wird gesendet...
+              </>
+            ) : (
+              <>
+                Pilotzugang anfragen
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </>
+            )}
+          </span>
+        </button>
+
+        {message && status === "error" && (
+          <p
+            role="status"
+            aria-live="polite"
+            className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center text-sm text-red-400"
+          >
+            {message}
+          </p>
+        )}
+
+        <p className="text-center text-xs text-zinc-500">
+          Wir schützen deine Daten. Mit dem Absenden akzeptierst du unsere{" "}
+          <a
+            className="font-medium text-zinc-400 underline underline-offset-2 transition-colors hover:text-white"
+            href="/privacy"
+          >
+            Datenschutzerklärung
+          </a>
+          .
         </p>
-      ) : null}
-      <p className="text-xs text-slate-500">
-        Wir schützen deine Daten. Mit dem Absenden akzeptierst du unsere{" "}
-        <a
-          className="font-semibold text-ink hover:text-brand-dark"
-          href="/privacy"
-        >
-          Datenschutzerklärung
-        </a>
-        .
-      </p>
+      </div>
     </form>
   );
 }

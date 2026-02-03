@@ -1,182 +1,32 @@
 import Link from "next/link";
 import BetaWaitlistForm from "../components/BetaWaitlistForm";
 import WatchDemoButton from "../components/WatchDemoButton";
+import PhoneMockup from "../components/PhoneMockup";
+import FlowBuilderDemo from "../components/FlowBuilderDemo";
+import GoogleReviewsFlow from "../components/GoogleReviewsFlow";
+import {
+  MessageSquare,
+  CalendarCheck,
+  Bell,
+  Star,
+  Zap,
+  Shield,
+  BarChart3,
+  Users,
+  ArrowRight,
+  CheckCircle2,
+  Sparkles,
+  Workflow,
+} from "lucide-react";
 
-const logoClassName = "block h-4 w-auto text-white/55 sm:h-5";
-
-const trustLogos = [
-  {
-    name: "Meta",
-    svg: (
-      <svg viewBox="0 0 80 24" className={logoClassName} role="img" aria-label="Meta">
-        <title>Meta</title>
-        <text
-          x="0"
-          y="12"
-          fill="currentColor"
-          fontSize="12"
-          fontFamily="var(--font-body)"
-          letterSpacing="0.28em"
-          dominantBaseline="middle"
-        >
-          META
-        </text>
-      </svg>
-    ),
-  },
-  {
-    name: "Instagram",
-    svg: (
-      <svg viewBox="0 0 140 24" className={logoClassName} role="img" aria-label="Instagram">
-        <title>Instagram</title>
-        <defs>
-          <linearGradient id="igGradient" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#f09433" />
-            <stop offset="0.5" stopColor="#e6683c" />
-            <stop offset="1" stopColor="#bc2a8d" />
-          </linearGradient>
-        </defs>
-        <rect x="1.5" y="4" width="16" height="16" rx="5" stroke="url(#igGradient)" strokeWidth="1.6" fill="none" />
-        <circle cx="9.5" cy="12" r="4" stroke="url(#igGradient)" strokeWidth="1.6" fill="none" />
-        <circle cx="14.5" cy="7.5" r="1.2" fill="url(#igGradient)" />
-        <text
-          x="26"
-          y="12"
-          fill="currentColor"
-          fontSize="12"
-          fontFamily="var(--font-body)"
-          letterSpacing="0.18em"
-          dominantBaseline="middle"
-        >
-          INSTAGRAM
-        </text>
-      </svg>
-    ),
-  },
-  {
-    name: "WhatsApp",
-    svg: (
-      <svg viewBox="0 0 150 24" className={logoClassName} role="img" aria-label="WhatsApp">
-        <title>WhatsApp</title>
-        <circle cx="10" cy="12" r="7" stroke="currentColor" strokeWidth="1.5" fill="none" />
-        <path
-          d="M6.5 18.5l-1.8 4 4-1.6"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-        <path
-          d="M8.2 9.8c1.4 2.2 3.8 3.6 5.8 4.2"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-        <text
-          x="24"
-          y="12"
-          fill="currentColor"
-          fontSize="12"
-          fontFamily="var(--font-body)"
-          letterSpacing="0.16em"
-          dominantBaseline="middle"
-        >
-          WHATSAPP
-        </text>
-      </svg>
-    ),
-  },
-  {
-    name: "Lightspeed",
-    svg: (
-      <svg viewBox="0 0 150 24" className={logoClassName} role="img" aria-label="Lightspeed">
-        <title>Lightspeed</title>
-        <circle cx="10" cy="12" r="7" stroke="currentColor" strokeWidth="1.5" fill="none" />
-        <path
-          d="M10 7l-3 6h4l-1 4 4-7h-4l0-3z"
-          fill="currentColor"
-        />
-        <text
-          x="24"
-          y="12"
-          fill="currentColor"
-          fontSize="12"
-          fontFamily="var(--font-body)"
-          letterSpacing="0.14em"
-          dominantBaseline="middle"
-        >
-          LIGHTSPEED
-        </text>
-      </svg>
-    ),
-  },
-  {
-    name: "Shore",
-    svg: (
-      <svg viewBox="0 0 100 24" className={logoClassName} role="img" aria-label="Shore">
-        <title>Shore</title>
-        <path
-          d="M3 10c3 2 6 2 9 0s6-2 9 0"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          fill="none"
-          strokeLinecap="round"
-        />
-        <path
-          d="M3 14c3 2 6 2 9 0s6-2 9 0"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          fill="none"
-          strokeLinecap="round"
-        />
-        <text
-          x="30"
-          y="12"
-          fill="currentColor"
-          fontSize="12"
-          fontFamily="var(--font-body)"
-          letterSpacing="0.2em"
-          dominantBaseline="middle"
-        >
-          SHORE
-        </text>
-      </svg>
-    ),
-  },
-  {
-    name: "orderbird",
-    svg: (
-      <svg viewBox="0 0 120 24" className={logoClassName} role="img" aria-label="orderbird">
-        <title>orderbird</title>
-        <path
-          d="M5 13c3-4 6-4 9 0 3-4 6-4 9 0"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          fill="none"
-          strokeLinecap="round"
-        />
-        <circle cx="5" cy="13" r="1" fill="currentColor" />
-        <text
-          x="30"
-          y="12"
-          fill="currentColor"
-          fontSize="12"
-          fontFamily="var(--font-body)"
-          letterSpacing="0.12em"
-          dominantBaseline="middle"
-        >
-          ORDERBIRD
-        </text>
-      </svg>
-    ),
-  },
-];
+/* ========================================
+   DATA
+   ======================================== */
 
 const heroStats = [
-  { label: "Antwortzeit", value: "< 30s" },
-  { label: "No-Shows", value: "-28%" },
-  { label: "Bewertungen", value: "+41%" },
+  { value: "<30s", label: "Antwortzeit", icon: Zap },
+  { value: "-28%", label: "No-Shows", icon: CalendarCheck },
+  { value: "+41%", label: "Bewertungen", icon: Star },
 ];
 
 const outcomes = [
@@ -184,140 +34,117 @@ const outcomes = [
     value: "+63%",
     label: "mehr Buchungen aus DMs",
     detail: "Pilotdaten nach 6 Wochen",
+    color: "from-indigo-500 to-violet-500",
   },
   {
     value: "3×",
     label: "schnellere Antworten",
     detail: "Instagram, Facebook, WhatsApp",
+    color: "from-cyan-500 to-blue-500",
   },
   {
     value: "-28%",
     label: "No-Shows reduziert",
     detail: "Bestätigung + Reminder",
+    color: "from-emerald-500 to-teal-500",
   },
   {
     value: "+41%",
     label: "mehr Google Reviews",
     detail: "automatisiert nach dem Besuch",
+    color: "from-amber-500 to-orange-500",
   },
 ];
 
-const steps = [
+const features = [
   {
-    title: "Verbinden",
-    description: "Instagram, Facebook und WhatsApp verbinden – wir übernehmen den Setup.",
+    icon: MessageSquare,
+    title: "Quick Replies",
+    description: "Vordefinierte Antwort-Buttons für schnelle, strukturierte Konversationen.",
+    gradient: "from-indigo-500 to-violet-500",
   },
   {
-    title: "Ablauf definieren",
-    description: "Templates übernehmen, Wording und Eskalationen finalisieren.",
+    icon: CalendarCheck,
+    title: "Automatische Buchung",
+    description: "Termine werden direkt im Chat erfasst und bestätigt.",
+    gradient: "from-emerald-500 to-teal-500",
   },
   {
-    title: "Live schalten",
-    description: "Antworten, Buchungen und Reviews laufen stabil – mit Reporting.",
+    icon: Bell,
+    title: "Reminder",
+    description: "Automatische Erinnerungen senken No-Shows messbar.",
+    gradient: "from-amber-500 to-orange-500",
+  },
+  {
+    icon: Star,
+    title: "Review Automation",
+    description: "Nach dem Besuch wird automatisch um eine Bewertung gebeten.",
+    gradient: "from-pink-500 to-rose-500",
+  },
+  {
+    icon: Shield,
+    title: "Enterprise-Ready",
+    description: "DSGVO-konform, Meta-verifiziert, volle Datentransparenz.",
+    gradient: "from-slate-500 to-zinc-500",
+  },
+  {
+    icon: BarChart3,
+    title: "Analytics",
+    description: "Alle Konversationen, Buchungen und Metriken im Dashboard.",
+    gradient: "from-cyan-500 to-blue-500",
   },
 ];
 
 const useCases = [
   {
-    title: "Restaurants & Bars",
+    industry: "Restaurants & Bars",
     scenario: "DM → Tischanfrage → Bestätigung",
     outcome: "Mehr Reservierungen aus Stories – ohne Zusatzaufwand.",
+    icon: "🍽️",
   },
   {
-    title: "Salons & Beauty",
+    industry: "Salons & Beauty",
     scenario: "DM → Termin → Zusatzleistung",
     outcome: "Mehr Umsatz pro Termin, weniger Ausfälle.",
+    icon: "💇",
   },
   {
-    title: "Praxen & Kliniken",
+    industry: "Praxen & Kliniken",
     scenario: "DM → Vorqualifizierung → Termin",
     outcome: "Weniger Telefon, klar vorbereitete Termine.",
+    icon: "🏥",
   },
   {
-    title: "Fitness & Wellness",
+    industry: "Fitness & Wellness",
     scenario: "DM → Kurs → Follow-up",
     outcome: "Mehr Mitgliedschaften durch schnelle Antworten.",
+    icon: "💪",
   },
 ];
 
-const productActions = [
-  {
-    tag: "Routing",
-    title: "Anfragen verstehen",
-    description: "Anfragen werden erkannt und automatisch richtig zugeordnet.",
-  },
-  {
-    tag: "Buchung",
-    title: "Termine erfassen",
-    description: "Datum, Uhrzeit, Personenanzahl und Wünsche werden strukturiert erfasst.",
-  },
-  {
-    tag: "Sync",
-    title: "Systeme synchronisieren",
-    description: "Kalender und Kassensysteme bleiben in Echtzeit aktuell.",
-  },
-  {
-    tag: "Reminder",
-    title: "Erinnerungen senden",
-    description: "Bestätigungen und Reminder senken No-Shows messbar.",
-  },
-  {
-    tag: "Reviews",
-    title: "Bewertungen auslösen",
-    description: "Review-Flow nach dem Besuch erhöht Bewertungsquote.",
-  },
-  {
-    tag: "Dashboard",
-    title: "Team-Übersicht",
-    description: "Konversationen, Buchungen und Statusmeldungen zentral.",
-  },
-];
+const testimonial = {
+  quote:
+    "Wir beantworten jede Instagram-Anfrage automatisch – inklusive Terminbuchung. Das spart uns täglich fast zwei Stunden und wir verlieren keine Anfrage mehr.",
+  author: "Mira Lehmann",
+  role: "Inhaberin, Studio Lumi",
+  company: "Friseur & Kosmetik",
+};
 
-const actionCards = [
-  { title: "Reservierung bestätigt", status: "LIVE" },
-  { title: "Reminder 4h vorher", status: "SCHEDULED" },
-  { title: "Review-Link bereit", status: "READY" },
-];
-
-const caseStudies = [
+const steps = [
   {
-    label: "Pilot-Case (anonymisiert)",
-    name: "Restaurantgruppe, Berlin",
-    focus: "Tischreservierungen via Instagram DM",
-    period: "6 Wochen",
-    metrics: ["+38% DM-Reservierungen", "Antwortzeit < 1 Min", "-22% No-Shows"],
+    step: "01",
+    title: "Verbinden",
+    description: "Instagram, Facebook und WhatsApp verbinden – wir übernehmen den Setup.",
   },
   {
-    label: "Pilot-Case (anonymisiert)",
-    name: "Salon-Kette, München",
-    focus: "Terminbuchung + Upsells",
-    period: "5 Wochen",
-    metrics: ["+27% Umsatz je Termin", "+41% Bewertungen", "-18% Ausfälle"],
+    step: "02",
+    title: "Konfigurieren",
+    description: "Templates übernehmen, Wording und Eskalationen finalisieren.",
   },
   {
-    label: "Pilot-Case (anonymisiert)",
-    name: "Praxisgruppe, Hamburg",
-    focus: "Vorqualifizierung & Terminvergabe",
-    period: "4 Wochen",
-    metrics: ["-33% Telefonzeit", "Antwortzeit < 2 Min", "+19% Termintreue"],
-  },
-];
-
-const insights = [
-  {
-    title: "Wie 30 % mehr Reservierungen über Instagram DMs möglich werden",
-    tag: "Playbook",
-    href: "/blog",
-  },
-  {
-    title: "Reminder-Design: der präzise Ablauf gegen No-Shows",
-    tag: "Best Practice",
-    href: "/blog",
-  },
-  {
-    title: "Bewertungen skalieren: von Besuch zu 5-Sterne-Review",
-    tag: "Guide",
-    href: "/blog",
+    step: "03",
+    title: "Live schalten",
+    description: "Antworten, Buchungen und Reviews laufen stabil – mit Reporting.",
   },
 ];
 
@@ -345,539 +172,421 @@ const structuredData = [
   },
 ];
 
+/* ========================================
+   COMPONENTS
+   ======================================== */
+
 export default function HomePage() {
   return (
-    <div className="bg-sand text-ink">
+    <div className="relative bg-zinc-950 text-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <section className="relative isolate overflow-hidden bg-ink text-white">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(55,105,255,0.35),_transparent_55%),radial-gradient(circle_at_20%_80%,_rgba(199,162,115,0.25),_transparent_45%)]" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-ink via-ink/95 to-black" />
-        <div className="mx-auto max-w-6xl px-4 pb-24 pt-12">
-          <div className="grid gap-12 lg:grid-cols-[1fr,1fr] lg:items-center lg:gap-16">
-            <div>
-              <span className="inline-flex items-center rounded-full border border-white/15 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
-                Enterprise Messaging für Service-Brands
-              </span>
-              <h1 className="font-display text-balance mt-6 text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-                Aus DMs werden Buchungen.
+
+      {/* ==================== HERO SECTION ==================== */}
+      <section className="relative min-h-screen overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0 bg-grid-dark" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/50 to-zinc-950" />
+        <div className="absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/20 blur-[120px]" />
+        <div className="absolute right-0 top-1/2 h-[400px] w-[400px] -translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px]" />
+
+        <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-32 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-16 lg:grid-cols-[1.1fr,0.9fr] lg:gap-20">
+            {/* Left Content */}
+            <div className="max-w-2xl">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-sm">
+                <Sparkles className="h-4 w-4 text-indigo-400" />
+                <span className="text-xs font-medium tracking-wide text-zinc-300">
+                  Enterprise Messaging für Service-Brands
+                </span>
+              </div>
+
+              {/* Headline */}
+              <h1 className="mt-8 font-display text-5xl font-medium tracking-tight sm:text-6xl lg:text-7xl">
+                Aus DMs werden{" "}
+                <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
+                  Buchungen
+                </span>
               </h1>
-              <p className="mt-6 text-lg text-white/75">
+
+              {/* Subheadline */}
+              <p className="mt-6 text-lg leading-relaxed text-zinc-400 sm:text-xl">
                 Wesponde orchestriert Instagram-, Facebook- und WhatsApp-Konversationen, bestätigt
-                Reservierungen, sendet Reminder und aktiviert Reviews – konsistent im Markenton,
-                mit klaren Freigaben und voller Transparenz.
+                Reservierungen, sendet Reminder und aktiviert Reviews – konsistent im Markenton.
               </p>
+
+              {/* CTAs */}
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
                 <WatchDemoButton
-                  className="border-transparent bg-white text-ink hover:bg-sand hover:text-ink"
-                  label="Kostenlose Demo ansehen"
+                  className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:shadow-white/20"
+                  label="Demo ansehen"
                 />
                 <a
                   href="#beta"
-                  className="inline-flex items-center justify-center rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/50 hover:text-white"
+                  className="group inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10"
                 >
                   Pilotzugang anfragen
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </a>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white/70 transition hover:border-white/40 hover:text-white"
-                >
-                  Partner-Login
-                </Link>
               </div>
-              <dl className="mt-12 grid gap-6 text-left sm:grid-cols-3">
+
+              {/* Stats */}
+              <div className="mt-16 grid grid-cols-3 gap-8">
                 {heroStats.map((stat) => (
-                  <div key={stat.label}>
-                    <dt className="text-xs uppercase tracking-[0.2em] text-white/50">
+                  <div key={stat.label} className="relative">
+                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
+                      <stat.icon className="h-3.5 w-3.5" />
                       {stat.label}
-                    </dt>
-                    <dd className="mt-2 text-3xl font-semibold text-white">{stat.value}</dd>
+                    </div>
+                    <div className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                      {stat.value}
+                    </div>
                   </div>
                 ))}
-              </dl>
-              <p className="mt-4 text-xs text-white/45">Pilotdaten aus Teams in der DACH-Region.</p>
-              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-white/60">
-                <span>Fragen?</span>
-                <Link href="/contact" className="font-semibold text-white/80 hover:text-white">
-                  Direkt sprechen
-                </Link>
-                <span className="text-white/30">oder</span>
-                <a
-                  href="mailto:hello@wesponde.com"
-                  className="font-semibold text-white/80 hover:text-white"
-                >
-                  hello@wesponde.com
-                </a>
               </div>
-              <div className="mt-8 grid grid-cols-3 gap-x-6 gap-y-3 text-white/60 sm:flex sm:flex-wrap sm:items-center sm:gap-6">
-                {trustLogos.map((logo) => (
-                  <div key={logo.name} className="flex h-6 items-center">
-                    {logo.svg}
-                  </div>
-                ))}
+
+              {/* Trust Badges */}
+              <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4 text-xs text-zinc-500">
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  Meta Business Partner
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  DSGVO-konform
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  Enterprise-ready
+                </span>
               </div>
             </div>
 
-            <div className="relative">
-              <div className="absolute -left-10 top-10 h-40 w-40 rounded-full bg-brand/30 blur-3xl" />
-              <div className="absolute -right-10 bottom-10 h-40 w-40 rounded-full bg-copper/40 blur-3xl" />
-              <div className="relative mx-auto w-full max-w-[380px] aspect-[9/19.5] animate-[floatSlow_12s_ease-in-out_infinite]">
-                <div className="absolute -left-2 top-24 h-12 w-1 rounded-full bg-white/10" />
-                <div className="absolute -left-2 top-40 h-8 w-1 rounded-full bg-white/10" />
-                <div className="absolute -left-2 top-52 h-8 w-1 rounded-full bg-white/10" />
-                <div className="absolute -right-2 top-32 h-14 w-1 rounded-full bg-white/10" />
-                <div className="h-full rounded-[60px] border border-white/15 bg-gradient-to-b from-white/12 to-black/85 p-[6px] shadow-[0_40px_90px_-60px_rgba(15,17,22,0.85)]">
-                  <div className="relative h-full overflow-hidden rounded-[52px] bg-[#0f1116]">
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-50" />
-                    <div className="relative z-10 flex h-full flex-col">
-                      <div className="absolute left-1/2 top-2 h-6 w-32 -translate-x-1/2 rounded-b-[18px] border border-white/10 bg-black/80">
-                        <div className="mx-auto mt-1 h-1.5 w-12 rounded-full bg-white/10" />
-                        <div className="absolute right-4 top-2 h-2 w-2 rounded-full bg-white/20" />
-                      </div>
-                      <div className="flex items-center justify-between px-6 pt-3 text-[11px] text-white/80">
-                        <span className="font-semibold tracking-[0.1em]">9:41</span>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-[2px]">
-                            <span className="h-1.5 w-0.5 rounded-full bg-white/70" />
-                            <span className="h-2 w-0.5 rounded-full bg-white/70" />
-                            <span className="h-2.5 w-0.5 rounded-full bg-white/70" />
-                            <span className="h-3 w-0.5 rounded-full bg-white/70" />
-                          </div>
-                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true">
-                            <path
-                              d="M3 9c2.8-3 6.2-4.5 9-4.5S18.2 6 21 9"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              fill="none"
-                              strokeLinecap="round"
-                            />
-                            <path
-                              d="M6 12c1.8-2 3.9-3 6-3s4.2 1 6 3"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              fill="none"
-                              strokeLinecap="round"
-                            />
-                            <circle cx="12" cy="15" r="1.2" fill="currentColor" />
-                          </svg>
-                          <div className="flex items-center gap-1">
-                            <div className="h-3 w-5 rounded-sm border border-white/60" />
-                            <div className="h-1.5 w-1 rounded-sm bg-white/60" />
-                          </div>
-                        </div>
-                      </div>
-
-                    <div className="mt-7 flex items-center justify-between border-b border-white/10 px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <svg viewBox="0 0 24 24" className="h-4 w-4 text-white/70" aria-hidden="true">
-                          <path d="M14 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#f09433] via-[#e6683c] to-[#bc2a8d] text-white">
-                          <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                            <rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                            <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                            <circle cx="16.5" cy="7.5" r="1" fill="currentColor" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-white">studio.lumi</p>
-                          <p className="text-[11px] text-white/45">Instagram Direct</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-white/60">
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                          <path d="M6 8h8l4-3v14l-4-3H6z" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinejoin="round" />
-                        </svg>
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.4" fill="none" />
-                          <circle cx="12" cy="8" r="1" fill="currentColor" />
-                          <path d="M12 11v5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                        </svg>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 space-y-3 overflow-hidden px-4 pb-4 pt-3 text-[12px]">
-                      <div
-                        className="flex items-start gap-2 opacity-0 animate-[messageIn_1.2s_ease_forwards]"
-                        style={{ animationDelay: "0.8s" }}
-                      >
-                        <div className="h-7 w-7 rounded-full bg-white/10" />
-                        <div className="max-w-[72%] rounded-2xl bg-white/10 px-3 py-1.5 text-white/80">
-                          Hi! 2 Plätze heute um 20:00?
-                        </div>
-                      </div>
-                      <div
-                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1.2s_ease_forwards]"
-                        style={{ animationDelay: "2.8s" }}
-                      >
-                        <div className="max-w-[72%] rounded-2xl bg-white px-3 py-1.5 text-ink">
-                          20:00 ist frei. Auf welchen Namen?
-                        </div>
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand to-copper text-[11px] font-semibold text-white">
-                          W
-                        </div>
-                      </div>
-                      <div
-                        className="flex items-start gap-2 opacity-0 animate-[messageIn_1.2s_ease_forwards]"
-                        style={{ animationDelay: "4.8s" }}
-                      >
-                        <div className="h-7 w-7 rounded-full bg-white/10" />
-                        <div className="max-w-[72%] rounded-2xl bg-white/10 px-3 py-1.5 text-white/80">
-                          Lisa Müller.
-                        </div>
-                      </div>
-                      <div
-                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1.2s_ease_forwards]"
-                        style={{ animationDelay: "6.8s" }}
-                      >
-                        <div className="max-w-[72%] rounded-2xl bg-white px-3 py-1.5 text-ink">
-                          Bestätigt. Reminder 4h vorher. Fensterplatz ok?
-                        </div>
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand to-copper text-[11px] font-semibold text-white">
-                          W
-                        </div>
-                      </div>
-                      <div
-                        className="flex items-start justify-end gap-2 opacity-0 animate-[messageIn_1.2s_ease_forwards]"
-                        style={{ animationDelay: "8.8s" }}
-                      >
-                        <div className="max-w-[72%] rounded-2xl bg-white px-3 py-1.5 text-ink">
-                          Perfekt. Bestätigung ist raus.
-                        </div>
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand to-copper text-[11px] font-semibold text-white">
-                          W
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-white/10 px-4 py-3">
-                      <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white/50">
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                          <rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" strokeWidth="1.4" fill="none" />
-                          <circle cx="9" cy="12" r="2" stroke="currentColor" strokeWidth="1.4" fill="none" />
-                          <path d="M15 9l3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                        </svg>
-                        <span>Nachricht senden…</span>
-                        <div className="ml-auto flex items-center gap-2 text-white/60">
-                          <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                          </svg>
-                          <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                            <path d="M5 19l14-7L5 5l4 7-4 7z" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinejoin="round" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-center pb-3 pt-1">
-                      <div className="h-1.5 w-28 rounded-full bg-white/20" />
-                    </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-4 text-xs text-white/75 shadow-[0_20px_50px_-40px_rgba(15,17,22,0.7)] lg:absolute lg:bottom-6 lg:left-full lg:ml-10 lg:mt-0 lg:w-56">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
-                  Systemstatus
-                </p>
-                <div className="mt-3 space-y-2">
-                  {actionCards.map((item) => (
-                    <div
-                      key={item.title}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2"
-                    >
-                      <span>{item.title}</span>
-                      <span className="text-[9px] uppercase tracking-[0.2em] text-brand-light">
-                        {item.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Right - Phone Mockup */}
+            <div className="relative flex justify-center lg:justify-end">
+              <PhoneMockup />
             </div>
           </div>
         </div>
       </section>
 
-      <section id="outcomes" className="relative bg-sand">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(55,105,255,0.08),_transparent_55%)]" />
-        <div className="mx-auto max-w-6xl px-4 py-24">
+      {/* ==================== OUTCOMES SECTION ==================== */}
+      <section id="outcomes" className="relative overflow-hidden bg-zinc-900/50 py-32">
+        <div className="absolute inset-0 bg-grid-dark opacity-50" />
+        <div className="absolute left-0 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px]" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
               Ergebnisse
-            </p>
-            <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink sm:text-4xl">
-              Messbare Wirkung ab Woche 1.
+            </span>
+            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              Messbare Wirkung ab Woche 1
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
+            <p className="mt-4 text-lg text-zinc-400">
               Mehr Buchungen, weniger No-Shows, bessere Bewertungen – nachvollziehbar im Dashboard.
             </p>
           </div>
-          <div className="mt-14 grid gap-6 md:grid-cols-2">
-            {outcomes.map((outcome) => (
+
+          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {outcomes.map((outcome, index) => (
               <div
                 key={outcome.label}
-                className="rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-[0_20px_60px_-40px_rgba(15,17,22,0.2)]"
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                <p className="text-3xl font-semibold text-ink">{outcome.value}</p>
-                <p className="mt-3 text-base font-semibold text-slate-800">{outcome.label}</p>
-                <p className="mt-2 text-sm text-slate-500">{outcome.detail}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="cases" className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-24">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-              Case Studies
-            </p>
-            <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink sm:text-4xl">
-              Konkrete Ergebnisse aus Pilot-Teams.
-            </h2>
-            <p className="mt-4 text-lg text-slate-600">
-              Drei Beispiele, wie Wesponde Buchungen, Bewertungen und Termintreue messbar verbessert.
-            </p>
-          </div>
-          <div className="mt-12 grid gap-6 lg:grid-cols-3">
-            {caseStudies.map((caseStudy) => (
-              <div
-                key={caseStudy.name}
-                className="rounded-[28px] border border-slate-200/70 bg-sand/50 p-6 shadow-[0_20px_60px_-45px_rgba(15,17,22,0.2)]"
-              >
-                <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.25em] text-slate-400">
-                  <span>{caseStudy.label}</span>
-                  <span>{caseStudy.period}</span>
+                <div
+                  className={`absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${outcome.color} opacity-20 blur-2xl transition-opacity group-hover:opacity-30`}
+                />
+                <div className="relative">
+                  <div className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+                    {outcome.value}
+                  </div>
+                  <div className="mt-3 text-base font-medium text-white">{outcome.label}</div>
+                  <div className="mt-1 text-sm text-zinc-500">{outcome.detail}</div>
                 </div>
-                <h3 className="mt-4 text-lg font-semibold text-ink">{caseStudy.name}</h3>
-                <p className="mt-2 text-sm text-slate-600">{caseStudy.focus}</p>
-                <ul className="mt-4 space-y-2 text-sm font-semibold text-ink">
-                  {caseStudy.metrics.map((metric) => (
-                    <li key={metric} className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-ink/70" />
-                      {metric}
-                    </li>
-                  ))}
-                </ul>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="workflow" className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-24">
-          <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-              Ablauf
-            </p>
-            <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink">
-              In Tagen live, nicht in Monaten.
+      {/* ==================== FEATURES SECTION ==================== */}
+      <section id="product" className="relative py-32">
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/50 to-zinc-950" />
+        <div className="absolute right-0 top-0 h-[600px] w-[600px] -translate-y-1/2 translate-x-1/2 rounded-full bg-violet-500/10 blur-[120px]" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
+              Produkt
+            </span>
+            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              Alles für automatisierte Konversationen
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
-              Wir übernehmen Setup, QA und die ersten Abläufe gemeinsam mit deinem Team.
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
+              Regeln, Tonalität und Eskalationen bleiben transparent – mit klaren Freigaben für dein
+              Team.
             </p>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {steps.map((step, index) => (
+
+          <div className="mt-20 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((feature, index) => (
               <div
-                key={step.title}
-                className="rounded-[28px] border border-slate-200/70 bg-sand/60 p-6 shadow-[0_15px_40px_-40px_rgba(15,17,22,0.2)]"
+                key={feature.title}
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-8 transition-all hover:border-white/20 hover:bg-zinc-900"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-                  Schritt {index + 1}
-                </span>
-                <h3 className="mt-3 text-lg font-semibold text-ink">{step.title}</h3>
-                <p className="mt-2 text-sm text-slate-600">{step.description}</p>
+                <div
+                  className={`mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${feature.gradient}`}
+                >
+                  <feature.icon className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-white">{feature.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-400">{feature.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="use-cases" className="relative bg-sand">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_bottom_right,_rgba(199,162,115,0.18),_transparent_50%)]" />
-        <div className="mx-auto max-w-6xl px-4 py-24">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-              Branchen
-            </p>
-            <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink">
-              Branchen-Playbooks mit fertiger Tonalität.
+      {/* ==================== FLOW BUILDER SECTION ==================== */}
+      <section id="flow-builder" className="relative overflow-hidden py-32">
+        <div className="absolute inset-0 bg-zinc-900/30" />
+        <div className="absolute right-0 top-1/2 h-[600px] w-[600px] -translate-y-1/2 translate-x-1/2 rounded-full bg-indigo-500/10 blur-[120px]" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-16 text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-indigo-400">
+              <Workflow className="h-3.5 w-3.5" />
+              Flow Builder
+            </span>
+            <h2 className="mt-6 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              Flows erstellen in{" "}
+              <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
+                Minuten
+              </span>
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
+              Drag & Drop Editor für Konversationsabläufe. Keine Programmierung nötig –
+              verbinde Nodes, definiere Quick Replies und geh live.
+            </p>
+          </div>
+
+          <FlowBuilderDemo />
+        </div>
+      </section>
+
+      {/* ==================== GOOGLE REVIEWS SECTION ==================== */}
+      <section id="reviews" className="relative py-32">
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/30 to-zinc-950" />
+        <div className="absolute left-0 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-[100px]" />
+
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-16 max-w-3xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-amber-400">
+              <Star className="h-3.5 w-3.5" />
+              Review Automation
+            </span>
+            <h2 className="mt-6 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              Google Bewertungen{" "}
+              <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+                automatisiert
+              </span>
+            </h2>
+            <p className="mt-4 text-lg text-zinc-400">
+              Nach dem Besuch fragen wir automatisch per DM nach einer Bewertung –
+              positive Reviews werden direkt zu Google weitergeleitet.
+            </p>
+          </div>
+
+          <GoogleReviewsFlow />
+        </div>
+      </section>
+
+      {/* ==================== USE CASES SECTION ==================== */}
+      <section id="use-cases" className="relative overflow-hidden py-32">
+        <div className="absolute inset-0 bg-zinc-900/30" />
+        <div className="absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px]" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
+              Branchen
+            </span>
+            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              Branchen-Playbooks mit fertiger Tonalität
+            </h2>
+            <p className="mt-4 text-lg text-zinc-400">
               Schneller live – mit Abläufen, die zu Sprache, Service und Upsells passen.
             </p>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-2">
-            {useCases.map((useCase) => (
+
+          <div className="mt-16 grid gap-6 sm:grid-cols-2">
+            {useCases.map((useCase, index) => (
               <div
-                key={useCase.title}
-                className="rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-[0_20px_60px_-40px_rgba(15,17,22,0.2)]"
+                key={useCase.industry}
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-                  {useCase.title}
-                </p>
-                <p className="mt-4 text-base font-semibold text-ink">{useCase.scenario}</p>
-                <p className="mt-2 text-sm text-slate-600">{useCase.outcome}</p>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+                      {useCase.industry}
+                    </span>
+                    <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-400">
+                      <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                      {useCase.scenario}
+                    </div>
+                    <p className="mt-4 text-base text-zinc-300">{useCase.outcome}</p>
+                  </div>
+                  <span className="text-4xl">{useCase.icon}</span>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="product" className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-24">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-              Produkt
-            </p>
-            <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink">
-              Präzise, steuerbar, markentreu.
+      {/* ==================== WORKFLOW SECTION ==================== */}
+      <section id="workflow" className="relative py-32">
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/30 to-zinc-950" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
+              Ablauf
+            </span>
+            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              In Tagen live, nicht in Monaten
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
-              Regeln, Tonalität und Eskalationen bleiben transparent – mit klaren Freigaben für dein Team.
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
+              Wir übernehmen Setup, QA und die ersten Abläufe gemeinsam mit deinem Team.
             </p>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-2">
-            {productActions.map((action) => (
+
+          <div className="mt-20 grid gap-8 lg:grid-cols-3">
+            {steps.map((step, index) => (
               <div
-                key={action.title}
-                className="flex gap-4 rounded-[28px] border border-slate-200/70 bg-sand/50 p-6"
+                key={step.title}
+                className="relative rounded-2xl border border-white/10 bg-zinc-900/50 p-8"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-ink text-[10px] font-semibold uppercase tracking-[0.25em] text-white">
-                  {action.tag}
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-lg font-bold text-white">
+                  {step.step}
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold text-ink">{action.title}</h3>
-                  <p className="mt-2 text-sm text-slate-600">{action.description}</p>
-                </div>
+                <h3 className="text-xl font-semibold text-white">{step.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-400">{step.description}</p>
+                {index < steps.length - 1 && (
+                  <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 lg:block">
+                    <ArrowRight className="h-6 w-6 text-zinc-700" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="testimonials" className="bg-ink">
-        <div className="mx-auto max-w-6xl px-4 py-24">
-          <div className="rounded-[32px] border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/5 p-10 text-white shadow-[0_40px_80px_-60px_rgba(15,17,22,0.9)] sm:p-16">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-              Stimmen aus dem Pilot
-            </p>
-            <blockquote className="font-display text-balance mt-6 text-2xl font-semibold leading-snug sm:text-3xl">
-              „Wir beantworten jede Instagram-Anfrage automatisch – inklusive Terminbuchung. Das
-              spart uns täglich fast zwei Stunden und wir verlieren keine Anfrage mehr.“
-            </blockquote>
-            <p className="mt-8 text-sm text-white/60">
-              Mira Lehmann — Inhaberin, Studio Lumi (Friseur & Kosmetik)
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* ==================== TESTIMONIAL SECTION ==================== */}
+      <section id="testimonials" className="relative overflow-hidden py-32">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10" />
+        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/5 blur-[100px]" />
 
-      <section id="insights" className="bg-sand">
-        <div className="mx-auto max-w-6xl px-4 py-24">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-                Insights
-              </p>
-              <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink sm:text-4xl">
-                Playbooks, Benchmarks und bewährte Abläufe.
-              </h2>
-              <p className="mt-4 text-lg text-slate-600">
-                Für Teams, die ihr Instagram-Messaging messbar skalieren wollen.
-              </p>
-            </div>
-            <Link
-              href="/blog"
-              className="inline-flex items-center justify-center rounded-full border border-ink/20 px-5 py-2 text-sm font-semibold text-ink transition hover:border-ink/40"
-            >
-              Alle Artikel
-            </Link>
-          </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {insights.map((insight) => (
-              <Link
-                key={insight.title}
-                href={insight.href}
-                className="group rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-[0_20px_60px_-45px_rgba(15,17,22,0.2)] transition hover:-translate-y-1"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-                  {insight.tag}
-                </p>
-                <h3 className="mt-4 text-lg font-semibold text-ink group-hover:text-brand-dark">
-                  {insight.title}
-                </h3>
-                <p className="mt-4 text-sm text-slate-600">
-                  Lesen →{" "}
-                  <span className="font-semibold text-ink group-hover:text-brand-dark">
-                    Artikel öffnen
-                  </span>
-                </p>
-              </Link>
+        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+          <div className="inline-flex items-center gap-1">
+            {[...Array(5)].map((_, i) => (
+              <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400" />
             ))}
           </div>
+          <blockquote className="mt-8">
+            <p className="font-display text-2xl font-medium leading-relaxed text-white sm:text-3xl lg:text-4xl">
+              &ldquo;{testimonial.quote}&rdquo;
+            </p>
+          </blockquote>
+          <div className="mt-8 flex items-center justify-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500" />
+            <div className="text-left">
+              <div className="font-semibold text-white">{testimonial.author}</div>
+              <div className="text-sm text-zinc-400">
+                {testimonial.role} · {testimonial.company}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section id="beta" className="bg-sand">
-        <div className="mx-auto max-w-6xl px-4 py-24">
-          <div className="grid gap-10 lg:grid-cols-[0.95fr,1.05fr] lg:items-center">
+      {/* ==================== BETA SIGNUP SECTION ==================== */}
+      <section id="beta" className="relative py-32">
+        <div className="absolute inset-0 bg-zinc-900/50" />
+        <div className="absolute left-0 top-0 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px]" />
+        <div className="absolute bottom-0 right-0 h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px]" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-16 lg:grid-cols-2">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+              <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
                 Pilotzugang
-              </p>
-              <h2 className="font-display text-balance mt-4 text-3xl font-semibold text-ink">
-                Enterprise-Onboarding für ausgewählte Partner.
+              </span>
+              <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+                Enterprise-Onboarding für ausgewählte Partner
               </h2>
-              <p className="mt-4 text-lg text-slate-600">
+              <p className="mt-4 text-lg text-zinc-400">
                 Persönlicher Setup, geprüfte Abläufe, live in unter zwei Wochen.
               </p>
-              <ul className="mt-6 space-y-3 text-sm text-slate-600">
-                <li>• Persönliches Onboarding & Flow-Setup</li>
-                <li>• Integration von Meta, WhatsApp und Kassensystemen</li>
-                <li>• Dashboard-Zugang für dein Team</li>
+              <ul className="mt-8 space-y-4">
+                {[
+                  "Persönliches Onboarding & Flow-Setup",
+                  "Integration von Meta, WhatsApp und Kassensystemen",
+                  "Dashboard-Zugang für dein Team",
+                  "Dedicated Success Manager",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-3 text-zinc-300">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    {item}
+                  </li>
+                ))}
               </ul>
             </div>
-            <BetaWaitlistForm />
+            <div>
+              <BetaWaitlistForm />
+            </div>
           </div>
         </div>
       </section>
 
-      <section id="cta" className="relative isolate overflow-hidden bg-ink py-20">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_20%,_rgba(55,105,255,0.35),_transparent_55%)]" />
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="flex flex-col items-start gap-10 rounded-[32px] border border-white/10 bg-white/5 p-10 text-white shadow-[0_40px_90px_-60px_rgba(15,17,22,0.9)] lg:flex-row lg:items-center lg:justify-between lg:p-16">
-            <div className="max-w-xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-                Success-Team
-              </p>
-            <h3 className="font-display text-balance mt-4 text-3xl font-semibold sm:text-4xl">
-              Wir machen dein Messaging live – sauber und schnell.
-            </h3>
-            <p className="mt-4 text-white/70">
-              Setup, Integrationen, QA und Launch-Begleitung – gemeinsam mit deinem Team.
-            </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link
-                href="/contact"
-                className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink shadow-lg shadow-white/20 transition hover:bg-sand"
-              >
-                Ergebnis-Check anfragen
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center rounded-full border border-white/25 px-6 py-3 text-sm font-semibold text-white/70 transition hover:border-white/50 hover:text-white"
-              >
-                Partner-Login
-              </Link>
-            </div>
+      {/* ==================== FINAL CTA SECTION ==================== */}
+      <section className="relative overflow-hidden py-32">
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent" />
+        <div className="absolute left-1/2 top-0 h-[400px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/20 blur-[120px]" />
+
+        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+          <h2 className="font-display text-4xl font-medium tracking-tight sm:text-5xl lg:text-6xl">
+            Bereit für automatisierte{" "}
+            <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
+              Konversationen
+            </span>
+            ?
+          </h2>
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400">
+            Setup, Integrationen, QA und Launch-Begleitung – gemeinsam mit deinem Team.
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:shadow-white/20"
+            >
+              Ergebnis-Check anfragen
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-8 py-4 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10"
+            >
+              Partner-Login
+            </Link>
           </div>
         </div>
       </section>

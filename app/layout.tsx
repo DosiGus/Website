@@ -33,12 +33,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de">
+    <html lang="de" className="dark">
       <body
-        className={`${displayFont.variable} ${bodyFont.variable} flex min-h-screen flex-col bg-sand text-ink`}
+        className={`${displayFont.variable} ${bodyFont.variable} flex min-h-screen flex-col bg-zinc-950 text-white antialiased`}
       >
         <Navbar />
-        <main className="flex-1 pt-16">{children}</main>
+        <main className="flex-1">{children}</main>
         <Footer />
       </body>
     </html>
