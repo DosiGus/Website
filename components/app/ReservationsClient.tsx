@@ -35,7 +35,7 @@ const STATUS_CONFIG: Record<ReservationStatus, StatusBadgeConfig> = {
 };
 
 const STATUS_OPTIONS: { value: ReservationStatus | "all"; label: string }[] = [
-  { value: "all", label: "Alle Status" },
+  { value: "all", label: "Status filtern" },
   { value: "pending", label: "Ausstehend" },
   { value: "confirmed", label: "Bestätigt" },
   { value: "cancelled", label: "Storniert" },
@@ -499,7 +499,7 @@ export default function ReservationsClient() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as ReservationStatus | "all")}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white focus:border-indigo-500 focus:outline-none"
+            className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-300 focus:border-indigo-500 focus:outline-none"
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value} className="bg-zinc-900 text-white">

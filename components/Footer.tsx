@@ -1,4 +1,7 @@
+'use client';
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 
 const productLinks = [
@@ -22,6 +25,13 @@ const legalLinks = [
 ];
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  // Don't show footer on protected app routes
+  if (pathname?.startsWith('/app')) {
+    return null;
+  }
+
   return (
     <footer className="relative border-t border-white/10 bg-zinc-950">
       {/* Gradient glow */}

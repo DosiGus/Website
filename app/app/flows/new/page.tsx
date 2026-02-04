@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Loader2, Sparkles, FileText, LayoutTemplate } from "lucide-react";
+import { Eye, Loader2, Sparkles, FileText, LayoutTemplate, X, ArrowLeft } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../../lib/supabaseBrowserClient";
 import type { FlowTemplate } from "../../../../lib/flowTemplates";
 import FlowSetupWizard from "../../../../components/app/FlowSetupWizard";
@@ -124,9 +124,9 @@ export default function NewFlowPage() {
       <div className="space-y-8">
         {status === "creating" ? (
           <div className="mx-auto max-w-xl">
-            <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-slate-200 bg-white p-12">
-              <Loader2 className="h-8 w-8 animate-spin text-brand" />
-              <p className="text-lg font-semibold text-slate-700">Flow wird erstellt…</p>
+            <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+              <p className="text-lg font-semibold text-white">Flow wird erstellt…</p>
             </div>
           </div>
         ) : (
@@ -137,7 +137,7 @@ export default function NewFlowPage() {
         )}
         {error && (
           <div className="mx-auto max-w-xl">
-            <p className="rounded-2xl bg-rose-50 px-4 py-3 text-center text-sm font-semibold text-rose-700">
+            <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-center text-sm font-medium text-rose-400">
               {error}
             </p>
           </div>
@@ -150,29 +150,30 @@ export default function NewFlowPage() {
   if (creationMode === "empty") {
     return (
       <div className="space-y-8">
-        <div className="mx-auto max-w-2xl space-y-6 rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
+        <div className="mx-auto max-w-2xl space-y-6 rounded-2xl border border-white/10 bg-zinc-900/50 p-10 backdrop-blur-xl">
           <button
             onClick={() => setCreationMode("choose")}
-            className="text-sm font-semibold text-slate-500 hover:text-brand"
+            className="flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
           >
-            ← Zurück zur Auswahl
+            <ArrowLeft className="h-4 w-4" />
+            Zurück zur Auswahl
           </button>
-          <p className="text-sm uppercase tracking-wide text-slate-400">Leerer Flow</p>
-          <h1 className="text-3xl font-semibold">Wie soll dein Flow heißen?</h1>
+          <p className="text-sm uppercase tracking-wide text-zinc-500">Leerer Flow</p>
+          <h1 className="text-3xl font-semibold text-white">Wie soll dein Flow heißen?</h1>
           <input
-            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-lg font-semibold text-slate-900 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-lg font-semibold text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             value={flowName}
             onChange={(event) => setFlowName(event.target.value)}
           />
           <button
             onClick={() => createFlow()}
             disabled={status === "creating"}
-            className="w-full rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/30 disabled:opacity-70"
+            className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 disabled:opacity-70"
           >
             {status === "creating" ? "Erstelle Flow …" : "Flow anlegen"}
           </button>
           {error ? (
-            <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+            <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-400">
               {error}
             </p>
           ) : null}
@@ -186,30 +187,30 @@ export default function NewFlowPage() {
       {/* Mode Selection */}
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="text-center">
-          <p className="text-sm uppercase tracking-wide text-slate-400">Neuer Flow</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900">Wie möchtest du starten?</h1>
-          <p className="mt-2 text-slate-500">Wähle eine Option, um deinen Flow zu erstellen.</p>
+          <p className="text-sm uppercase tracking-wide text-zinc-500">Neuer Flow</p>
+          <h1 className="mt-2 text-3xl font-semibold text-white">Wie möchtest du starten?</h1>
+          <p className="mt-2 text-zinc-400">Wähle eine Option, um deinen Flow zu erstellen.</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           {/* Wizard Option */}
           <button
             onClick={() => setCreationMode("wizard")}
-            className="group relative flex flex-col items-start rounded-2xl border-2 border-brand bg-brand/5 p-6 text-left transition hover:bg-brand/10"
+            className="group relative flex flex-col items-start rounded-2xl border-2 border-indigo-500/50 bg-indigo-500/10 p-6 text-left transition-all hover:border-indigo-500 hover:bg-indigo-500/15"
           >
             <div className="absolute -top-3 right-4">
-              <span className="rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white">
+              <span className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-1 text-xs font-semibold text-white">
                 Empfohlen
               </span>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white">
               <Sparkles className="h-6 w-6" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold text-slate-900">Setup-Assistent</h3>
-            <p className="mt-2 text-sm text-slate-500">
+            <h3 className="mt-4 text-lg font-semibold text-white">Setup-Assistent</h3>
+            <p className="mt-2 text-sm text-zinc-400">
               Beantworte 5 einfache Fragen und wir erstellen deinen Reservierungs-Flow automatisch.
             </p>
-            <span className="mt-4 text-sm font-semibold text-brand group-hover:underline">
+            <span className="mt-4 text-sm font-semibold text-indigo-400 transition-colors group-hover:text-indigo-300">
               Assistent starten →
             </span>
           </button>
@@ -217,16 +218,16 @@ export default function NewFlowPage() {
           {/* Template Option */}
           <button
             onClick={() => setCreationMode("template")}
-            className="group flex flex-col items-start rounded-2xl border-2 border-slate-200 p-6 text-left transition hover:border-slate-300 hover:bg-slate-50"
+            className="group flex flex-col items-start rounded-2xl border-2 border-white/10 bg-zinc-900/50 p-6 text-left transition-all hover:border-white/20 hover:bg-zinc-900/80"
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-zinc-400 transition-colors group-hover:text-white">
               <LayoutTemplate className="h-6 w-6" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold text-slate-900">Aus Template</h3>
-            <p className="mt-2 text-sm text-slate-500">
+            <h3 className="mt-4 text-lg font-semibold text-white">Aus Template</h3>
+            <p className="mt-2 text-sm text-zinc-400">
               Wähle ein fertiges Template für Restaurant, Salon oder Praxis und passe es an.
             </p>
-            <span className="mt-4 text-sm font-semibold text-brand group-hover:underline">
+            <span className="mt-4 text-sm font-semibold text-indigo-400 transition-colors group-hover:text-indigo-300">
               Templates ansehen →
             </span>
           </button>
@@ -234,44 +235,43 @@ export default function NewFlowPage() {
           {/* Empty Flow Option */}
           <button
             onClick={() => setCreationMode("empty")}
-            className="group flex flex-col items-start rounded-2xl border-2 border-slate-200 p-6 text-left transition hover:border-slate-300 hover:bg-slate-50"
+            className="group flex flex-col items-start rounded-2xl border-2 border-white/10 bg-zinc-900/50 p-6 text-left transition-all hover:border-white/20 hover:bg-zinc-900/80"
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-zinc-400 transition-colors group-hover:text-white">
               <FileText className="h-6 w-6" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold text-slate-900">Leerer Flow</h3>
-            <p className="mt-2 text-sm text-slate-500">
+            <h3 className="mt-4 text-lg font-semibold text-white">Leerer Flow</h3>
+            <p className="mt-2 text-sm text-zinc-400">
               Starte mit einem leeren Flow und baue alles selbst von Grund auf.
             </p>
-            <span className="mt-4 text-sm font-semibold text-brand group-hover:underline">
+            <span className="mt-4 text-sm font-semibold text-indigo-400 transition-colors group-hover:text-indigo-300">
               Leer starten →
             </span>
           </button>
         </div>
       </div>
 
-      {/* Templates Section - show when in template mode or in choose mode (collapsed preview) */}
-      {(creationMode === "template" || creationMode === "choose") && (
-        <section className={`space-y-4 ${creationMode === "choose" ? "opacity-60 hover:opacity-100 transition" : ""}`}>
-          {creationMode === "template" && (
-            <button
-              onClick={() => setCreationMode("choose")}
-              className="text-sm font-semibold text-slate-500 hover:text-brand"
-            >
-              ← Zurück zur Auswahl
-            </button>
-          )}
+      {/* Templates Section - show when in template mode */}
+      {creationMode === "template" && (
+        <section className="space-y-4">
+          <button
+            onClick={() => setCreationMode("choose")}
+            className="flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Zurück zur Auswahl
+          </button>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-wide text-slate-400">Templates</p>
-              <h2 className="text-2xl font-semibold">Starte mit einer Vorlage</h2>
-              <p className="text-slate-500">
+              <p className="text-sm uppercase tracking-wide text-zinc-500">Templates</p>
+              <h2 className="text-2xl font-semibold text-white">Starte mit einer Vorlage</h2>
+              <p className="text-zinc-400">
                 Spare Zeit mit fertigen Journeys für Restaurants, Salons oder Praxen.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <input
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                 placeholder="Template durchsuchen…"
                 value={templateSearch}
                 onChange={(event) => setTemplateSearch(event.target.value)}
@@ -279,18 +279,18 @@ export default function NewFlowPage() {
               <select
                 value={verticalFilter}
                 onChange={(event) => setVerticalFilter(event.target.value)}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 focus:border-brand focus:outline-none"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white focus:border-indigo-500 focus:outline-none"
               >
                 {uniqueVerticals.map((vertical) => (
-                  <option key={vertical} value={vertical}>
-                    {vertical === "alle" ? "Alle Verticals" : vertical}
+                  <option key={vertical} value={vertical} className="bg-zinc-900 text-white">
+                    {vertical === "alle" ? "Alle Branchen" : vertical}
                   </option>
                 ))}
               </select>
             </div>
           </div>
           {loadingTemplates ? (
-            <div className="flex items-center gap-2 rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 text-sm text-zinc-400">
               <Loader2 className="h-4 w-4 animate-spin" />
               Templates werden geladen …
             </div>
@@ -299,27 +299,27 @@ export default function NewFlowPage() {
               {filteredTemplates.map((template) => (
                 <div
                   key={template.id}
-                  className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                  className="flex flex-col justify-between rounded-2xl border border-white/10 bg-zinc-900/50 p-5 transition-all hover:border-white/20"
                 >
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                    <p className="text-xs uppercase tracking-wide text-zinc-500">
                       {template.vertical}
                     </p>
-                    <h3 className="mt-2 text-lg font-semibold text-slate-900">
+                    <h3 className="mt-2 text-lg font-semibold text-white">
                       {template.name}
                     </h3>
-                    <p className="mt-2 text-sm text-slate-500">{template.description}</p>
+                    <p className="mt-2 text-sm text-zinc-400">{template.description}</p>
                   </div>
                   <div className="mt-5 flex gap-2">
                     <button
                       onClick={() => createFlow(template.id)}
-                      className="flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-brand-dark hover:border-brand"
+                      className="flex-1 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40"
                     >
-                      Flow aus Template
+                      Flow erstellen
                     </button>
                     <button
                       onClick={() => setPreviewTemplate(template)}
-                      className="rounded-full border border-slate-100 px-3 py-2 text-slate-500 hover:border-brand"
+                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
                       title="Template ansehen"
                     >
                       <Eye className="h-4 w-4" />
@@ -328,7 +328,7 @@ export default function NewFlowPage() {
                 </div>
               ))}
               {!filteredTemplates.length && (
-                <p className="rounded-3xl border border-dashed border-slate-200 bg-white/70 p-6 text-sm text-slate-500">
+                <p className="rounded-2xl border border-dashed border-white/10 bg-zinc-900/30 p-6 text-sm text-zinc-500">
                   Keine Templates für diese Filter gefunden.
                 </p>
               )}
@@ -338,36 +338,36 @@ export default function NewFlowPage() {
       )}
 
       {previewTemplate ? (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-wide text-slate-400">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">
                   {previewTemplate.vertical}
                 </p>
-                <h3 className="text-2xl font-semibold">{previewTemplate.name}</h3>
-                <p className="mt-2 text-sm text-slate-500">{previewTemplate.description}</p>
+                <h3 className="text-2xl font-semibold text-white">{previewTemplate.name}</h3>
+                <p className="mt-2 text-sm text-zinc-400">{previewTemplate.description}</p>
               </div>
               <button
                 onClick={() => setPreviewTemplate(null)}
-                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500"
+                className="rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
               >
-                Schließen
+                <X className="h-4 w-4" />
               </button>
             </div>
             <div className="mt-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Schritte
               </p>
-              <ol className="space-y-2 text-sm text-slate-600">
+              <ol className="space-y-2 text-sm text-zinc-400">
                 {previewTemplate.nodes.map((node, index) => (
-                  <li key={node.id} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
-                    <span className="font-semibold text-slate-500">Step {index + 1}:</span>{" "}
+                  <li key={node.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    <span className="font-medium text-zinc-300">Step {index + 1}:</span>{" "}
                     {node.data?.label}
                   </li>
                 ))}
               </ol>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-zinc-500">
                 {previewTemplate.edges.length} Verbindungen ·{" "}
                 {previewTemplate.nodes.length} Nodes
               </p>
@@ -378,13 +378,13 @@ export default function NewFlowPage() {
                   createFlow(previewTemplate.id);
                   setPreviewTemplate(null);
                 }}
-                className="flex-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
+                className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40"
               >
                 Template übernehmen
               </button>
               <button
                 onClick={() => setPreviewTemplate(null)}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10"
               >
                 Abbrechen
               </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Menu, X, ArrowRight } from "lucide-react";
 
@@ -14,8 +15,12 @@ const navLinks = [
 ];
 
 export default function Navbar() {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // Don't show navbar on protected app routes
+  const isAppRoute = pathname?.startsWith('/app');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,6 +29,11 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Hide navbar in app routes
+  if (isAppRoute) {
+    return null;
+  }
 
   const renderLinks = (onNavigate?: () => void) =>
     navLinks.map((link) => (
