@@ -128,6 +128,16 @@ export default function PhoneMockup() {
 
   const getMessage = (id: number) => conversationFlow.find((m) => m.id === id);
 
+  // Auto-scroll to bottom when messages or quick replies change
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [visibleMessages, activeQuickReplies]);
+
   return (
     <div className="relative flex items-center justify-center">
       {/* Subtle glow behind phone - reduced blur for mobile performance */}
@@ -211,7 +221,7 @@ export default function PhoneMockup() {
             {/* Messages Area */}
             <div
               ref={messagesContainerRef}
-              className="relative z-10 h-[310px] space-y-2 overflow-y-auto px-3 py-2 pb-16 sm:h-[340px] sm:space-y-2.5 sm:py-3 sm:pb-20 md:h-[380px] md:pb-20 no-scrollbar"
+              className="relative z-10 h-[310px] space-y-2 overflow-y-auto px-3 py-2 pb-0 sm:h-[340px] sm:space-y-2.5 sm:py-3 sm:pb-0 md:h-[380px] md:pb-0 no-scrollbar"
             >
               {conversationFlow.map((message) => {
                 if (!visibleMessages.includes(message.id)) return null;
