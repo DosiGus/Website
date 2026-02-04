@@ -4,6 +4,7 @@ import WatchDemoButton from "../components/WatchDemoButton";
 import PhoneMockup from "../components/PhoneMockup";
 import FlowBuilderDemo from "../components/FlowBuilderDemo";
 import GoogleReviewsFlow from "../components/GoogleReviewsFlow";
+import FaqAccordion from "../components/FaqAccordion";
 import {
   MessageSquare,
   CalendarCheck,
@@ -323,10 +324,10 @@ export default function HomePage() {
               Ablauf
             </span>
             <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              In Tagen live, nicht in Monaten
+              In Minuten live, nicht in Tagen
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
-              Wir übernehmen Setup, QA und die ersten Abläufe gemeinsam mit deinem Team.
+              Fertige Templates und geführtes Setup bringen dich schnell ans Ziel.
             </p>
           </div>
 
@@ -445,78 +446,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ==================== USE CASES SECTION ==================== */}
-      <section id="use-cases" className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-zinc-900/30" />
-        <div className="absolute left-1/2 top-0 hidden h-[500px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
-              Branchen
-            </span>
-            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              Branchenabläufe mit passender Tonalität
-            </h2>
-            <p className="mt-4 text-lg text-zinc-400">
-              Schneller live – mit Abläufen, die zu Sprache, Service und Upsells passen.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-6">
-            {useCases.map((useCase, index) => (
-              <div
-                key={useCase.industry}
-                className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-white/20 hover:bg-white/10 sm:rounded-2xl sm:p-8"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500 sm:text-xs">
-                      {useCase.industry}
-                    </span>
-                    <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2 py-0.5 text-xs font-medium text-indigo-400 sm:mt-4 sm:gap-2 sm:px-3 sm:py-1 sm:text-sm">
-                      <span className="h-1 w-1 rounded-full bg-indigo-400 sm:h-1.5 sm:w-1.5" />
-                      {useCase.scenario}
-                    </div>
-                    <p className="mt-2 text-sm text-zinc-300 sm:mt-4 sm:text-base">{useCase.outcome}</p>
-                  </div>
-                  <span className="ml-2 text-2xl sm:text-4xl">{useCase.icon}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ==================== TESTIMONIAL SECTION ==================== */}
-      <section id="testimonials" className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10" />
-        <div className="absolute left-1/2 top-1/2 hidden h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/5 blur-[100px] sm:block" />
-
-        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <div className="inline-flex items-center gap-0.5">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400 sm:h-5 sm:w-5" />
-            ))}
-          </div>
-          <blockquote className="mt-6 sm:mt-8">
-            <p className="font-display text-xl font-medium leading-relaxed text-white sm:text-2xl md:text-3xl lg:text-4xl">
-              &ldquo;{testimonial.quote}&rdquo;
-            </p>
-          </blockquote>
-          <div className="mt-6 flex items-center justify-center gap-3 sm:mt-8 sm:gap-4">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 sm:h-12 sm:w-12" />
-            <div className="text-left">
-              <div className="text-sm font-semibold text-white sm:text-base">{testimonial.author}</div>
-              <div className="text-xs text-zinc-400 sm:text-sm">
-                {testimonial.role}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ==================== FAQ SECTION ==================== */}
       <section id="faq" className="relative py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-zinc-900/50" />
@@ -535,16 +464,8 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:mt-16 sm:grid-cols-2 sm:gap-6">
-            {faqs.map((faq) => (
-              <div
-                key={faq.question}
-                className="rounded-xl border border-white/10 bg-zinc-900/50 p-5 sm:rounded-2xl sm:p-7"
-              >
-                <h3 className="text-base font-semibold text-white">{faq.question}</h3>
-                <p className="mt-2 text-sm text-zinc-400">{faq.answer}</p>
-              </div>
-            ))}
+          <div className="mt-10 sm:mt-16">
+            <FaqAccordion faqs={faqs} />
           </div>
         </div>
       </section>
@@ -559,7 +480,7 @@ export default function HomePage() {
           <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
             <div>
               <span className="inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-400 sm:text-xs">
-                Pilotzugang
+                Kontakt
               </span>
               <h2 className="mt-3 font-display text-3xl font-medium tracking-tight sm:mt-4 sm:text-4xl md:text-5xl">
                 Persönliches Onboarding für Partner
@@ -602,21 +523,15 @@ export default function HomePage() {
             ?
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:mt-6 sm:text-lg">
-            Setup, Integrationen und Launch-Begleitung – gemeinsam mit deinem Team.
+            Setup, Integrationen und Launch in Minuten.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row sm:gap-4">
+          <div className="mt-8 sm:mt-10">
             <Link
-              href="/contact"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:shadow-white/20 sm:w-auto sm:px-8 sm:py-4"
+              href="/login?view=signup"
+              className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:bg-emerald-500 hover:text-white hover:shadow-emerald-500/30 sm:px-8 sm:py-4"
             >
-              Ergebnis-Check anfragen
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/login?view=login"
-              className="inline-flex w-full items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition-all hover:border-white/25 hover:bg-white/10 sm:w-auto sm:px-8 sm:py-4"
-            >
-              Partner-Login
+              Jetzt starten
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
         </div>
