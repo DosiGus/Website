@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Filter, Star, Trash2, Pencil, Check, X } from "lucide-react";
+import { Copy, Search, Star, Trash2, Pencil, Check, X, AlertTriangle, CheckCircle } from "lucide-react";
 import type { Edge, Node } from "reactflow";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { lintFlow } from "../../lib/flowLint";
@@ -248,7 +248,6 @@ export default function FlowListClient({ variant }: Props) {
       return;
     }
 
-    // Get the current flow data first
     const flow = flows.find((f) => f.id === flowId);
     if (!flow) return;
 
@@ -283,7 +282,7 @@ export default function FlowListClient({ variant }: Props) {
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+      <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-6 text-sm text-zinc-400">
         Flows werden geladen …
       </div>
     );
@@ -291,9 +290,9 @@ export default function FlowListClient({ variant }: Props) {
 
   if (!filteredFlows.length) {
     return (
-      <div className="rounded-3xl border border-dashed border-slate-300 bg-white/70 p-6 text-sm text-slate-500">
+      <div className="rounded-xl border border-dashed border-white/20 bg-zinc-900/30 p-8 text-center text-sm text-zinc-400">
         Noch keine Flows vorhanden.{" "}
-        <Link href="/app/flows/new" className="font-semibold text-brand-dark">
+        <Link href="/app/flows/new" className="font-semibold text-indigo-400 hover:text-indigo-300">
           Erstelle den ersten Flow.
         </Link>
       </div>
@@ -302,21 +301,23 @@ export default function FlowListClient({ variant }: Props) {
 
   const renderWarningPill = (count: number) =>
     count > 0 ? (
-      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">
+        <AlertTriangle className="h-3 w-3" />
         {count} Warnung{count > 1 ? "en" : ""}
       </span>
     ) : (
-      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-        ✓ Valide
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
+        <CheckCircle className="h-3 w-3" />
+        Valide
       </span>
     );
 
   const filterControls = (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-      <div className="flex flex-1 items-center gap-2 rounded-full border border-slate-200 px-4 py-2">
-        <Filter className="h-4 w-4 text-slate-400" />
+      <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5">
+        <Search className="h-4 w-4 text-zinc-500" />
         <input
-          className="w-full text-sm text-slate-600 focus:outline-none"
+          className="w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
           placeholder="Flows durchsuchen..."
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
@@ -325,11 +326,11 @@ export default function FlowListClient({ variant }: Props) {
       <select
         value={statusFilter}
         onChange={(event) => setStatusFilter(event.target.value as "all" | "Aktiv" | "Entwurf")}
-        className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 focus:border-brand focus:outline-none"
+        className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white focus:border-indigo-500/50 focus:outline-none"
       >
-        <option value="all">Alle Stati</option>
-        <option value="Aktiv">Aktive</option>
-        <option value="Entwurf">Entwürfe</option>
+        <option value="all" className="bg-zinc-900">Alle Stati</option>
+        <option value="Aktiv" className="bg-zinc-900">Aktive</option>
+        <option value="Entwurf" className="bg-zinc-900">Entwürfe</option>
       </select>
     </div>
   );
@@ -339,7 +340,7 @@ export default function FlowListClient({ variant }: Props) {
       <div className="space-y-4">
         {filterControls}
         {error ? (
-          <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+          <p className="rounded-xl bg-rose-500/10 border border-rose-500/20 px-4 py-3 text-sm font-medium text-rose-400">
             {error}
           </p>
         ) : null}
@@ -347,59 +348,55 @@ export default function FlowListClient({ variant }: Props) {
           {filteredFlows.map((flow) => (
             <div
               key={flow.id}
-              className="flex flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/70 p-5"
+              className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-white/10 bg-zinc-900/50 p-5 transition-all hover:border-white/20 hover:bg-zinc-900"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-slate-400">{flow.status}</p>
-                  <h3 className="mt-1 text-xl font-semibold">{flow.name}</h3>
-                  <p className="mt-2 text-sm text-slate-500">
-                    Zuletzt aktualisiert {new Date(flow.updated_at).toLocaleDateString()}
+                  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                    flow.status === "Aktiv"
+                      ? "bg-emerald-500/10 text-emerald-400"
+                      : "bg-zinc-500/10 text-zinc-400"
+                  }`}>
+                    {flow.status}
+                  </span>
+                  <h3 className="mt-2 text-lg font-semibold text-white">{flow.name}</h3>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Zuletzt aktualisiert {new Date(flow.updated_at).toLocaleDateString("de-DE")}
                   </p>
                 </div>
                 <button
                   onClick={() => toggleFavorite(flow.id)}
-                  className={`rounded-full border px-2 py-1 ${
+                  className={`rounded-lg border p-2 transition-all ${
                     favorites.includes(flow.id)
-                      ? "border-amber-300 bg-amber-50 text-amber-600"
-                      : "border-slate-200 text-slate-400"
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                      : "border-white/10 bg-white/5 text-zinc-500 hover:border-white/20 hover:text-white"
                   }`}
                   title="Favorit"
                 >
                   <Star className="h-4 w-4" fill={favorites.includes(flow.id) ? "currentColor" : "none"} />
                 </button>
               </div>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                 {renderWarningPill(flow.warningCount)}
-                <span>
-                  {flow.nodes.length} Nodes · {flow.edges.length} Verbindungen
-                </span>
+                <span className="text-zinc-600">•</span>
+                <span>{flow.nodes.length} Nodes · {flow.edges.length} Verbindungen</span>
               </div>
-              <div className="mt-5 flex flex-wrap gap-3">
+              <div className="mt-5 flex flex-wrap gap-2">
                 <Link
                   href={`/app/flows/${flow.id}`}
-                  className="flex-1 rounded-2xl bg-slate-900 px-4 py-2 text-center text-sm font-semibold text-white"
+                  className="flex-1 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-center text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-indigo-500/25"
                 >
                   Flow öffnen
                 </Link>
                 <button
                   onClick={() => duplicateFlow(flow.id)}
-                  className="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand"
+                  className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-300 transition-all hover:border-white/20 hover:bg-white/10"
                   disabled={pendingAction?.id === flow.id && pendingAction.type === "duplicate"}
                 >
-                    <Copy className="h-4 w-4" />
+                  <Copy className="h-4 w-4" />
                   {pendingAction?.id === flow.id && pendingAction.type === "duplicate"
-                    ? "Dupliziere…"
-                    : "Duplizieren"}
-                </button>
-                <button
-                  onClick={() => saveAsTemplate(flow.id, flow.name)}
-                  className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-brand"
-                  disabled={pendingAction?.id === flow.id && pendingAction.type === "template"}
-                >
-                  {pendingAction?.id === flow.id && pendingAction.type === "template"
-                    ? "Speichere…"
-                    : "Als Template"}
+                    ? "..."
+                    : "Kopie"}
                 </button>
               </div>
             </div>
@@ -410,29 +407,29 @@ export default function FlowListClient({ variant }: Props) {
   }
 
   return (
-    <div className="space-y-4 overflow-hidden rounded-3xl border border-slate-200 bg-white">
-      <div className="px-6 pt-4">
+    <div className="space-y-4 overflow-hidden rounded-xl border border-white/10 bg-zinc-900/50">
+      <div className="px-6 pt-5">
         {filterControls}
         {error ? (
-          <p className="mt-3 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+          <p className="mt-3 rounded-xl bg-rose-500/10 border border-rose-500/20 px-4 py-3 text-sm font-medium text-rose-400">
             {error}
           </p>
         ) : null}
       </div>
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50">
+      <table className="min-w-full divide-y divide-white/10 text-sm">
+        <thead className="bg-white/5">
           <tr>
-            <th className="px-6 py-3 text-left font-semibold text-slate-500">Name</th>
-            <th className="px-6 py-3 text-left font-semibold text-slate-500">Status</th>
-            <th className="px-6 py-3 text-left font-semibold text-slate-500">Qualität</th>
-            <th className="px-6 py-3 text-left font-semibold text-slate-500">Aktualisiert</th>
-            <th className="px-6 py-3 text-left font-semibold text-slate-500">Aktionen</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Name</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Status</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Qualität</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Aktualisiert</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Aktionen</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 bg-white">
+        <tbody className="divide-y divide-white/5">
           {filteredFlows.map((flow) => (
-            <tr key={flow.id} className="hover:bg-slate-50">
-              <td className="whitespace-nowrap px-6 py-4 font-medium text-slate-900">
+            <tr key={flow.id} className="transition-colors hover:bg-white/5">
+              <td className="whitespace-nowrap px-6 py-4 font-medium text-white">
                 {editingFlowId === flow.id ? (
                   <div className="flex items-center gap-2">
                     <input
@@ -443,30 +440,30 @@ export default function FlowListClient({ variant }: Props) {
                         if (e.key === "Enter") saveFlowName(flow.id);
                         if (e.key === "Escape") cancelEditing();
                       }}
-                      className="rounded-lg border border-brand px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                      className="rounded-lg border border-indigo-500/50 bg-white/5 px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       autoFocus
                     />
                     <button
                       onClick={() => saveFlowName(flow.id)}
-                      className="rounded-full p-1 text-emerald-600 hover:bg-emerald-50"
+                      className="rounded-lg p-1.5 text-emerald-400 hover:bg-emerald-500/10"
                       title="Speichern"
                     >
                       <Check className="h-4 w-4" />
                     </button>
                     <button
                       onClick={cancelEditing}
-                      className="rounded-full p-1 text-slate-400 hover:bg-slate-100"
+                      className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10"
                       title="Abbrechen"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 ) : (
-                  <div className="group flex items-center gap-2">
+                  <div className="group/name flex items-center gap-2">
                     <span>{flow.name}</span>
                     <button
                       onClick={() => startEditing(flow)}
-                      className="rounded-full p-1 text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100"
+                      className="rounded-lg p-1 text-zinc-500 opacity-0 transition-all hover:bg-white/10 hover:text-white group-hover/name:opacity-100"
                       title="Namen bearbeiten"
                     >
                       <Pencil className="h-3 w-3" />
@@ -478,65 +475,57 @@ export default function FlowListClient({ variant }: Props) {
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
                     flow.status === "Aktiv"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-200 text-slate-600"
+                      ? "bg-emerald-500/10 text-emerald-400"
+                      : "bg-zinc-500/10 text-zinc-400"
                   }`}
                 >
                   {flow.status}
                 </span>
               </td>
               <td className="px-6 py-4">{renderWarningPill(flow.warningCount)}</td>
-              <td className="px-6 py-4 text-slate-500">
-                {new Date(flow.updated_at).toLocaleDateString()}
+              <td className="px-6 py-4 text-zinc-400">
+                {new Date(flow.updated_at).toLocaleDateString("de-DE")}
               </td>
               <td className="px-6 py-4">
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href={`/app/flows/${flow.id}`}
-                    className="text-sm font-semibold text-brand-dark hover:text-brand"
+                    className="text-sm font-medium text-indigo-400 hover:text-indigo-300"
                   >
                     Öffnen →
                   </Link>
                   <button
                     onClick={() => duplicateFlow(flow.id)}
-                    className="flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-brand"
+                    className="flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1 text-xs font-medium text-zinc-300 hover:border-white/20 hover:bg-white/10"
                     disabled={pendingAction?.id === flow.id && pendingAction.type === "duplicate"}
                   >
                     <Copy className="h-3 w-3" />
                     Kopie
                   </button>
                   <button
-                    onClick={() => saveAsTemplate(flow.id, flow.name)}
-                    className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-brand"
-                    disabled={pendingAction?.id === flow.id && pendingAction.type === "template"}
-                  >
-                    Template
-                  </button>
-                  <button
                     onClick={() => toggleFavorite(flow.id)}
-                    className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${
+                    className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium ${
                       favorites.includes(flow.id)
-                        ? "border-amber-300 bg-amber-50 text-amber-600"
-                        : "border-slate-200 text-slate-500"
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                        : "border-white/10 text-zinc-400 hover:border-white/20"
                     }`}
                   >
                     <Star className="h-3 w-3" fill={favorites.includes(flow.id) ? "currentColor" : "none"} />
-                    Favorit
                   </button>
                   {deleteConfirmId === flow.id ? (
                     <>
                       <button
                         onClick={() => deleteFlow(flow.id)}
                         disabled={pendingAction?.id === flow.id && pendingAction.type === "delete"}
-                        className="rounded-full bg-rose-600 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+                        className="rounded-lg bg-rose-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-600 disabled:opacity-50"
                       >
                         {pendingAction?.id === flow.id && pendingAction.type === "delete"
-                          ? "Lösche…"
-                          : "Ja, löschen"}
+                          ? "..."
+                          : "Löschen"}
                       </button>
                       <button
                         onClick={() => setDeleteConfirmId(null)}
-                        className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                        className="rounded-lg border border-white/10 px-2.5 py-1 text-xs font-medium text-zinc-400 hover:bg-white/10"
                       >
                         Abbrechen
                       </button>
@@ -544,10 +533,9 @@ export default function FlowListClient({ variant }: Props) {
                   ) : (
                     <button
                       onClick={() => setDeleteConfirmId(flow.id)}
-                      className="flex items-center gap-1 rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                      className="flex items-center gap-1 rounded-lg border border-rose-500/20 px-2.5 py-1 text-xs font-medium text-rose-400 hover:bg-rose-500/10"
                     >
                       <Trash2 className="h-3 w-3" />
-                      Löschen
                     </button>
                   )}
                 </div>

@@ -141,9 +141,9 @@ export default function ConversationsClient() {
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        <div className="flex items-center justify-center text-slate-400">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-brand"></div>
+      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-8 backdrop-blur-xl">
+        <div className="flex items-center justify-center text-zinc-400">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-indigo-500"></div>
           <span className="ml-3">Lade Konversationen...</span>
         </div>
       </div>
@@ -152,11 +152,11 @@ export default function ConversationsClient() {
 
   if (error) {
     return (
-      <div className="rounded-3xl border border-rose-200 bg-rose-50 p-8">
-        <p className="text-rose-700">{error}</p>
+      <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-8">
+        <p className="text-rose-400">{error}</p>
         <button
           onClick={loadConversations}
-          className="mt-4 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+          className="mt-4 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-rose-700"
         >
           Erneut versuchen
         </button>
@@ -167,25 +167,25 @@ export default function ConversationsClient() {
   // Message detail view
   if (selectedConversation) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-6 py-4">
           <div className="flex items-center gap-3">
             <button
               onClick={handleCloseMessages}
-              className="rounded-full p-2 hover:bg-slate-200"
+              className="rounded-lg p-2 transition-colors hover:bg-white/10"
             >
-              <ArrowLeft className="h-5 w-5 text-slate-600" />
+              <ArrowLeft className="h-5 w-5 text-zinc-400" />
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-slate-400" />
-                <span className="font-medium text-slate-700">
+                <User className="h-4 w-4 text-zinc-500" />
+                <span className="font-medium text-white">
                   {selectedConversation.instagram_sender_id}
                 </span>
               </div>
               {selectedConversation.flows && (
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-zinc-400">
                   Flow: {selectedConversation.flows.name}
                 </div>
               )}
@@ -193,21 +193,21 @@ export default function ConversationsClient() {
           </div>
           <button
             onClick={handleCloseMessages}
-            className="rounded-full p-2 hover:bg-slate-200"
+            className="rounded-lg p-2 transition-colors hover:bg-white/10"
           >
-            <X className="h-5 w-5 text-slate-500" />
+            <X className="h-5 w-5 text-zinc-400" />
           </button>
         </div>
 
         {/* Variables summary */}
         {selectedConversation.metadata?.variables && Object.keys(selectedConversation.metadata.variables).length > 0 && (
-          <div className="border-b border-slate-200 bg-blue-50 px-6 py-3">
-            <div className="text-xs font-medium text-blue-700 mb-1">Extrahierte Daten:</div>
+          <div className="border-b border-white/10 bg-indigo-500/10 px-6 py-3">
+            <div className="mb-1 text-xs font-medium text-indigo-400">Extrahierte Daten:</div>
             <div className="flex flex-wrap gap-2">
               {Object.entries(selectedConversation.metadata.variables).map(([key, value]) => (
                 <span
                   key={key}
-                  className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700"
+                  className="inline-flex items-center rounded-lg bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-300"
                 >
                   {key}: {value}
                 </span>
@@ -217,14 +217,14 @@ export default function ConversationsClient() {
         )}
 
         {/* Messages */}
-        <div className="h-[500px] overflow-y-auto p-6 space-y-4">
+        <div className="h-[500px] space-y-4 overflow-y-auto p-6">
           {messagesLoading ? (
-            <div className="flex items-center justify-center h-full text-slate-400">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-brand"></div>
+            <div className="flex h-full items-center justify-center text-zinc-400">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-indigo-500"></div>
               <span className="ml-3">Lade Nachrichten...</span>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-slate-400">
+            <div className="flex h-full items-center justify-center text-zinc-400">
               Keine Nachrichten gefunden
             </div>
           ) : (
@@ -236,11 +236,11 @@ export default function ConversationsClient() {
                 <div
                   className={`max-w-[75%] rounded-2xl px-4 py-2 ${
                     msg.direction === "incoming"
-                      ? "bg-slate-100 text-slate-800"
-                      : "bg-brand text-white"
+                      ? "bg-white/10 text-zinc-200"
+                      : "bg-gradient-to-r from-indigo-500 to-violet-500 text-white"
                   }`}
                 >
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="mb-1 flex items-center gap-2">
                     {msg.direction === "incoming" ? (
                       <User className="h-3 w-3 opacity-60" />
                     ) : (
@@ -272,32 +272,32 @@ export default function ConversationsClient() {
 
   // Conversation list view
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-xl">
       {conversations.length === 0 ? (
-        <div className="p-8 text-center text-slate-500">
-          <MessageCircle className="mx-auto h-12 w-12 text-slate-300 mb-4" />
-          <p>Noch keine Konversationen</p>
-          <p className="text-sm mt-2">
+        <div className="p-8 text-center text-zinc-400">
+          <MessageCircle className="mx-auto mb-4 h-12 w-12 text-zinc-600" />
+          <p className="text-white">Noch keine Konversationen</p>
+          <p className="mt-2 text-sm">
             Konversationen erscheinen hier, sobald Kunden über Instagram schreiben.
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-white/5">
           {conversations.map((conv) => (
             <button
               key={conv.id}
               onClick={() => handleSelectConversation(conv)}
-              className="w-full px-6 py-4 text-left hover:bg-slate-50 transition-colors flex items-center justify-between group"
+              className="group flex w-full items-center justify-between px-6 py-4 text-left transition-colors hover:bg-white/5"
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
-                  <User className="h-5 w-5 text-slate-500" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20">
+                  <User className="h-5 w-5 text-violet-400" />
                 </div>
                 <div>
-                  <div className="font-medium text-slate-800">
+                  <div className="font-medium text-white">
                     {conv.instagram_sender_id}
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-500">
+                  <div className="flex items-center gap-3 text-sm text-zinc-400">
                     {conv.flows && (
                       <span className="flex items-center gap-1">
                         <Bot className="h-3 w-3" />
@@ -313,15 +313,15 @@ export default function ConversationsClient() {
               </div>
               <div className="flex items-center gap-3">
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  className={`rounded-lg px-2 py-0.5 text-xs font-medium ${
                     conv.status === "active"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-100 text-slate-600"
+                      ? "bg-emerald-500/10 text-emerald-400"
+                      : "bg-zinc-500/10 text-zinc-400"
                   }`}
                 >
                   {conv.status === "active" ? "Aktiv" : "Geschlossen"}
                 </span>
-                <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-slate-500" />
+                <ChevronRight className="h-5 w-5 text-zinc-600 transition-colors group-hover:text-zinc-400" />
               </div>
             </button>
           ))}

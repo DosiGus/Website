@@ -27,11 +27,11 @@ type StatusBadgeConfig = {
 };
 
 const STATUS_CONFIG: Record<ReservationStatus, StatusBadgeConfig> = {
-  pending: { label: "Ausstehend", bgClass: "bg-amber-100", textClass: "text-amber-700" },
-  confirmed: { label: "Bestätigt", bgClass: "bg-emerald-100", textClass: "text-emerald-700" },
-  cancelled: { label: "Storniert", bgClass: "bg-slate-200", textClass: "text-slate-600" },
-  completed: { label: "Abgeschlossen", bgClass: "bg-blue-100", textClass: "text-blue-700" },
-  no_show: { label: "Nicht erschienen", bgClass: "bg-rose-100", textClass: "text-rose-700" },
+  pending: { label: "Ausstehend", bgClass: "bg-amber-500/10", textClass: "text-amber-400" },
+  confirmed: { label: "Bestätigt", bgClass: "bg-emerald-500/10", textClass: "text-emerald-400" },
+  cancelled: { label: "Storniert", bgClass: "bg-zinc-500/10", textClass: "text-zinc-400" },
+  completed: { label: "Abgeschlossen", bgClass: "bg-blue-500/10", textClass: "text-blue-400" },
+  no_show: { label: "Nicht erschienen", bgClass: "bg-rose-500/10", textClass: "text-rose-400" },
 };
 
 const STATUS_OPTIONS: { value: ReservationStatus | "all"; label: string }[] = [
@@ -331,7 +331,7 @@ export default function ReservationsClient() {
           <button
             onClick={() => updateStatus(reservation.id, "confirmed")}
             disabled={isLoading}
-            className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
           >
             <CheckCircle2 className="h-3 w-3" />
             Bestätigen
@@ -343,7 +343,7 @@ export default function ReservationsClient() {
           <button
             onClick={() => updateStatus(reservation.id, "cancelled")}
             disabled={isLoading}
-            className="flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/10 disabled:opacity-50"
           >
             <XCircle className="h-3 w-3" />
             Stornieren
@@ -355,7 +355,7 @@ export default function ReservationsClient() {
           <button
             onClick={() => updateStatus(reservation.id, "completed")}
             disabled={isLoading}
-            className="flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/20 disabled:opacity-50"
           >
             <CheckCircle2 className="h-3 w-3" />
             Abschließen
@@ -367,7 +367,7 @@ export default function ReservationsClient() {
           <button
             onClick={() => updateStatus(reservation.id, "no_show")}
             disabled={isLoading}
-            className="flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-400 transition-colors hover:bg-rose-500/20 disabled:opacity-50"
           >
             <XCircle className="h-3 w-3" />
             Nicht erschienen
@@ -377,7 +377,7 @@ export default function ReservationsClient() {
         {/* Details button - always show */}
         <button
           onClick={() => setDetailModalReservation(reservation)}
-          className="flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+          className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/10"
         >
           <Eye className="h-3 w-3" />
           Details
@@ -389,13 +389,13 @@ export default function ReservationsClient() {
             <button
               onClick={() => deleteReservation(reservation.id)}
               disabled={isLoading}
-              className="rounded-full bg-rose-600 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+              className="rounded-lg bg-rose-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
             >
               {isLoading ? "Lösche..." : "Ja, löschen"}
             </button>
             <button
               onClick={() => setDeleteConfirmId(null)}
-              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/10"
             >
               Abbrechen
             </button>
@@ -403,7 +403,7 @@ export default function ReservationsClient() {
         ) : (
           <button
             onClick={() => setDeleteConfirmId(reservation.id)}
-            className="flex items-center gap-1 rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+            className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-400 transition-colors hover:bg-rose-500/20"
           >
             <Trash2 className="h-3 w-3" />
             Löschen
@@ -417,50 +417,54 @@ export default function ReservationsClient() {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-blue-100 p-3">
-              <CalendarDays className="h-5 w-5 text-blue-600" />
+        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-blue-500/20 blur-2xl transition-all group-hover:bg-blue-500/30" />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600">
+              <CalendarDays className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{stats.today}</p>
-              <p className="text-sm text-slate-500">Heute</p>
+              <p className="text-2xl font-bold text-white">{stats.today}</p>
+              <p className="text-sm text-zinc-400">Heute</p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-amber-100 p-3">
-              <Clock className="h-5 w-5 text-amber-600" />
+        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-amber-500/20 blur-2xl transition-all group-hover:bg-amber-500/30" />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600">
+              <Clock className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{stats.pending}</p>
-              <p className="text-sm text-slate-500">Ausstehend</p>
+              <p className="text-2xl font-bold text-white">{stats.pending}</p>
+              <p className="text-sm text-zinc-400">Ausstehend</p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-emerald-100 p-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-emerald-500/20 blur-2xl transition-all group-hover:bg-emerald-500/30" />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
+              <CheckCircle2 className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{stats.confirmed}</p>
-              <p className="text-sm text-slate-500">Bestätigt</p>
+              <p className="text-2xl font-bold text-white">{stats.confirmed}</p>
+              <p className="text-sm text-zinc-400">Bestätigt</p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-purple-100 p-3">
-              <Users className="h-5 w-5 text-purple-600" />
+        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-violet-500/20 blur-2xl transition-all group-hover:bg-violet-500/30" />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-600">
+              <Users className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{stats.guestsToday}</p>
-              <p className="text-sm text-slate-500">Gäste heute</p>
+              <p className="text-2xl font-bold text-white">{stats.guestsToday}</p>
+              <p className="text-sm text-zinc-400">Gäste heute</p>
             </div>
           </div>
         </div>
@@ -470,7 +474,7 @@ export default function ReservationsClient() {
       <div className="flex justify-end">
         <button
           onClick={() => setCreateModalOpen(true)}
-          className="flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white shadow-md shadow-brand/30"
+          className="flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40"
         >
           <Plus className="h-4 w-4" />
           Reservierung erstellen
@@ -478,13 +482,13 @@ export default function ReservationsClient() {
       </div>
 
       {/* Filters */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
           {/* Search */}
-          <div className="flex flex-1 items-center gap-2 rounded-full border border-slate-200 px-4 py-2">
-            <Filter className="h-4 w-4 text-slate-400" />
+          <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2">
+            <Filter className="h-4 w-4 text-zinc-400" />
             <input
-              className="w-full text-sm text-slate-600 focus:outline-none"
+              className="w-full bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
               placeholder="Gastname suchen..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -495,10 +499,10 @@ export default function ReservationsClient() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as ReservationStatus | "all")}
-            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 focus:border-brand focus:outline-none"
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white focus:border-indigo-500 focus:outline-none"
           >
             {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
+              <option key={option.value} value={option.value} className="bg-zinc-900 text-white">
                 {option.label}
               </option>
             ))}
@@ -506,23 +510,23 @@ export default function ReservationsClient() {
 
           {/* Date From */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-500">Von:</span>
+            <span className="text-sm text-zinc-400">Von:</span>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 focus:border-brand focus:outline-none"
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
             />
           </div>
 
           {/* Date To */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-500">Bis:</span>
+            <span className="text-sm text-zinc-400">Bis:</span>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 focus:border-brand focus:outline-none"
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
             />
           </div>
 
@@ -534,7 +538,7 @@ export default function ReservationsClient() {
                 setDateFrom("");
                 setDateTo("");
               }}
-              className="text-sm font-semibold text-brand hover:underline"
+              className="text-sm font-semibold text-indigo-400 hover:text-indigo-300"
             >
               Filter zurücksetzen
             </button>
@@ -544,54 +548,54 @@ export default function ReservationsClient() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-400">
           {error}
         </div>
       )}
 
       {notice && (
-        <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-400">
           {notice}
         </div>
       )}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-xl">
         {loading ? (
-          <div className="p-6 text-sm text-slate-500">
+          <div className="p-6 text-sm text-zinc-400">
             Reservierungen werden geladen...
           </div>
         ) : filteredReservations.length === 0 ? (
-          <div className="p-6 text-sm text-slate-500">
+          <div className="p-6 text-sm text-zinc-400">
             Keine Reservierungen gefunden.
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50">
+              <table className="min-w-full divide-y divide-white/10 text-sm">
+                <thead className="bg-white/5">
                   <tr>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-500">Gast</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-500">Datum</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-500">Uhrzeit</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-500">Personen</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-500">Status</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-500">Aktionen</th>
+                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Gast</th>
+                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Datum</th>
+                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Uhrzeit</th>
+                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Personen</th>
+                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Status</th>
+                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Aktionen</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-white/5">
                   {filteredReservations.map((reservation) => (
-                    <tr key={reservation.id} className="hover:bg-slate-50">
-                      <td className="whitespace-nowrap px-6 py-4 font-medium text-slate-900">
+                    <tr key={reservation.id} className="transition-colors hover:bg-white/5">
+                      <td className="whitespace-nowrap px-6 py-4 font-medium text-white">
                         {reservation.guest_name}
                       </td>
-                      <td className="px-6 py-4 text-slate-600">
+                      <td className="px-6 py-4 text-zinc-300">
                         {formatDate(reservation.reservation_date)}
                       </td>
-                      <td className="px-6 py-4 text-slate-600">
+                      <td className="px-6 py-4 text-zinc-300">
                         {reservation.reservation_time}
                       </td>
-                      <td className="px-6 py-4 text-slate-600">
+                      <td className="px-6 py-4 text-zinc-300">
                         {reservation.guest_count}
                       </td>
                       <td className="px-6 py-4">
@@ -608,15 +612,15 @@ export default function ReservationsClient() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-3">
-                <p className="text-sm text-slate-500">
+              <div className="flex items-center justify-between border-t border-white/10 bg-white/5 px-6 py-3">
+                <p className="text-sm text-zinc-400">
                   Seite {currentPage} von {totalPages} ({total} Einträge)
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5 disabled:opacity-50"
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Zurück
@@ -624,7 +628,7 @@ export default function ReservationsClient() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5 disabled:opacity-50"
                   >
                     Weiter
                     <ChevronRight className="h-4 w-4" />

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { CheckCircle, AlertTriangle, Clock, Link as LinkIcon, Wifi, WifiOff } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import type { IntegrationStatus } from "../../lib/meta/types";
 
@@ -21,14 +22,8 @@ export default function IntegrationsClient() {
   const [reviewSaved, setReviewSaved] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
 
-  const successParam = useMemo(
-    () => searchParams?.get("success"),
-    [searchParams],
-  );
-  const accountParam = useMemo(
-    () => searchParams?.get("account"),
-    [searchParams],
-  );
+  const successParam = useMemo(() => searchParams?.get("success"), [searchParams]);
+  const accountParam = useMemo(() => searchParams?.get("account"), [searchParams]);
   const errorParam = useMemo(() => searchParams?.get("error"), [searchParams]);
 
   const getAccessToken = useCallback(async () => {
@@ -39,7 +34,6 @@ export default function IntegrationsClient() {
 
   const metaConnected = metaIntegration?.status === "connected";
 
-  // After OAuth error, poll for status in case the primary request is still running
   const [oauthResolved, setOauthResolved] = useState(false);
   useEffect(() => {
     if (!errorParam || oauthResolved || metaConnected) return;
@@ -227,9 +221,6 @@ export default function IntegrationsClient() {
     }
   }, [getAccessToken, metaConnected, reviewUrl]);
 
-  const metaStatusLabel = metaConnected ? "Verbunden" : "Nicht verbunden";
-
-  // Calculate days until token expires
   const getTokenExpiryInfo = () => {
     if (!metaIntegration?.expires_at) return null;
 
@@ -250,68 +241,78 @@ export default function IntegrationsClient() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold">Meta / Instagram</h3>
-            <p className="text-sm text-slate-500">
-              Verbinde deinen Instagram- oder Facebook-Account, um DMs automatisiert zu
-              beantworten.
-            </p>
+      {/* Meta / Instagram */}
+      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500">
+              <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Meta / Instagram</h3>
+              <p className="text-sm text-zinc-400">
+                DMs automatisiert beantworten
+              </p>
+            </div>
           </div>
           <span
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              metaConnected ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+              metaConnected
+                ? "bg-emerald-500/10 text-emerald-400"
+                : "bg-zinc-500/10 text-zinc-400"
             }`}
           >
-            {status === "loading" ? "Lädt…" : metaStatusLabel}
+            {metaConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+            {status === "loading" ? "Lädt…" : metaConnected ? "Verbunden" : "Nicht verbunden"}
           </span>
         </div>
 
         {successParam === "true" && (
-          <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+            <CheckCircle className="h-4 w-4" />
             {accountParam
-              ? `Meta/Instagram wurde erfolgreich verbunden: ${accountParam}`
+              ? `Erfolgreich verbunden: ${accountParam}`
               : "Meta/Instagram wurde erfolgreich verbunden."}
           </div>
         )}
 
         {errorParam && !metaConnected && !oauthResolved && (
-          <div className="mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+            <AlertTriangle className="h-4 w-4" />
             Verbindung fehlgeschlagen: {errorParam}
           </div>
         )}
 
         {oauthResolved && (
-          <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+            <CheckCircle className="h-4 w-4" />
             Meta/Instagram wurde erfolgreich verbunden.
           </div>
         )}
 
         {metaConnected && (
-          <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            <div className="font-semibold text-slate-700">Verbundenes Konto</div>
-            <div>{metaIntegration?.account_name ?? "Meta Account"}</div>
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">Verbundenes Konto</div>
+            <div className="mt-1 font-medium text-white">{metaIntegration?.account_name ?? "Meta Account"}</div>
             {metaIntegration?.instagram_username && (
-              <div className="text-xs text-slate-400">
-                @{metaIntegration.instagram_username}
-              </div>
-            )}
-            {!metaIntegration?.instagram_username && metaIntegration?.instagram_id && (
-              <div className="text-xs text-slate-400">
-                Instagram ID: {metaIntegration.instagram_id}
-              </div>
+              <div className="text-sm text-zinc-400">@{metaIntegration.instagram_username}</div>
             )}
           </div>
         )}
 
-        <div className="mt-4 rounded-2xl border border-slate-100 bg-white px-4 py-4 text-sm">
-          <div className="font-semibold text-slate-700">Google‑Bewertungslink</div>
-          <p className="mt-1 text-xs text-slate-500">
-            Dieser Link wird im Review‑Flow an deine Gäste geschickt.
+        {/* Google Review URL */}
+        <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-white">
+            <LinkIcon className="h-4 w-4 text-amber-400" />
+            Google-Bewertungslink
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            Dieser Link wird im Review-Flow an deine Gäste geschickt.
           </p>
           <input
-            className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
+            className="mt-3 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50"
             placeholder="https://g.page/…/review"
             value={reviewUrl}
             onChange={(event) => {
@@ -322,81 +323,69 @@ export default function IntegrationsClient() {
           />
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button
-              className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
+              className="rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50"
               onClick={handleSaveReviewUrl}
               disabled={reviewSaving || !metaConnected}
             >
               {reviewSaving ? "Speichern..." : "Link speichern"}
             </button>
             {reviewSaved && (
-              <span className="text-xs font-semibold text-emerald-600">Gespeichert ✓</span>
+              <span className="flex items-center gap-1 text-xs font-medium text-emerald-400">
+                <CheckCircle className="h-3 w-3" />
+                Gespeichert
+              </span>
             )}
             {reviewError && (
-              <span className="text-xs font-semibold text-rose-600">{reviewError}</span>
+              <span className="text-xs font-medium text-rose-400">{reviewError}</span>
             )}
           </div>
-          {!metaConnected && (
-            <p className="mt-2 text-xs text-slate-400">
-              Verbinde zuerst Meta/Instagram, um den Link zu speichern.
-            </p>
-          )}
         </div>
 
         {/* Token Expiry Warning */}
         {metaConnected && tokenExpiryInfo?.isExpired && (
-          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm">
-            <div className="flex items-start gap-3">
-              <span className="text-xl">⚠️</span>
-              <div>
-                <div className="font-semibold text-rose-700">Token abgelaufen!</div>
-                <div className="text-rose-600">
-                  Dein Instagram-Zugang ist abgelaufen. Bitte verbinde deinen Account erneut,
-                  um weiterhin Nachrichten zu empfangen.
-                </div>
+          <div className="mt-4 flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 text-rose-400" />
+            <div>
+              <div className="font-semibold text-rose-400">Token abgelaufen!</div>
+              <div className="text-rose-400/80">
+                Bitte verbinde deinen Account erneut.
               </div>
             </div>
           </div>
         )}
 
         {metaConnected && tokenExpiryInfo?.isExpiringSoon && !tokenExpiryInfo?.isExpired && (
-          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-            <div className="flex items-start gap-3">
-              <span className="text-xl">⏰</span>
-              <div>
-                <div className="font-semibold text-amber-700">
-                  Token läuft in {tokenExpiryInfo.daysUntilExpiry} {tokenExpiryInfo.daysUntilExpiry === 1 ? "Tag" : "Tagen"} ab
-                </div>
-                <div className="text-amber-600">
-                  Dein Instagram-Zugang läuft am{" "}
-                  {tokenExpiryInfo.expiresAt.toLocaleDateString("de-DE", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  })}{" "}
-                  ab. Bitte verbinde deinen Account erneut, um Unterbrechungen zu vermeiden.
-                </div>
+          <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm">
+            <Clock className="mt-0.5 h-4 w-4 text-amber-400" />
+            <div>
+              <div className="font-semibold text-amber-400">
+                Token läuft in {tokenExpiryInfo.daysUntilExpiry} {tokenExpiryInfo.daysUntilExpiry === 1 ? "Tag" : "Tagen"} ab
+              </div>
+              <div className="text-amber-400/80">
+                Bitte verbinde deinen Account erneut.
               </div>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+            <AlertTriangle className="h-4 w-4" />
             {error}
           </div>
         )}
 
         <div className="mt-6 flex flex-wrap gap-3">
           <button
-            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-400"
+            className="rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition-all hover:border-white/20 hover:bg-white/10"
             onClick={handleConnect}
             disabled={connecting}
           >
-            {connecting ? "Verbinden..." : "Mit Meta verbinden"}
+            {connecting ? "Verbinden..." : metaConnected ? "Erneut verbinden" : "Mit Meta verbinden"}
           </button>
           {metaConnected && (
             <button
-              className="rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:border-rose-400"
+              className="rounded-lg border border-rose-500/20 px-4 py-2.5 text-sm font-medium text-rose-400 transition-all hover:bg-rose-500/10"
               onClick={handleDisconnect}
               disabled={disconnecting}
             >
@@ -406,36 +395,53 @@ export default function IntegrationsClient() {
         </div>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold">WhatsApp Business</h3>
-            <p className="text-sm text-slate-500">
-              In Kürze verfügbar. Hinterlasse uns Feedback, wenn du früh starten möchtest.
-            </p>
+      {/* WhatsApp Business */}
+      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500">
+              <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">WhatsApp Business</h3>
+              <p className="text-sm text-zinc-400">
+                In Kürze verfügbar
+              </p>
+            </div>
           </div>
-          <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+          <span className="rounded-full bg-zinc-500/10 px-3 py-1 text-xs font-semibold text-zinc-400">
             Bald verfügbar
           </span>
         </div>
-        <button className="mt-6 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-400">
+        <button className="mt-6 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-400 transition-all hover:border-white/20 hover:text-white">
           Benachrichtigen
         </button>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold">POS / Kassensystem</h3>
-            <p className="text-sm text-slate-500">
-              Synchronisiere Tisch- und Terminverfügbarkeiten mit deinem Kassensystem.
-            </p>
+      {/* POS */}
+      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500">
+              <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8M12 17v4" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">POS / Kassensystem</h3>
+              <p className="text-sm text-zinc-400">
+                Verfügbarkeiten synchronisieren
+              </p>
+            </div>
           </div>
-          <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+          <span className="rounded-full bg-zinc-500/10 px-3 py-1 text-xs font-semibold text-zinc-400">
             In Planung
           </span>
         </div>
-        <button className="mt-6 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-400">
+        <button className="mt-6 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-400 transition-all hover:border-white/20 hover:text-white">
           Mehr erfahren
         </button>
       </div>

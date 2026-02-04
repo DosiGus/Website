@@ -94,14 +94,14 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
   const today = new Date().toISOString().split("T")[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-      <div className="w-full max-w-lg rounded-3xl bg-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <h2 className="text-xl font-semibold text-slate-900">Neue Reservierung</h2>
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+          <h2 className="text-xl font-semibold text-white">Neue Reservierung</h2>
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -111,15 +111,15 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
         <form onSubmit={handleSubmit} className="space-y-5 p-6">
           {/* Guest Name */}
           <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Gastname <span className="text-rose-500">*</span>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Gastname <span className="text-rose-400">*</span>
             </label>
             <input
               type="text"
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
               placeholder="Max Mustermann"
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
               required
             />
           </div>
@@ -127,27 +127,27 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
           {/* Date and Time Row */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
-                Datum <span className="text-rose-500">*</span>
+              <label className="mb-1 block text-sm font-medium text-zinc-300">
+                Datum <span className="text-rose-400">*</span>
               </label>
               <input
                 type="date"
                 value={reservationDate}
                 onChange={(e) => setReservationDate(e.target.value)}
                 min={today}
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
                 required
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
-                Uhrzeit <span className="text-rose-500">*</span>
+              <label className="mb-1 block text-sm font-medium text-zinc-300">
+                Uhrzeit <span className="text-rose-400">*</span>
               </label>
               <input
                 type="time"
                 value={reservationTime}
                 onChange={(e) => setReservationTime(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
                 required
               />
             </div>
@@ -155,8 +155,8 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
 
           {/* Guest Count */}
           <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Personenanzahl <span className="text-rose-500">*</span>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Personenanzahl <span className="text-rose-400">*</span>
             </label>
             <input
               type="number"
@@ -164,7 +164,7 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
               onChange={(e) => setGuestCount(e.target.value)}
               min="1"
               max="100"
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
               required
             />
           </div>
@@ -172,7 +172,7 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
           {/* Contact Fields */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
+              <label className="mb-1 block text-sm font-medium text-zinc-300">
                 Telefon
               </label>
               <input
@@ -180,11 +180,11 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="+49 123 456789"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
+              <label className="mb-1 block text-sm font-medium text-zinc-300">
                 E-Mail
               </label>
               <input
@@ -192,14 +192,14 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="gast@example.com"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
               />
             </div>
           </div>
 
           {/* Special Requests */}
           <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-700">
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
               Besondere Wünsche
             </label>
             <textarea
@@ -207,13 +207,13 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
               onChange={(e) => setSpecialRequests(e.target.value)}
               placeholder="z.B. Allergien, Kinderstuhl, Geburtstag..."
               rows={3}
-              className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+              className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
             />
           </div>
 
           {/* Error */}
           {error && (
-            <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-400">
               {error}
             </div>
           )}
@@ -223,14 +223,14 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10"
             >
               Abbrechen
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white shadow-md shadow-brand/30 disabled:opacity-50"
+              className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 disabled:opacity-50"
             >
               {loading ? "Erstelle..." : "Reservierung erstellen"}
             </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Workflow, Plug, CalendarCheck, Clock } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 
 interface DashboardStats {
@@ -19,36 +20,27 @@ export default function DashboardStats() {
       const supabase = createSupabaseBrowserClient();
 
       try {
-        // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           setLoading(false);
           return;
         }
 
-        // Fetch all stats in parallel
         const [flowsRes, integrationsRes, reservationsRes, pendingRes] = await Promise.all([
-          // Count active flows
           supabase
             .from("flows")
             .select("id", { count: "exact", head: true })
             .eq("user_id", user.id)
             .eq("status", "Aktiv"),
-
-          // Count connected integrations
           supabase
             .from("integrations")
             .select("id", { count: "exact", head: true })
             .eq("user_id", user.id)
             .eq("status", "connected"),
-
-          // Count total reservations
           supabase
             .from("reservations")
             .select("id", { count: "exact", head: true })
             .eq("user_id", user.id),
-
-          // Count pending reservations
           supabase
             .from("reservations")
             .select("id", { count: "exact", head: true })
@@ -76,30 +68,48 @@ export default function DashboardStats() {
     {
       label: "Aktive Flows",
       value: stats?.activeFlows ?? 0,
-      description: "Flows die aktuell Nachrichten beantworten"
+      description: "Flows die aktuell Nachrichten beantworten",
+      icon: Workflow,
+      gradient: "from-indigo-500 to-violet-500",
+      bgGlow: "bg-indigo-500/20",
     },
     {
       label: "Verbundene Kanäle",
       value: stats?.connectedChannels ?? 0,
-      description: "Instagram-Accounts verbunden"
+      description: "Instagram-Accounts verbunden",
+      icon: Plug,
+      gradient: "from-emerald-500 to-teal-500",
+      bgGlow: "bg-emerald-500/20",
     },
     {
       label: "Reservierungen",
       value: stats?.totalReservations ?? 0,
-      description: `${stats?.pendingReservations ?? 0} ausstehend`
+      description: `${stats?.pendingReservations ?? 0} ausstehend`,
+      icon: CalendarCheck,
+      gradient: "from-amber-500 to-orange-500",
+      bgGlow: "bg-amber-500/20",
+    },
+    {
+      label: "Ausstehend",
+      value: stats?.pendingReservations ?? 0,
+      description: "Reservierungen zur Bestätigung",
+      icon: Clock,
+      gradient: "from-rose-500 to-pink-500",
+      bgGlow: "bg-rose-500/20",
     },
   ];
 
   if (loading) {
     return (
-      <section className="grid gap-4 sm:grid-cols-3">
-        {[1, 2, 3].map((i) => (
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm animate-pulse"
+            className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6"
           >
-            <div className="h-4 w-24 bg-slate-200 rounded"></div>
-            <div className="mt-3 h-8 w-16 bg-slate-200 rounded"></div>
+            <div className="h-4 w-24 animate-pulse rounded bg-white/10"></div>
+            <div className="mt-4 h-8 w-16 animate-pulse rounded bg-white/10"></div>
+            <div className="mt-2 h-3 w-32 animate-pulse rounded bg-white/10"></div>
           </div>
         ))}
       </section>
@@ -107,19 +117,32 @@ export default function DashboardStats() {
   }
 
   return (
-    <section className="grid gap-4 sm:grid-cols-3">
-      {statItems.map((stat) => (
-        <div
-          key={stat.label}
-          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
-        >
-          <p className="text-sm text-slate-500">{stat.label}</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">
-            {stat.value.toLocaleString("de-DE")}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">{stat.description}</p>
-        </div>
-      ))}
+    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {statItems.map((stat) => {
+        const Icon = stat.icon;
+        return (
+          <div
+            key={stat.label}
+            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 transition-all hover:border-white/20 hover:bg-zinc-900"
+          >
+            {/* Background glow */}
+            <div className={`absolute -right-8 -top-8 h-24 w-24 rounded-full ${stat.bgGlow} blur-2xl opacity-50 transition-opacity group-hover:opacity-70`} />
+
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-zinc-400">{stat.label}</p>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${stat.gradient}`}>
+                  <Icon className="h-5 w-5 text-white" />
+                </div>
+              </div>
+              <p className="mt-4 text-4xl font-bold tracking-tight text-white">
+                {stat.value.toLocaleString("de-DE")}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">{stat.description}</p>
+            </div>
+          </div>
+        );
+      })}
     </section>
   );
 }
