@@ -59,14 +59,14 @@ const outcomes = [
 const features = [
   {
     icon: MessageSquare,
-    title: "Quick Replies",
-    description: "Vordefinierte Antwort-Buttons für schnelle, strukturierte Konversationen.",
+    title: "Antwort-Buttons",
+    description: "Klare Auswahl statt Freitext – Kunden klicken sich in wenigen Sekunden zum Ziel.",
     gradient: "from-indigo-500 to-violet-500",
   },
   {
     icon: CalendarCheck,
-    title: "Automatische Buchung",
-    description: "Termine werden direkt im Chat erfasst und bestätigt.",
+    title: "Buchungen im Chat",
+    description: "Datum, Uhrzeit und Personenanzahl werden im Dialog abgefragt und bestätigt.",
     gradient: "from-emerald-500 to-teal-500",
   },
   {
@@ -77,14 +77,14 @@ const features = [
   },
   {
     icon: Star,
-    title: "Review Automation",
-    description: "Nach dem Besuch wird automatisch um eine Bewertung gebeten.",
+    title: "Bewertungen anfragen",
+    description: "Nach dem Besuch wird freundlich zur Bewertung eingeladen.",
     gradient: "from-pink-500 to-rose-500",
   },
   {
     icon: Shield,
-    title: "Enterprise-Ready",
-    description: "DSGVO-konform, Meta-verifiziert, volle Datentransparenz.",
+    title: "Sicher & DSGVO-konform",
+    description: "Meta-verifiziert, klare Rollen, volle Datentransparenz.",
     gradient: "from-slate-500 to-zinc-500",
   },
   {
@@ -139,12 +139,63 @@ const steps = [
   {
     step: "02",
     title: "Konfigurieren",
-    description: "Templates übernehmen, Wording und Eskalationen finalisieren.",
+    description: "Vorlagen übernehmen, Sprache & Übergaben an dein Team definieren.",
   },
   {
     step: "03",
     title: "Live schalten",
     description: "Antworten, Buchungen und Reviews laufen stabil – mit Reporting.",
+  },
+];
+
+const differentiators = [
+  {
+    title: "Branchenfertig statt Baukasten",
+    description: "Abläufe, Texte und Antworten sind auf Service-Branchen zugeschnitten – sofort nutzbar.",
+  },
+  {
+    title: "Buchungen & Bewertungen aus einem Guss",
+    description: "Vom ersten Kontakt bis zur Bewertung läuft alles im selben Dialog – ohne Tool-Chaos.",
+  },
+  {
+    title: "Onboarding mit echter Begleitung",
+    description: "Wir richten ein, testen und optimieren gemeinsam – kein Self‑Service‑Alleingang.",
+  },
+];
+
+const comparisonRows = [
+  { label: "Einrichtung & QA", wesponde: "Begleitet + geprüft", others: "Selbst einrichten" },
+  { label: "Branchenvorlagen", wesponde: "Fix & anpassbar", others: "Generisch" },
+  { label: "Buchungen im Chat", wesponde: "Inklusive", others: "Zusatz-Tool nötig" },
+  { label: "Bewertungen nach dem Besuch", wesponde: "Automatisch", others: "Manuell" },
+  { label: "Team-Übergaben", wesponde: "Klar definiert", others: "Unklar/extra" },
+];
+
+const faqs = [
+  {
+    question: "Für welche Branchen ist Wesponde gedacht?",
+    answer:
+      "Für Service‑Branchen mit vielen DMs: Restaurants, Salons, Praxen, Fitness und ähnliche Betriebe.",
+  },
+  {
+    question: "Wie schnell sind wir live?",
+    answer:
+      "In der Regel innerhalb von 1–2 Wochen – inklusive Einrichtung, Texten und Testläufen.",
+  },
+  {
+    question: "Muss mein Team technisch sein?",
+    answer:
+      "Nein. Wir liefern klare Vorlagen und übernehmen das Setup. Dein Team passt nur die Inhalte an.",
+  },
+  {
+    question: "Kann ich Antworten jederzeit ändern?",
+    answer:
+      "Ja. Texte, Buttons und Abläufe lassen sich jederzeit im Editor anpassen.",
+  },
+  {
+    question: "Wie werden Übergaben an das Team gelöst?",
+    answer:
+      "Wir definieren klare Übergabepunkte, damit dein Team nur die Fälle übernimmt, die es braucht.",
   },
 ];
 
@@ -200,7 +251,7 @@ export default function HomePage() {
               <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 sm:gap-2 sm:px-4 sm:py-2">
                 <Sparkles className="h-3.5 w-3.5 text-indigo-400 sm:h-4 sm:w-4" />
                 <span className="text-[11px] font-medium tracking-wide text-zinc-300 sm:text-xs">
-                  Enterprise Messaging
+                  Messaging für Service-Teams
                 </span>
               </div>
 
@@ -214,20 +265,20 @@ export default function HomePage() {
 
               {/* Subheadline */}
               <p className="mt-4 text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg md:text-xl">
-                Wesponde automatisiert Instagram, Facebook und WhatsApp – Reservierungen, Reminder und Reviews.
+                Wesponde macht aus DMs klare Abläufe – Reservierungen, Erinnerungen und Bewertungen ohne Mehraufwand.
               </p>
 
               {/* CTAs */}
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
                 <WatchDemoButton
                   className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:shadow-white/20"
-                  label="Demo ansehen"
+                  label="Demo für Service-Teams ansehen"
                 />
                 <a
                   href="#beta"
                   className="group inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10"
                 >
-                  Pilotzugang anfragen
+                  Pilotzugang für dein Team anfragen
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </a>
               </div>
@@ -256,11 +307,11 @@ export default function HomePage() {
                 </span>
                 <span className="flex items-center gap-1.5 sm:gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
-                  DSGVO
+                  DSGVO-konform
                 </span>
                 <span className="flex items-center gap-1.5 sm:gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
-                  Enterprise
+                  Persönliches Onboarding
                 </span>
               </div>
             </div>
@@ -325,11 +376,10 @@ export default function HomePage() {
               Produkt
             </span>
             <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              Alles für automatisierte Konversationen
+              Alles für klare, geführte Gespräche
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
-              Regeln, Tonalität und Eskalationen bleiben transparent – mit klaren Freigaben für dein
-              Team.
+              Antworten, Übergaben und Tonalität sind sauber definiert – ohne technisches Bauchgefühl.
             </p>
           </div>
 
@@ -353,6 +403,56 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ==================== DIFFERENTIATORS SECTION ==================== */}
+      <section id="why-wesponde" className="relative py-16 sm:py-24 lg:py-32">
+        <div className="absolute inset-0 bg-zinc-900/40" />
+        <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[100px] sm:block" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
+              Warum Wesponde
+            </span>
+            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              Klarer Unterschied zu generischen Tools
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
+              Speziell für Service‑Teams gebaut – mit fertigen Abläufen, die sofort wirken.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-4 sm:mt-16 sm:grid-cols-3 sm:gap-6">
+            {differentiators.map((item) => (
+              <div
+                key={item.title}
+                className="rounded-xl border border-white/10 bg-zinc-900/50 p-5 sm:rounded-2xl sm:p-7"
+              >
+                <h3 className="text-lg font-semibold text-white">{item.title}</h3>
+                <p className="mt-2 text-sm text-zinc-400">{item.description}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 sm:mt-16">
+            <div className="grid grid-cols-1 gap-2 border-b border-white/10 px-5 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 sm:grid-cols-[1.2fr,1fr,1fr] sm:gap-6">
+              <span>Vergleich</span>
+              <span className="text-emerald-400">Wesponde</span>
+              <span>Andere Tools</span>
+            </div>
+            {comparisonRows.map((row) => (
+              <div
+                key={row.label}
+                className="grid grid-cols-1 gap-2 border-b border-white/10 px-5 py-4 text-sm sm:grid-cols-[1.2fr,1fr,1fr] sm:gap-6"
+              >
+                <span className="text-zinc-400">{row.label}</span>
+                <span className="font-semibold text-emerald-400">{row.wesponde}</span>
+                <span className="text-zinc-400">{row.others}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ==================== FLOW BUILDER SECTION ==================== */}
       <section id="flow-builder" className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-zinc-900/30" />
@@ -362,16 +462,16 @@ export default function HomePage() {
           <div className="mb-10 text-center sm:mb-16">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-indigo-400 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs">
               <Workflow className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              Flow Builder
+              Ablauf-Editor
             </span>
             <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:mt-6 sm:text-4xl md:text-5xl">
-              Flows erstellen in{" "}
+              Abläufe erstellen in{" "}
               <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
                 Minuten
               </span>
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400 sm:mt-4 sm:text-lg">
-              Drag & Drop Editor für Konversationsabläufe. Keine Programmierung nötig.
+              Visueller Editor für Dialoge. Ohne Code, ohne Aufwand.
             </p>
           </div>
 
@@ -388,7 +488,7 @@ export default function HomePage() {
           <div className="mb-10 max-w-3xl sm:mb-16">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-400 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs">
               <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              Review Automation
+              Bewertungsanfrage
             </span>
             <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:mt-6 sm:text-4xl md:text-5xl">
               Google Bewertungen{" "}
@@ -416,7 +516,7 @@ export default function HomePage() {
               Branchen
             </span>
             <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              Branchen-Playbooks mit fertiger Tonalität
+              Branchenabläufe mit passender Tonalität
             </h2>
             <p className="mt-4 text-lg text-zinc-400">
               Schneller live – mit Abläufen, die zu Sprache, Service und Upsells passen.
@@ -516,6 +616,38 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ==================== FAQ SECTION ==================== */}
+      <section id="faq" className="relative py-16 sm:py-24 lg:py-32">
+        <div className="absolute inset-0 bg-zinc-900/50" />
+        <div className="absolute right-0 top-0 hidden h-[400px] w-[400px] translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
+
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
+              FAQ
+            </span>
+            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              Häufige Fragen
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
+              Die wichtigsten Antworten für Teams, die über Messenger buchen.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-4 sm:mt-16 sm:grid-cols-2 sm:gap-6">
+            {faqs.map((faq) => (
+              <div
+                key={faq.question}
+                className="rounded-xl border border-white/10 bg-zinc-900/50 p-5 sm:rounded-2xl sm:p-7"
+              >
+                <h3 className="text-base font-semibold text-white">{faq.question}</h3>
+                <p className="mt-2 text-sm text-zinc-400">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ==================== BETA SIGNUP SECTION ==================== */}
       <section id="beta" className="relative py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-zinc-900/50" />
@@ -529,14 +661,14 @@ export default function HomePage() {
                 Pilotzugang
               </span>
               <h2 className="mt-3 font-display text-3xl font-medium tracking-tight sm:mt-4 sm:text-4xl md:text-5xl">
-                Enterprise-Onboarding für Partner
+                Persönliches Onboarding für Partner
               </h2>
               <p className="mt-3 text-sm text-zinc-400 sm:mt-4 sm:text-lg">
                 Persönlicher Setup, geprüfte Abläufe, live in unter zwei Wochen.
               </p>
               <ul className="mt-6 space-y-3 sm:mt-8 sm:space-y-4">
                 {[
-                  "Persönliches Onboarding & Flow-Setup",
+                  "Persönliches Onboarding & Ablauf-Setup",
                   "Integration von Meta & WhatsApp",
                   "Dashboard-Zugang für dein Team",
                   "Dedicated Success Manager",
@@ -580,7 +712,7 @@ export default function HomePage() {
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/login"
+              href="/login?view=login"
               className="inline-flex w-full items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition-all hover:border-white/25 hover:bg-white/10 sm:w-auto sm:px-8 sm:py-4"
             >
               Partner-Login

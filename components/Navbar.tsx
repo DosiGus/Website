@@ -77,16 +77,16 @@ export default function Navbar() {
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 lg:flex">
           <Link
-            href="/login"
+            href="/login?view=login"
             className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
           >
             Login
           </Link>
           <Link
-            href="/#beta"
-            className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:shadow-white/20"
+            href="/login?view=signup"
+            className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:bg-emerald-500 hover:text-white hover:shadow-emerald-500/30"
           >
-            Pilotzugang
+            Jetzt testen
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
@@ -116,18 +116,18 @@ export default function Navbar() {
             </nav>
             <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-6">
               <Link
-                href="/login"
+                href="/login?view=login"
                 className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-white/10"
                 onClick={() => setMenuOpen(false)}
               >
                 Login
               </Link>
               <Link
-                href="/#beta"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-zinc-900 shadow-lg transition-all"
+                href="/login?view=signup"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-zinc-900 shadow-lg transition-all hover:bg-emerald-500 hover:text-white"
                 onClick={() => setMenuOpen(false)}
               >
-                Pilotzugang anfragen
+                Jetzt testen
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

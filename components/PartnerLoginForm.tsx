@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { Loader2 } from "lucide-react";
@@ -8,15 +8,32 @@ import { Loader2 } from "lucide-react";
 type AuthView = "login" | "signup";
 
 export default function PartnerLoginForm() {
-  const [view, setView] = useState<AuthView>("login");
+  const searchParams = useSearchParams();
+  const viewParam = searchParams.get("view");
+  const defaultView = (viewParam as AuthView) === "signup" ? "signup" : "login";
+  const [view, setView] = useState<AuthView>(defaultView);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string>("");
   const router = useRouter();
-  const searchParams = useSearchParams();
   const redirectParam = searchParams.get("redirect");
   const fallbackRedirect =
     typeof window !== "undefined" ? `${window.location.origin}/app` : "https://app.wesponde.com";
   const redirectTarget = redirectParam || fallbackRedirect;
+
+  const updateView = useCallback(
+    (nextView: AuthView) => {
+      setView(nextView);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("view", nextView);
+      router.replace(`/login?${params.toString()}`);
+    },
+    [router, searchParams],
+  );
+
+  useEffect(() => {
+    const nextView = (viewParam as AuthView) === "signup" ? "signup" : "login";
+    setView(nextView);
+  }, [viewParam]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,7 +86,7 @@ export default function PartnerLoginForm() {
         <div className="flex gap-1 rounded-xl bg-zinc-800/50 p-1">
           <button
             type="button"
-            onClick={() => setView("login")}
+            onClick={() => updateView("login")}
             className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
               view === "login"
                 ? "bg-white text-zinc-900 shadow-sm"
@@ -80,7 +97,7 @@ export default function PartnerLoginForm() {
           </button>
           <button
             type="button"
-            onClick={() => setView("signup")}
+            onClick={() => updateView("signup")}
             className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
               view === "signup"
                 ? "bg-white text-zinc-900 shadow-sm"
@@ -200,7 +217,7 @@ export default function PartnerLoginForm() {
 
         {/* Support Link */}
         <p className="text-center text-xs text-zinc-500">
-          Probleme beim Login?{" "}
+          {view === "login" ? "Probleme beim Login?" : "Probleme beim Registrieren?"}{" "}
           <a
             className="font-medium text-zinc-400 underline underline-offset-2 transition-colors hover:text-white"
             href="/contact"

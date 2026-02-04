@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 /* ========================================
    PHONE MOCKUP COMPONENT
@@ -65,6 +65,7 @@ export default function PhoneMockup() {
   const [selectedQuickReply, setSelectedQuickReply] = useState<{ messageId: number; reply: string } | null>(null);
   const [showTyping, setShowTyping] = useState(false);
   const [cycleKey, setCycleKey] = useState(0);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const resetAnimation = useCallback(() => {
     setVisibleMessages([]);
@@ -208,7 +209,10 @@ export default function PhoneMockup() {
             </div>
 
             {/* Messages Area */}
-            <div className="relative z-10 h-[310px] space-y-2 overflow-hidden px-3 py-2 sm:h-[340px] sm:space-y-2.5 sm:py-3 md:h-[380px]">
+            <div
+              ref={messagesContainerRef}
+              className="relative z-10 h-[310px] space-y-2 overflow-y-auto px-3 py-2 pb-16 sm:h-[340px] sm:space-y-2.5 sm:py-3 sm:pb-20 md:h-[380px] md:pb-20 no-scrollbar"
+            >
               {conversationFlow.map((message) => {
                 if (!visibleMessages.includes(message.id)) return null;
                 if (message.type === 'quick-reply-selection') {
@@ -235,18 +239,18 @@ export default function PhoneMockup() {
                       className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'} opacity-0 animate-[messageSlideIn_0.6s_ease_forwards]`}
                     >
                       <div
-                        className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
-                          isOutgoing
-                            ? 'rounded-br-md bg-gradient-to-r from-indigo-500 to-violet-500 text-white'
-                            : 'rounded-bl-md bg-zinc-800 text-white'
-                        }`}
-                      >
-                        {message.text}
-                      </div>
+                      className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
+                        isOutgoing
+                          ? 'rounded-br-md bg-gradient-to-r from-indigo-500 to-violet-500 text-white'
+                          : 'rounded-bl-md bg-zinc-800 text-white'
+                      }`}
+                    >
+                      {message.text}
                     </div>
+                  </div>
 
-                    {/* Quick Replies */}
-                    {showQuickReplies && (
+                  {/* Quick Replies */}
+                  {showQuickReplies && (
                       <div className="mt-2 flex flex-wrap justify-end gap-1.5">
                         {message.quickReplies!.map((reply, idx) => {
                           const isSelected = isQuickReplySelected && selectedQuickReply?.reply === reply;

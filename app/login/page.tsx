@@ -4,12 +4,12 @@ import PartnerLoginForm from "../../components/PartnerLoginForm";
 import { ArrowRight, Shield, Zap, HeadphonesIcon } from "lucide-react";
 
 export const metadata = {
-  title: "Wesponde Login – Partner-Zugang",
+  title: "Wesponde Zugang – Login & Testen",
   description:
-    "Melde dich mit deiner Wesponde-ID oder via Meta OAuth an, um das Dashboard zu öffnen.",
+    "Login für bestehende Kund:innen oder Testzugang starten.",
 };
 
-const features = [
+const loginFeatures = [
   {
     icon: Shield,
     title: "Sicher",
@@ -27,7 +27,32 @@ const features = [
   },
 ];
 
-export default function LoginPage() {
+const signupFeatures = [
+  {
+    icon: Shield,
+    title: "Sicher",
+    description: "Geschützte Verbindungen und klare Zugriffsrechte",
+  },
+  {
+    icon: Zap,
+    title: "Schnell",
+    description: "In wenigen Minuten startklar für erste Demos",
+  },
+  {
+    icon: HeadphonesIcon,
+    title: "Support",
+    description: "Hilfe beim Einstieg, wenn du sie brauchst",
+  },
+];
+
+export default function LoginPage({ searchParams }: { searchParams: { view?: string } }) {
+  const isSignup = searchParams?.view === "signup";
+  const features = isSignup ? signupFeatures : loginFeatures;
+  const badgeClass = isSignup
+    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+    : "border-indigo-500/20 bg-indigo-500/10 text-indigo-400";
+  const badgeLabel = isSignup ? "Jetzt testen" : "Partner-Login";
+  const heading = isSignup ? "Starte deinen Testzugang" : "Zugriff für bestehende Kund:innen";
   return (
     <div className="relative min-h-screen bg-zinc-950 pt-24">
       {/* Background */}
@@ -39,16 +64,28 @@ export default function LoginPage() {
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
           {/* Left Column - Info */}
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-indigo-400">
-              Partner-Login
+            <span className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wider ${badgeClass}`}>
+              {badgeLabel}
             </span>
             <h1 className="mt-6 font-display text-3xl font-medium tracking-tight text-white sm:text-4xl">
-              Zugriff für bestehende Kund:innen
+              {heading}
             </h1>
-            <p className="mt-4 text-lg text-zinc-400">
-              Verwende deine Geschäfts-E-Mail oder verbinde deinen Meta-Business-Account via OAuth.
-              Nach dem Login wirst du zur App weitergeleitet.
-            </p>
+            {isSignup ? (
+              <p className="mt-4 text-lg text-zinc-400">
+                Melde dich an, um unser Produkt zu testen und erste Konversations‑Demos zu sehen.{" "}
+                <Link href="/login?view=login" className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300">
+                  Schon registriert? Einloggen
+                </Link>
+              </p>
+            ) : (
+              <p className="mt-4 text-lg text-zinc-400">
+                Verwende deine Geschäfts‑E‑Mail oder verbinde deinen Meta‑Business‑Account via OAuth.
+                Nach dem Login wirst du zur App weitergeleitet.{" "}
+                <Link href="/login?view=signup" className="text-indigo-400 underline underline-offset-4 hover:text-indigo-300">
+                  Noch kein Zugang? Jetzt testen
+                </Link>
+              </p>
+            )}
 
             {/* Features */}
             <div className="mt-10 space-y-4">
@@ -67,9 +104,13 @@ export default function LoginPage() {
 
             {/* No Access Card */}
             <div className="mt-10 rounded-xl border border-white/10 bg-zinc-900/50 p-6">
-              <h3 className="font-semibold text-white">Noch kein Zugang?</h3>
+              <h3 className="font-semibold text-white">
+                {isSignup ? "Fragen zum Testzugang?" : "Noch kein Zugang?"}
+              </h3>
               <p className="mt-2 text-sm text-zinc-400">
-                Unser Success-Team schaltet dich nach einem kurzen Onboarding frei.
+                {isSignup
+                  ? "Wir helfen dir beim Einstieg und beantworten deine Fragen."
+                  : "Unser Success‑Team schaltet dich nach einem kurzen Onboarding frei."}
               </p>
               <Link
                 href="/contact"
