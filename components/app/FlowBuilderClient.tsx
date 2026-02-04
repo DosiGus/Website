@@ -1225,9 +1225,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   if (loading || !userId) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
-          <div className="inline-flex h-10 w-10 animate-spin items-center justify-center rounded-full border-2 border-primary border-t-transparent" />
-          <p className="mt-4 text-sm text-slate-500">Flow wird geladen…</p>
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-10 text-center backdrop-blur-xl">
+          <div className="inline-flex h-10 w-10 animate-spin items-center justify-center rounded-full border-2 border-indigo-500 border-t-transparent" />
+          <p className="mt-4 text-sm text-zinc-400">Flow wird geladen...</p>
         </div>
       </div>
     );
@@ -1236,9 +1236,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   if (errorMessage) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-10 text-center max-w-md">
+        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-10 text-center max-w-md backdrop-blur-xl">
           <TriangleAlert className="mx-auto h-12 w-12 text-rose-400" />
-          <p className="mt-4 text-sm text-rose-700">{errorMessage}</p>
+          <p className="mt-4 text-sm text-rose-400">{errorMessage}</p>
         </div>
       </div>
     );
@@ -1246,19 +1246,19 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const warningBadge =
     lintWarnings.length > 0 ? (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-400">
         <TriangleAlert className="h-3.5 w-3.5" /> {lintWarnings.length}
       </span>
     ) : (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-400">
         <CheckCircle2 className="h-3.5 w-3.5" /> OK
       </span>
     );
 
   return (
-    <div className="relative min-h-screen bg-canvas">
+    <div className="relative min-h-screen bg-zinc-950">
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-slate-200/50 bg-white/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-zinc-900/80 backdrop-blur-xl">
         <div className="mx-auto max-w-screen-2xl px-6 py-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             {/* Left: Flow Name */}
@@ -1266,7 +1266,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               <input
                 value={flowName}
                 onChange={(event) => setFlowName(event.target.value)}
-                className="font-display text-2xl font-semibold italic text-slate-900 bg-transparent focus:outline-none focus:ring-0 border-0 p-0"
+                className="font-display text-2xl font-semibold text-white bg-transparent focus:outline-none focus:ring-0 border-0 p-0"
                 style={{ minWidth: '200px' }}
               />
               {warningBadge}
@@ -1277,7 +1277,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               {/* Trigger Button */}
               <button
                 onClick={() => openTriggerModal()}
-                className="btn-press inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-indigo-500/50 hover:text-white transition-colors"
               >
                 <Zap className="h-4 w-4" />
                 Trigger ({triggers.length})
@@ -1287,7 +1287,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               <select
                 value={status}
                 onChange={(event) => setStatus(event.target.value as "Entwurf" | "Aktiv")}
-                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 focus:border-primary focus:outline-none transition-colors"
+                className="rounded-xl border border-white/10 bg-zinc-800 px-4 py-2 text-sm font-semibold text-white focus:border-indigo-500 focus:outline-none transition-colors"
               >
                 <option value="Entwurf">Entwurf</option>
                 <option value="Aktiv">Aktiv</option>
@@ -1299,7 +1299,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                   setInspectorTab("preview");
                   setInspectorOpen(true);
                 }}
-                className="btn-press rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-indigo-500/50 hover:text-white transition-colors"
               >
                 Test
               </button>
@@ -1307,13 +1307,13 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               {/* Save Button */}
               <button
                 onClick={() => handleSave()}
-                className="btn-press rounded-full bg-primary px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30 hover:bg-primary-dark transition-colors"
+                className="rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all"
                 disabled={saveState === "saving"}
               >
                 {saveState === "saving"
-                  ? "Speichert…"
+                  ? "Speichert..."
                   : saveState === "saved"
-                  ? "Gespeichert ✓"
+                  ? "Gespeichert"
                   : "Speichern"}
               </button>
             </div>
@@ -1327,43 +1327,43 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         <div className="mx-auto max-w-screen-2xl px-6 py-4">
           <div className="flex flex-wrap items-center gap-3">
             {/* Mode Toggle */}
-            <div className="flex rounded-full bg-slate-100 p-1">
+            <div className="flex rounded-xl bg-white/5 p-1 border border-white/10">
               <button
                 onClick={() => setBuilderMode("simple")}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${
+                className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
                   builderMode === "simple"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-white/10 text-white shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 Einfach
               </button>
               <button
                 onClick={() => setBuilderMode("pro")}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${
+                className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
                   builderMode === "pro"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-white/10 text-white shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 Profi
               </button>
             </div>
 
-            <div className="h-6 w-px bg-slate-200" />
+            <div className="h-6 w-px bg-white/10" />
 
             {builderMode === "pro" && (
               <>
                 <button
                   onClick={runAutoLayout}
-                  className="btn-press inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-indigo-500/50 hover:text-white transition-colors"
                 >
                   <Focus className="h-4 w-4" />
                   Auto-Layout
                 </button>
                 <button
                   onClick={fitToView}
-                  className="btn-press inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-indigo-500/50 hover:text-white transition-colors"
                 >
                   Zoom to Fit
                 </button>
@@ -1374,19 +1374,19 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
             <div className="relative ml-auto">
               <button
                 onClick={() => setNodeSearchOpen(!nodeSearchOpen)}
-                className="btn-press inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-indigo-500/50 hover:text-white transition-colors"
               >
                 <Search className="h-4 w-4" />
                 Suchen
               </button>
               {nodeSearchOpen && (
-                <div className="absolute right-0 top-12 z-20 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl animate-scale-in">
+                <div className="absolute right-0 top-12 z-20 w-72 rounded-xl border border-white/10 bg-zinc-900 p-3 shadow-2xl animate-scale-in">
                   <input
                     type="text"
                     placeholder="Schritt suchen..."
                     value={nodeSearchQuery}
                     onChange={(e) => setNodeSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                     autoFocus
                   />
                   {searchResults.length > 0 && (
@@ -1395,19 +1395,19 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                         <button
                           key={node.id}
                           onClick={() => jumpToNode(node.id)}
-                          className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
+                          className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-white/5 transition-colors"
                         >
-                          <Focus className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                          <Focus className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
                           <div>
-                            <p className="font-semibold text-slate-700">{node.data?.label || "Ohne Titel"}</p>
-                            <p className="line-clamp-1 text-xs text-slate-400">{node.data?.text || ""}</p>
+                            <p className="font-semibold text-zinc-200">{node.data?.label || "Ohne Titel"}</p>
+                            <p className="line-clamp-1 text-xs text-zinc-500">{node.data?.text || ""}</p>
                           </div>
                         </button>
                       ))}
                     </div>
                   )}
                   {nodeSearchQuery && searchResults.length === 0 && (
-                    <p className="mt-2 text-center text-sm text-slate-400">Keine Ergebnisse</p>
+                    <p className="mt-2 text-center text-sm text-zinc-500">Keine Ergebnisse</p>
                   )}
                 </div>
               )}
@@ -1443,7 +1443,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               onFitView={fitToView}
             />
           ) : (
-            <div className="h-[calc(100vh-200px)] min-h-[500px] overflow-y-auto rounded-2xl border border-slate-200/50 bg-white p-6">
+            <div className="h-[calc(100vh-200px)] min-h-[500px] overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
               <FlowListBuilder
                 nodes={nodes}
                 edges={edges}
@@ -1463,12 +1463,12 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
           {/* Inline Editor Overlay */}
           {inlineEditNodeId && (
-            <div className="absolute bottom-10 right-10 w-72 rounded-xl border border-slate-200 bg-white p-4 shadow-xl animate-scale-in">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <div className="absolute bottom-10 right-10 w-72 rounded-xl border border-white/10 bg-zinc-900 p-4 shadow-2xl animate-scale-in">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Inline bearbeiten
               </p>
               <input
-                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none"
+                className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                 value={inlineEditValue}
                 onChange={(event) => setInlineEditValue(event.target.value)}
                 onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -1482,13 +1482,13 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={applyInlineEdit}
-                  className="btn-press flex-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white"
+                  className="flex-1 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-1.5 text-xs font-semibold text-white"
                 >
                   Speichern
                 </button>
                 <button
                   onClick={() => setInlineEditNodeId(null)}
-                  className="btn-press flex-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600"
+                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
                 >
                   Abbrechen
                 </button>
@@ -1503,7 +1503,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
             <div className="relative">
               <button
                 onClick={() => setAddMenuOpen(!isAddMenuOpen)}
-                className={`fab flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-xl transition-all ${
+                className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-xl shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 ${
                   isAddMenuOpen ? "rotate-45" : ""
                 }`}
               >
@@ -1512,10 +1512,10 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
               {/* Add Menu */}
               {isAddMenuOpen && (
-                <div className="absolute left-16 top-1/2 -translate-y-1/2 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl animate-scale-in">
+                <div className="absolute left-16 top-1/2 -translate-y-1/2 w-48 rounded-xl border border-white/10 bg-zinc-900 p-2 shadow-2xl animate-scale-in">
                   <button
                     onClick={() => addNode("message")}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-white/5 transition-colors"
                   >
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500">
                       <MessageSquare className="h-4 w-4 text-white" />
@@ -1524,7 +1524,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                   </button>
                   <button
                     onClick={() => addNode("choice")}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-white/5 transition-colors"
                   >
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-violet-500 to-purple-600">
                       <Shapes className="h-4 w-4 text-white" />
@@ -1579,13 +1579,13 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
       {/* Trigger Modal */}
       {isTriggerModalOpen && triggerForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-xl font-semibold italic text-slate-900">
+              <h3 className="font-display text-xl font-semibold text-white">
                 {editingTriggerId ? "Trigger bearbeiten" : "Neuen Trigger anlegen"}
               </h3>
-              <button onClick={closeTriggerModal} className="btn-press rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+              <button onClick={closeTriggerModal} className="rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1593,30 +1593,30 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
             {/* Existing Triggers List */}
             {!editingTriggerId && triggers.length > 0 && (
               <div className="mt-5 space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Bestehende Trigger</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Bestehende Trigger</p>
                 <div className="max-h-40 overflow-y-auto space-y-2">
                   {triggers.map((trigger) => (
-                    <div key={trigger.id} className="flex items-center justify-between rounded-lg border border-slate-100 p-3">
+                    <div key={trigger.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3">
                       <div className="flex flex-wrap gap-1">
                         {trigger.config.keywords.slice(0, 3).map((keyword) => (
-                          <span key={keyword} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                          <span key={keyword} className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-zinc-300">
                             {keyword}
                           </span>
                         ))}
                         {trigger.config.keywords.length > 3 && (
-                          <span className="text-xs text-slate-400">+{trigger.config.keywords.length - 3}</span>
+                          <span className="text-xs text-zinc-500">+{trigger.config.keywords.length - 3}</span>
                         )}
                       </div>
                       <div className="flex gap-1">
                         <button
                           onClick={() => openTriggerModal(trigger)}
-                          className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                          className="rounded-full p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => deleteTrigger(trigger.id)}
-                          className="rounded-full p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+                          className="rounded-full p-1.5 text-zinc-400 hover:bg-rose-500/20 hover:text-rose-400 transition-colors"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -1629,17 +1629,17 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
             <div className="mt-5 space-y-5">
               <div>
-                <p className="text-sm font-semibold text-slate-600">Keywords</p>
+                <p className="text-sm font-semibold text-zinc-300">Keywords</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {triggerForm.config.keywords.map((keyword) => (
                     <span
                       key={keyword}
-                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
+                      className="inline-flex items-center gap-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 px-3 py-1 text-xs font-semibold text-indigo-400"
                     >
                       {keyword}
                       <button
                         onClick={() => removeKeywordFromTrigger(keyword)}
-                        className="text-primary/60 hover:text-primary"
+                        className="text-indigo-400/60 hover:text-indigo-400"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -1657,18 +1657,18 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                       }
                     }}
                     placeholder="Keyword hinzufügen"
-                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                   />
                   <button
                     onClick={addKeywordToTrigger}
-                    className="btn-press rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary"
+                    className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-indigo-500/50 hover:text-white transition-colors"
                   >
                     Hinzufügen
                   </button>
                 </div>
               </div>
               <div>
-                <label className="text-sm font-semibold text-slate-600">Match Type</label>
+                <label className="text-sm font-semibold text-zinc-300">Match Type</label>
                 <select
                   value={triggerForm.config.matchType}
                   onChange={(event) =>
@@ -1684,14 +1684,14 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                         : prev,
                     )
                   }
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                 >
                   <option value="CONTAINS">enthält Schlagwort</option>
                   <option value="EXACT">exaktes Schlagwort</option>
                 </select>
               </div>
               <div>
-                <label className="text-sm font-semibold text-slate-600">Start Node</label>
+                <label className="text-sm font-semibold text-zinc-300">Start Node</label>
                 <select
                   value={triggerForm.startNodeId ?? ""}
                   onChange={(event) =>
@@ -1699,9 +1699,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                       prev ? { ...prev, startNodeId: event.target.value || null } : prev,
                     )
                   }
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                 >
-                  <option value="">Node wählen…</option>
+                  <option value="">Node wählen...</option>
                   {nodes.map((node) => (
                     <option key={node.id} value={node.id}>
                       {node.data?.label ?? node.id}
@@ -1713,7 +1713,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
             <div className="mt-6 flex gap-2">
               <button
                 onClick={saveTrigger}
-                className="btn-press flex-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white"
+                className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all disabled:opacity-50"
                 disabled={
                   !triggerForm.config.keywords.length || !triggerForm.startNodeId
                 }
@@ -1722,7 +1722,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               </button>
               <button
                 onClick={closeTriggerModal}
-                className="btn-press rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-400 hover:text-white transition-colors"
               >
                 Abbrechen
               </button>

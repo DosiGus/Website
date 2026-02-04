@@ -219,12 +219,12 @@ export default function FlowSimulator({
   return (
     <div className="flex flex-col h-[400px]">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-        <p className="text-sm font-semibold text-slate-600">Chat-Simulation</p>
+      <div className="flex items-center justify-between pb-3 border-b border-white/10">
+        <p className="text-sm font-semibold text-zinc-300">Chat-Simulation</p>
         {isStarted && (
           <button
             onClick={handleReset}
-            className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-brand transition-colors"
+            className="flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-indigo-400 transition-colors"
           >
             <RotateCcw className="h-3 w-3" />
             Neustart
@@ -237,19 +237,19 @@ export default function FlowSimulator({
         {hasNoStartNode ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
             <AlertCircle className="h-8 w-8 text-amber-500" />
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-zinc-500">
               Kein Start-Node gefunden. Erstelle einen Trigger oder einen
               Start-Node.
             </p>
           </div>
         ) : !isStarted ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
-            <p className="text-sm text-slate-500 text-center px-4">
+            <p className="text-sm text-zinc-500 text-center px-4">
               Teste deinen Flow ohne echte Instagram-Verbindung.
             </p>
             <button
               onClick={handleStart}
-              className="flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand/90 transition-colors"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all"
             >
               <Play className="h-4 w-4" />
               Simulation starten
@@ -267,13 +267,13 @@ export default function FlowSimulator({
                 <div
                   className={`max-w-[85%] rounded-2xl px-4 py-2 ${
                     msg.type === "user"
-                      ? "bg-brand text-white"
-                      : "bg-slate-100 text-slate-800"
+                      ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white"
+                      : "bg-zinc-800 text-zinc-200"
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     {msg.type === "bot" ? (
-                      <Bot className="h-3 w-3 text-slate-400" />
+                      <Bot className="h-3 w-3 text-zinc-500" />
                     ) : (
                       <User className="h-3 w-3 text-white/70" />
                     )}
@@ -301,7 +301,7 @@ export default function FlowSimulator({
                           key={qr.id}
                           onClick={() => handleQuickReplyClick(qr)}
                           disabled={msg.id !== messages[messages.length - 1]?.id}
-                          className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-white shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-semibold text-zinc-200 hover:bg-white/20 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {qr.label}
                         </button>
@@ -314,12 +314,12 @@ export default function FlowSimulator({
 
             {isFlowEnded && (
               <div className="text-center py-4">
-                <p className="text-xs text-slate-400 mb-2">
+                <p className="text-xs text-zinc-500 mb-2">
                   -- Flow beendet --
                 </p>
                 <button
                   onClick={handleReset}
-                  className="text-xs font-semibold text-brand hover:text-brand/80 transition-colors"
+                  className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
                 >
                   Erneut testen
                 </button>
@@ -333,7 +333,7 @@ export default function FlowSimulator({
 
       {/* Input Area */}
       {isStarted && !isFlowEnded && expectsFreeText && (
-        <div className="pt-3 border-t border-slate-200">
+        <div className="pt-3 border-t border-white/10">
           <div className="flex gap-2">
             <input
               value={userInput}
@@ -345,17 +345,17 @@ export default function FlowSimulator({
                 }
               }}
               placeholder={currentPlaceholder}
-              className="flex-1 rounded-2xl border border-slate-200 px-4 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand/20"
+              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20"
             />
             <button
               onClick={handleFreeTextSubmit}
               disabled={!userInput.trim()}
-              className="rounded-full bg-brand p-2 text-white hover:bg-brand/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 p-2 text-white hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <Send className="h-4 w-4" />
             </button>
           </div>
-          <p className="text-[10px] text-slate-400 mt-2 text-center">
+          <p className="text-[10px] text-zinc-500 mt-2 text-center">
             Dieser Node erwartet eine Texteingabe
           </p>
         </div>

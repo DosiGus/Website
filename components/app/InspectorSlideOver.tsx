@@ -70,9 +70,9 @@ type InspectorSlideOverProps = {
 };
 
 const EDGE_TONE_META: Record<EdgeTone, { label: string; bg: string; text: string }> = {
-  neutral: { label: 'Neutral', bg: '#e2e8f0', text: '#0f172a' },
-  positive: { label: 'Bestätigt', bg: '#d1fae5', text: '#065f46' },
-  negative: { label: 'Ablehnung', bg: '#fee2e2', text: '#b91c1c' },
+  neutral: { label: 'Neutral', bg: '#3f3f46', text: '#a1a1aa' },
+  positive: { label: 'Bestätigt', bg: '#065f46', text: '#34d399' },
+  negative: { label: 'Ablehnung', bg: '#7f1d1d', text: '#fca5a5' },
 };
 
 export default function InspectorSlideOver({
@@ -134,7 +134,7 @@ export default function InspectorSlideOver({
     <>
       {/* Backdrop - subtle overlay */}
       <div
-        className={`fixed inset-0 z-30 bg-slate-900/10 backdrop-blur-[1px] transition-opacity duration-300 ${
+        className={`fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
@@ -144,28 +144,28 @@ export default function InspectorSlideOver({
       <div
         ref={panelRef}
         className={`
-          fixed right-0 top-0 z-40 h-full w-[380px] max-w-[90vw]
-          bg-white shadow-2xl border-l border-slate-200
+          fixed right-0 top-0 z-40 h-full w-[400px] max-w-[90vw]
+          bg-zinc-900 shadow-2xl border-l border-white/10
           transform transition-transform duration-300 ease-out
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h2 className="font-display text-xl font-semibold text-slate-900 italic">
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+          <h2 className="font-display text-xl font-semibold text-white">
             Inspector
           </h2>
           <button
             onClick={onClose}
-            className="btn-press rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            className="rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="border-b border-slate-100 px-4 py-3">
-          <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+        <div className="border-b border-white/10 px-4 py-3">
+          <div className="flex gap-1 rounded-xl bg-white/5 p-1">
             {(['content', 'logic', 'variables', 'preview'] as InspectorTab[]).map((tab) => (
               <button
                 key={tab}
@@ -173,8 +173,8 @@ export default function InspectorSlideOver({
                 className={`
                   flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all
                   ${inspectorTab === tab
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
+                    ? 'bg-white/10 text-white shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-300'
                   }
                 `}
               >
@@ -193,11 +193,11 @@ export default function InspectorSlideOver({
                 <>
                   {/* Text Message */}
                   <div>
-                    <label className="text-sm font-semibold text-slate-600">Textnachricht</label>
+                    <label className="text-sm font-semibold text-zinc-400">Textnachricht</label>
                     <textarea
                       value={selectedNode.data?.text ?? ''}
                       onChange={(e) => onNodeFieldChange('text', e.target.value)}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 resize-none"
+                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
                       rows={4}
                       placeholder="Gib hier deine Nachricht ein..."
                     />
@@ -205,25 +205,25 @@ export default function InspectorSlideOver({
 
                   {/* Image URL */}
                   <div>
-                    <label className="text-sm font-semibold text-slate-600">Bild (URL)</label>
+                    <label className="text-sm font-semibold text-zinc-400">Bild (URL)</label>
                     <input
                       value={selectedNode.data?.imageUrl ?? ''}
                       onChange={(e) => onNodeFieldChange('imageUrl', e.target.value)}
                       placeholder="https://..."
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     />
                   </div>
 
                   {/* Input Mode */}
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-                    <p className="text-sm font-semibold text-slate-600 mb-3">Antwortart</p>
-                    <div className="flex rounded-lg bg-white p-1 border border-slate-200">
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-sm font-semibold text-zinc-300 mb-3">Antwortart</p>
+                    <div className="flex rounded-lg bg-white/5 p-1 border border-white/10">
                       <button
                         onClick={() => onInputModeChange('buttons')}
                         className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-all ${
                           selectedInputMode === 'buttons'
-                            ? 'bg-primary text-white'
-                            : 'text-slate-500 hover:text-slate-700'
+                            ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white'
+                            : 'text-zinc-500 hover:text-zinc-300'
                         }`}
                       >
                         Buttons
@@ -232,15 +232,15 @@ export default function InspectorSlideOver({
                         onClick={() => onInputModeChange('free_text')}
                         className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-all ${
                           selectedInputMode === 'free_text'
-                            ? 'bg-primary text-white'
-                            : 'text-slate-500 hover:text-slate-700'
+                            ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white'
+                            : 'text-zinc-500 hover:text-zinc-300'
                         }`}
                       >
                         Freitext
                       </button>
                     </div>
                     {selectedInputMode === 'free_text' && (
-                      <p className="mt-2 text-xs text-slate-500">
+                      <p className="mt-2 text-xs text-zinc-500">
                         Der Kunde schreibt hier frei. Du bestimmst, wohin es danach weitergeht.
                       </p>
                     )}
@@ -248,22 +248,22 @@ export default function InspectorSlideOver({
 
                   {/* Free Text Options */}
                   {selectedInputMode === 'free_text' ? (
-                    <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 space-y-4">
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4">
                       <div>
-                        <label className="text-xs font-semibold text-slate-500">Platzhalter im Chat</label>
+                        <label className="text-xs font-semibold text-zinc-500">Platzhalter im Chat</label>
                         <input
                           value={selectedNode.data?.placeholder ?? ''}
                           onChange={(e) => onFreeTextMetaChange('placeholder', e.target.value)}
-                          placeholder="z. B. Datum eingeben…"
-                          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                          placeholder="z. B. Datum eingeben..."
+                          className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-500">Dieses Feld sammelt</label>
+                        <label className="text-xs font-semibold text-zinc-500">Dieses Feld sammelt</label>
                         <select
                           value={selectedNode.data?.collects ?? ''}
                           onChange={(e) => onFreeTextMetaChange('collects', e.target.value)}
-                          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                          className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                         >
                           <option value="">Keine Zuordnung</option>
                           <option value="name">Name</option>
@@ -276,13 +276,13 @@ export default function InspectorSlideOver({
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-500">Weiterleiten zu</label>
+                        <label className="text-xs font-semibold text-zinc-500">Weiterleiten zu</label>
                         <select
                           value={selectedFreeTextTarget ?? ''}
                           onChange={(e) => onFreeTextTargetChange(selectedNode.id, e.target.value || null)}
-                          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                          className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                         >
-                          <option value="">Node wählen…</option>
+                          <option value="">Node wählen...</option>
                           {nodes
                             .filter((node) => node.id !== selectedNode.id)
                             .map((node) => (
@@ -295,18 +295,18 @@ export default function InspectorSlideOver({
                     </div>
                   ) : (
                     /* Quick Replies / Buttons */
-                    <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm font-semibold text-slate-600">Antwort-Buttons</p>
+                        <p className="text-sm font-semibold text-zinc-300">Antwort-Buttons</p>
                         <button
                           onClick={onAddQuickReply}
-                          className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
+                          className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
                         >
                           + Button
                         </button>
                       </div>
                       {selectedNodeReplies.length === 0 ? (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-zinc-500">
                           Noch keine Buttons. Füge Buttons hinzu, um Antworten zu verlinken.
                         </p>
                       ) : (
@@ -314,13 +314,13 @@ export default function InspectorSlideOver({
                           {selectedNodeReplies.map((reply) => (
                             <div
                               key={reply.id}
-                              className="rounded-xl border border-slate-200 bg-white p-3 space-y-2"
+                              className="rounded-xl border border-white/10 bg-zinc-800/50 p-3 space-y-2"
                             >
-                              <div className="flex items-center justify-between text-xs text-slate-500">
+                              <div className="flex items-center justify-between text-xs text-zinc-500">
                                 <span>Button</span>
                                 <button
                                   onClick={() => onRemoveQuickReply(reply.id)}
-                                  className="text-rose-500 hover:text-rose-600"
+                                  className="text-rose-400 hover:text-rose-300"
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </button>
@@ -329,22 +329,22 @@ export default function InspectorSlideOver({
                                 value={reply.label}
                                 onChange={(e) => onUpdateQuickReply(reply.id, { label: e.target.value })}
                                 placeholder="Button-Text"
-                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                               />
                               <input
                                 value={reply.payload}
                                 onChange={(e) => onUpdateQuickReply(reply.id, { payload: e.target.value })}
                                 placeholder="Payload / interne Aktion"
-                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                               />
                               <div>
-                                <label className="text-xs font-semibold text-slate-500">Weiterleiten zu</label>
+                                <label className="text-xs font-semibold text-zinc-500">Weiterleiten zu</label>
                                 <select
                                   value={reply.targetNodeId ?? ''}
                                   onChange={(e) => onQuickReplyTargetChange(reply.id, e.target.value, reply.label)}
-                                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                                  className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                                 >
-                                  <option value="">Node wählen…</option>
+                                  <option value="">Node wählen...</option>
                                   <option value="__NEW_FREETEXT__">+ Freitext (neu)</option>
                                   {nodes.map((node) => (
                                     <option key={node.id} value={node.id}>
@@ -363,28 +363,28 @@ export default function InspectorSlideOver({
                   {/* Delete Node Button */}
                   <button
                     onClick={onDeleteSelection}
-                    className="btn-press w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-100 transition-colors"
+                    className="w-full rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-400 hover:bg-rose-500/20 transition-colors"
                   >
                     Node entfernen
                   </button>
                 </>
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center">
-                  <p className="text-sm text-slate-500">
+                <div className="rounded-xl border border-dashed border-white/20 p-8 text-center">
+                  <p className="text-sm text-zinc-500">
                     Wähle einen Node im Canvas aus, um die Inhalte zu bearbeiten.
                   </p>
                 </div>
               )}
 
               {/* Snippets */}
-              <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-                <p className="text-sm font-semibold text-slate-600 mb-3">Snippets</p>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <p className="text-sm font-semibold text-zinc-300 mb-3">Snippets</p>
                 <div className="flex flex-wrap gap-2">
                   {snippets.map((snippet) => (
                     <button
                       key={snippet.label}
                       onClick={() => onSnippetInsert(snippet.text)}
-                      className="btn-press rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-zinc-400 hover:border-indigo-500/50 hover:text-indigo-400 transition-colors"
                     >
                       {snippet.label}
                     </button>
@@ -393,13 +393,13 @@ export default function InspectorSlideOver({
               </div>
 
               {/* Smart Prompt */}
-              <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-                <p className="flex items-center gap-2 text-sm font-semibold text-slate-600 mb-3">
-                  <Sparkles className="h-4 w-4 text-primary" />
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold text-zinc-300 mb-3">
+                  <Sparkles className="h-4 w-4 text-indigo-400" />
                   Smart Prompt
                 </p>
                 <textarea
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none resize-none"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none resize-none"
                   rows={3}
                   placeholder="z. B. 'Erzeuge eine freundliche Begrüßung für ein italienisches Restaurant...'"
                   value={smartPrompt}
@@ -407,7 +407,7 @@ export default function InspectorSlideOver({
                 />
                 <button
                   onClick={onSmartPromptSubmit}
-                  className="btn-press mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-400 hover:border-indigo-500/50 hover:text-indigo-400 transition-colors"
                 >
                   Vorschlag einsetzen
                 </button>
@@ -421,19 +421,19 @@ export default function InspectorSlideOver({
               {selectedEdge ? (
                 <>
                   <div>
-                    <label className="text-sm font-semibold text-slate-600">Edge Label</label>
+                    <label className="text-sm font-semibold text-zinc-400">Edge Label</label>
                     <input
                       value={(selectedEdge.data as any)?.condition ?? ''}
                       onChange={(e) => onEdgeFieldChange('condition', e.target.value)}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-slate-600">Bedeutung / Ton</label>
+                    <label className="text-sm font-semibold text-zinc-400">Bedeutung / Ton</label>
                     <select
                       value={((selectedEdge.data as any)?.tone as EdgeTone) ?? 'neutral'}
                       onChange={(e) => onEdgeFieldChange('tone', e.target.value)}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-primary focus:outline-none"
+                      className="mt-2 w-full rounded-xl border border-white/10 bg-zinc-800 px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
                     >
                       {Object.entries(EDGE_TONE_META).map(([value, meta]) => (
                         <option key={value} value={value}>
@@ -444,8 +444,8 @@ export default function InspectorSlideOver({
                   </div>
                 </>
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center">
-                  <p className="text-sm text-slate-500">
+                <div className="rounded-xl border border-dashed border-white/20 p-8 text-center">
+                  <p className="text-sm text-zinc-500">
                     Wähle eine Verbindung, um Bedingungen und Labels zu pflegen.
                   </p>
                 </div>
@@ -455,8 +455,8 @@ export default function InspectorSlideOver({
 
           {/* Variables Tab */}
           {inspectorTab === 'variables' && (
-            <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center">
-              <p className="text-sm text-slate-500">
+            <div className="rounded-xl border border-dashed border-white/20 p-8 text-center">
+              <p className="text-sm text-zinc-500">
                 Variablen-Support folgt. Plane hier Platzhalter wie {"{{customer_name}}"} ein.
               </p>
             </div>
@@ -464,7 +464,7 @@ export default function InspectorSlideOver({
 
           {/* Preview Tab */}
           {inspectorTab === 'preview' && (
-            <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
               <FlowSimulator
                 nodes={nodes}
                 edges={edges}
@@ -475,10 +475,10 @@ export default function InspectorSlideOver({
           )}
 
           {/* Quality Check Section */}
-          <div className="mt-6 rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-            <p className="text-sm font-semibold text-slate-600 mb-3">Qualitäts-Check</p>
+          <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
+            <p className="text-sm font-semibold text-zinc-300 mb-3">Qualitäts-Check</p>
             {lintWarnings.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+              <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-400">
                 <CheckCircle2 className="h-4 w-4" /> Keine Warnungen
               </div>
             ) : (
@@ -488,8 +488,8 @@ export default function InspectorSlideOver({
                     key={warning.id}
                     className={`rounded-lg border p-3 text-sm ${
                       warning.severity === 'info'
-                        ? 'border-blue-100 bg-blue-50/50 text-blue-700'
-                        : 'border-amber-100 bg-amber-50/50 text-amber-700'
+                        ? 'border-blue-500/20 bg-blue-500/10 text-blue-400'
+                        : 'border-amber-500/20 bg-amber-500/10 text-amber-400'
                     }`}
                   >
                     <p className="font-semibold">{warning.message}</p>
@@ -513,12 +513,12 @@ export default function InspectorSlideOver({
 
           {/* Save State Feedback */}
           {saveState === 'saved' && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+            <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-400">
               <CheckCircle2 className="h-4 w-4" /> Änderungen gespeichert
             </div>
           )}
           {saveState === 'error' && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+            <div className="mt-4 flex items-center gap-2 rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-2 text-sm font-semibold text-rose-400">
               <TriangleAlert className="h-4 w-4" /> Speichern fehlgeschlagen
             </div>
           )}

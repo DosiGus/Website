@@ -34,14 +34,14 @@ type FlowBuilderCanvasProps = {
   onFitView?: () => void;
 };
 
-// Custom edge styles based on tone
+// Custom edge styles based on tone - updated for dark theme
 const getEdgeStyle = (edge: Edge) => {
   const tone = (edge.data as any)?.tone ?? 'neutral';
 
   switch (tone) {
     case 'positive':
       return {
-        stroke: '#10B981',
+        stroke: '#34D399',
         strokeWidth: 2.5,
       };
     case 'negative':
@@ -51,7 +51,7 @@ const getEdgeStyle = (edge: Edge) => {
       };
     default:
       return {
-        stroke: '#94a3b8',
+        stroke: '#52525b',
         strokeWidth: 2,
       };
   }
@@ -83,7 +83,7 @@ function Canvas({
   );
 
   return (
-    <div className="relative h-[calc(100vh-200px)] min-h-[500px] overflow-hidden rounded-2xl canvas-gradient border border-slate-200/50">
+    <div className="relative h-[calc(100vh-200px)] min-h-[500px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/50 backdrop-blur-sm">
       <ReactFlow
         nodes={nodes}
         edges={styledEdges}
@@ -108,29 +108,29 @@ function Canvas({
         snapGrid={[20, 20]}
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
-          style: { stroke: '#94a3b8', strokeWidth: 2 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#52525b' },
+          style: { stroke: '#52525b', strokeWidth: 2 },
         }}
         className="bg-transparent"
       >
-        {/* Dot Grid Background */}
+        {/* Dot Grid Background - Dark Theme */}
         <Background
           gap={20}
-          size={1.5}
-          color="#cbd5e1"
+          size={1}
+          color="#3f3f46"
           variant={BackgroundVariant.Dots}
         />
 
-        {/* MiniMap with updated styling */}
+        {/* MiniMap with dark styling */}
         <MiniMap
           pannable
           zoomable
           position="bottom-right"
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            border: '1px solid #e2e8f0',
+            backgroundColor: 'rgba(24, 24, 27, 0.95)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '12px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
           }}
           nodeColor={(node) => {
             if (node.data?.isStart) return '#10B981';
@@ -138,21 +138,21 @@ function Canvas({
             if (node.data?.variant === 'choice') return '#8B5CF6';
             return '#6366F1';
           }}
-          maskColor="rgba(0, 0, 0, 0.05)"
+          maskColor="rgba(0, 0, 0, 0.3)"
         />
 
-        {/* Controls with updated styling */}
+        {/* Controls with dark styling */}
         <Controls
           position="bottom-left"
           style={{
             display: 'flex',
             flexDirection: 'row',
             gap: '4px',
-            backgroundColor: 'white',
-            border: '1px solid #e2e8f0',
+            backgroundColor: 'rgba(24, 24, 27, 0.95)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '12px',
             padding: '4px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
           }}
           showInteractive={false}
         />
@@ -162,7 +162,7 @@ function Canvas({
       <div className="pointer-events-none absolute right-4 top-4 flex gap-2">
         <button
           type="button"
-          className="pointer-events-auto btn-press rounded-full border border-slate-200 bg-white/90 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:border-primary hover:text-primary transition-colors"
+          className="pointer-events-auto rounded-xl border border-white/10 bg-zinc-900/90 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-zinc-300 shadow-lg hover:border-indigo-500/50 hover:text-white transition-colors"
           onClick={onFitView}
         >
           Zoom to Fit

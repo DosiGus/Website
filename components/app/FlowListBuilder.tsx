@@ -125,7 +125,7 @@ const buildFreeTextDefaults = (label?: string) => {
   if (lower.includes("person") || lower.includes("gäste") || lower.includes("gast")) {
     return { text: "Für wie viele Personen?", collects: "guestCount", placeholder: "z. B. 4" };
   }
-  return { text: "Bitte gib deine Antwort ein.", collects: "", placeholder: "Antwort eingeben…" };
+  return { text: "Bitte gib deine Antwort ein.", collects: "", placeholder: "Antwort eingeben..." };
 };
 
 const COLLECTS_LABELS: Record<string, string> = {
@@ -368,18 +368,18 @@ export default function FlowListBuilder({
   if (nodes.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-8">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5">
-          <MessageSquare className="h-10 w-10 text-primary" />
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500/20 to-violet-500/20">
+          <MessageSquare className="h-10 w-10 text-indigo-400" />
         </div>
-        <h3 className="mt-6 font-display text-2xl font-semibold italic text-slate-900">
+        <h3 className="mt-6 font-display text-2xl font-semibold text-white">
           Dein Flow ist noch leer
         </h3>
-        <p className="mt-2 max-w-md text-center text-slate-500">
+        <p className="mt-2 max-w-md text-center text-zinc-500">
           Erstelle deinen ersten Schritt, um mit dem Aufbau deines Konversations-Flows zu beginnen.
         </p>
         <button
           onClick={() => onAddNode("message", "Willkommen! Wie kann ich dir heute helfen?")}
-          className="btn-press mt-8 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30"
+          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25"
         >
           <Sparkles className="h-4 w-4" />
           Ersten Schritt erstellen
@@ -391,26 +391,26 @@ export default function FlowListBuilder({
   return (
     <div ref={containerRef} className="space-y-0">
       {/* Flow Header Stats */}
-      <div className="mb-6 flex items-center justify-between rounded-xl bg-white border border-slate-200 p-4">
+      <div className="mb-6 flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 text-sm">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              <MessageSquare className="h-4 w-4 text-primary" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20">
+              <MessageSquare className="h-4 w-4 text-indigo-400" />
             </div>
-            <span className="font-semibold text-slate-900">{nodes.length}</span>
-            <span className="text-slate-500">Schritte</span>
+            <span className="font-semibold text-white">{nodes.length}</span>
+            <span className="text-zinc-500">Schritte</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
-              <Flag className="h-4 w-4 text-emerald-600" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20">
+              <Flag className="h-4 w-4 text-emerald-400" />
             </div>
-            <span className="font-semibold text-slate-900">{startNodeIds.size}</span>
-            <span className="text-slate-500">Startpunkte</span>
+            <span className="font-semibold text-white">{startNodeIds.size}</span>
+            <span className="text-zinc-500">Startpunkte</span>
           </div>
         </div>
         <button
           onClick={() => onAddNode("message")}
-          className="btn-press inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-shadow"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-shadow"
         >
           <Plus className="h-4 w-4" />
           Neuer Schritt
@@ -420,7 +420,7 @@ export default function FlowListBuilder({
       {/* Flow Steps */}
       <div className="relative">
         {/* Vertical Connection Line */}
-        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary/20 via-slate-200 to-slate-200" />
+        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-500/30 via-white/10 to-white/10" />
 
         {orderedNodes.map((node, index) => {
           const isStart = startNodeIds.has(node.id);
@@ -437,10 +437,10 @@ export default function FlowListBuilder({
               {/* Step Card */}
               <div
                 className={`
-                  relative ml-16 mb-4 rounded-xl border-2 bg-white transition-all duration-200
+                  relative ml-16 mb-4 rounded-xl border-2 bg-zinc-900/50 transition-all duration-200
                   ${isSelected
-                    ? 'border-primary shadow-lg shadow-primary/10'
-                    : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
+                    ? 'border-indigo-500/50 shadow-lg shadow-indigo-500/10'
+                    : 'border-white/10 hover:border-white/20 hover:shadow-md'
                   }
                 `}
               >
@@ -451,8 +451,8 @@ export default function FlowListBuilder({
                     ${isStart
                       ? 'bg-emerald-500 border-emerald-500 text-white'
                       : isSelected
-                        ? 'bg-primary border-primary text-white'
-                        : 'bg-white border-slate-300 text-slate-600'
+                        ? 'bg-indigo-500 border-indigo-500 text-white'
+                        : 'bg-zinc-800 border-zinc-600 text-zinc-400'
                     }
                   `}
                 >
@@ -484,16 +484,16 @@ export default function FlowListBuilder({
                   {/* Title & Preview */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-slate-900 truncate">
+                      <h3 className="font-semibold text-white truncate">
                         {node.data?.label || "Ohne Titel"}
                       </h3>
                       {isStart && (
-                        <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                        <span className="shrink-0 rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-xs font-semibold text-emerald-400">
                           Start
                         </span>
                       )}
                       {inputMode === 'free_text' && (
-                        <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                        <span className="shrink-0 rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-xs font-semibold text-amber-400">
                           {(node.data as any)?.collects ? COLLECTS_LABELS[(node.data as any).collects] || 'Freitext' : 'Freitext'}
                         </span>
                       )}
@@ -503,44 +503,44 @@ export default function FlowListBuilder({
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-sm text-slate-500 truncate">
+                    <p className="mt-0.5 text-sm text-zinc-500 truncate">
                       {node.data?.text || "Keine Nachricht"}
                     </p>
                   </div>
 
                   {/* Expand Arrow */}
-                  <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  <ChevronRight className={`h-5 w-5 text-zinc-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                 </div>
 
                 {/* Expanded Content */}
                 {isExpanded && (
-                  <div className="border-t border-slate-100 p-4 space-y-4 animate-fade-in-up">
+                  <div className="border-t border-white/10 p-4 space-y-4 animate-fade-in-up">
                     {/* Message Text */}
                     <div>
-                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
                         Nachricht
                       </label>
                       <textarea
                         value={node.data?.text || ""}
                         onChange={(e) => updateNodeText(node.id, e.target.value)}
                         placeholder="Was soll der Bot sagen?"
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors resize-none"
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-colors resize-none"
                         rows={3}
                       />
                     </div>
 
                     {/* Response Type Toggle */}
                     <div>
-                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
                         Wie antwortet der Kunde?
                       </label>
-                      <div className="flex rounded-xl bg-slate-100 p-1">
+                      <div className="flex rounded-xl bg-white/5 p-1 border border-white/10">
                         <button
                           onClick={() => updateInputMode(node.id, "buttons")}
                           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
                             inputMode === "buttons"
-                              ? "bg-white text-slate-900 shadow-sm"
-                              : "text-slate-500 hover:text-slate-700"
+                              ? "bg-white/10 text-white shadow-sm"
+                              : "text-zinc-500 hover:text-zinc-300"
                           }`}
                         >
                           <MessageSquare className="h-4 w-4" />
@@ -550,8 +550,8 @@ export default function FlowListBuilder({
                           onClick={() => updateInputMode(node.id, "free_text")}
                           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
                             inputMode === "free_text"
-                              ? "bg-white text-slate-900 shadow-sm"
-                              : "text-slate-500 hover:text-slate-700"
+                              ? "bg-white/10 text-white shadow-sm"
+                              : "text-zinc-500 hover:text-zinc-300"
                           }`}
                         >
                           <Keyboard className="h-4 w-4" />
@@ -562,20 +562,20 @@ export default function FlowListBuilder({
 
                     {/* Free Text Config */}
                     {inputMode === "free_text" && (
-                      <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-3">
-                        <p className="text-sm text-amber-800">
+                      <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-4 space-y-3">
+                        <p className="text-sm text-amber-400">
                           Der Kunde tippt seine Antwort frei ein.
                         </p>
 
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
-                            <label className="mb-1 block text-xs font-medium text-amber-900">
+                            <label className="mb-1 block text-xs font-medium text-amber-300">
                               Dieses Feld sammelt
                             </label>
                             <select
                               value={(node.data as any)?.collects ?? ""}
                               onChange={(e) => updateFreeTextMeta(node.id, "collects", e.target.value)}
-                              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                              className="w-full rounded-lg border border-amber-500/30 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                             >
                               <option value="">Keine Zuordnung</option>
                               <option value="name">Name</option>
@@ -588,15 +588,15 @@ export default function FlowListBuilder({
                             </select>
                           </div>
                           <div>
-                            <label className="mb-1 block text-xs font-medium text-amber-900">
+                            <label className="mb-1 block text-xs font-medium text-amber-300">
                               Danach weiter zu
                             </label>
                             <select
                               value={freeTextTarget}
                               onChange={(e) => setFreeTextTarget(node.id, e.target.value)}
-                              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                              className="w-full rounded-lg border border-amber-500/30 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                             >
-                              <option value="">Schritt wählen…</option>
+                              <option value="">Schritt wählen...</option>
                               {nodes.filter(n => n.id !== node.id).map((n) => (
                                 <option key={n.id} value={n.id}>
                                   {n.data?.label || "Ohne Titel"}
@@ -607,7 +607,7 @@ export default function FlowListBuilder({
                         </div>
 
                         {freeTextTarget && (
-                          <div className="flex items-center gap-2 text-sm text-amber-800">
+                          <div className="flex items-center gap-2 text-sm text-amber-400">
                             <ArrowRight className="h-4 w-4" />
                             <span>Weiter zu: <strong>{getNodeLabel(freeTextTarget)}</strong></span>
                           </div>
@@ -619,12 +619,12 @@ export default function FlowListBuilder({
                     {inputMode === "buttons" && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                             Antwort-Buttons ({quickReplies.length})
                           </label>
                           <button
                             onClick={() => addQuickReply(node.id)}
-                            className="btn-press inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 px-3 py-1 text-xs font-semibold text-indigo-400 hover:bg-indigo-500/30 transition-colors"
                           >
                             <Plus className="h-3 w-3" />
                             Button
@@ -632,13 +632,13 @@ export default function FlowListBuilder({
                         </div>
 
                         {quickReplies.length === 0 ? (
-                          <div className="rounded-xl border-2 border-dashed border-slate-200 p-6 text-center">
-                            <p className="text-sm text-slate-500">
+                          <div className="rounded-xl border-2 border-dashed border-white/20 p-6 text-center">
+                            <p className="text-sm text-zinc-500">
                               Noch keine Buttons. Füge Buttons hinzu, damit der Kunde antworten kann.
                             </p>
                             <button
                               onClick={() => addQuickReply(node.id)}
-                              className="btn-press mt-3 inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary transition-colors"
+                              className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-400 hover:border-indigo-500/50 hover:text-indigo-400 transition-colors"
                             >
                               <Plus className="h-4 w-4" />
                               Ersten Button hinzufügen
@@ -649,9 +649,9 @@ export default function FlowListBuilder({
                             {quickReplies.map((reply, replyIndex) => (
                               <div
                                 key={reply.id}
-                                className="group flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3"
+                                className="group flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-800/50 p-3"
                               >
-                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-xs font-bold text-zinc-300">
                                   {replyIndex + 1}
                                 </div>
                                 <input
@@ -659,15 +659,15 @@ export default function FlowListBuilder({
                                   value={reply.label}
                                   onChange={(e) => updateQuickReply(node.id, reply.id, { label: e.target.value })}
                                   placeholder="Button-Text"
-                                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                                 />
-                                <ArrowRight className="h-4 w-4 text-slate-400" />
+                                <ArrowRight className="h-4 w-4 text-zinc-500" />
                                 <select
                                   value={reply.targetNodeId || ""}
                                   onChange={(e) => handleQuickReplyTargetChange(node.id, reply.id, e.target.value, reply.label)}
-                                  className="w-36 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm focus:border-primary focus:outline-none"
+                                  className="w-36 rounded-lg border border-white/10 bg-zinc-800 px-2 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                                 >
-                                  <option value="">Ziel wählen…</option>
+                                  <option value="">Ziel wählen...</option>
                                   <option value="__NEW_FREETEXT__">+ Neuer Freitext</option>
                                   {nodes.filter(n => n.id !== node.id).map((n) => (
                                     <option key={n.id} value={n.id}>
@@ -677,7 +677,7 @@ export default function FlowListBuilder({
                                 </select>
                                 <button
                                   onClick={() => removeQuickReply(node.id, reply.id)}
-                                  className="rounded-full p-1.5 text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-rose-50 hover:text-rose-600 transition-all"
+                                  className="rounded-full p-1.5 text-zinc-500 opacity-0 group-hover:opacity-100 hover:bg-rose-500/20 hover:text-rose-400 transition-all"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </button>
@@ -689,10 +689,10 @@ export default function FlowListBuilder({
                     )}
 
                     {/* Delete Button */}
-                    <div className="pt-2 border-t border-slate-100">
+                    <div className="pt-2 border-t border-white/10">
                       <button
                         onClick={() => onDeleteNode(node.id)}
-                        className="btn-press w-full flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-100 transition-colors"
+                        className="w-full flex items-center justify-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 py-2.5 text-sm font-semibold text-rose-400 hover:bg-rose-500/20 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
                         Schritt löschen
@@ -705,7 +705,7 @@ export default function FlowListBuilder({
               {/* Connection Arrow between steps */}
               {!isLast && (
                 <div className="absolute -left-[28px] bottom-0 translate-y-1/2 flex h-6 w-6 items-center justify-center">
-                  <ArrowDown className="h-4 w-4 text-slate-300" />
+                  <ArrowDown className="h-4 w-4 text-zinc-600" />
                 </div>
               )}
             </div>
@@ -714,12 +714,12 @@ export default function FlowListBuilder({
 
         {/* Add New Step at End */}
         <div className="relative ml-16">
-          <div className="absolute -left-[52px] top-4 flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-slate-300 bg-white">
-            <Plus className="h-5 w-5 text-slate-400" />
+          <div className="absolute -left-[52px] top-4 flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-zinc-600 bg-zinc-800">
+            <Plus className="h-5 w-5 text-zinc-500" />
           </div>
           <button
             onClick={() => onAddNode("message")}
-            className="btn-press w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 py-6 text-sm font-semibold text-slate-500 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+            className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/20 bg-white/5 py-6 text-sm font-semibold text-zinc-500 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:text-indigo-400 transition-all"
           >
             <Plus className="h-5 w-5" />
             Weiteren Schritt hinzufügen
