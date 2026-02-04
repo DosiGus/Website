@@ -24,6 +24,7 @@ type InspectorSlideOverProps = {
   onClose: () => void;
   inspectorTab: InspectorTab;
   onTabChange: (tab: InspectorTab) => void;
+  disableBackdropBlur?: boolean;
 
   // Node editing
   selectedNode: ReactFlowNode | null;
@@ -40,6 +41,7 @@ type InspectorSlideOverProps = {
   onUpdateQuickReply: (replyId: string, patch: Partial<FlowQuickReply>) => void;
   onRemoveQuickReply: (replyId: string) => void;
   onQuickReplyTargetChange: (replyId: string, targetValue: string, label: string) => void;
+  hidePayloadField?: boolean;
 
   // Edge editing
   selectedEdge: Edge | null;
@@ -80,6 +82,7 @@ export default function InspectorSlideOver({
   onClose,
   inspectorTab,
   onTabChange,
+  disableBackdropBlur = false,
   selectedNode,
   selectedNodeReplies,
   selectedInputMode,
@@ -107,6 +110,7 @@ export default function InspectorSlideOver({
   lintWarnings,
   onFocusWarning,
   saveState,
+  hidePayloadField = false,
 }: InspectorSlideOverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -134,9 +138,9 @@ export default function InspectorSlideOver({
     <>
       {/* Backdrop - subtle overlay */}
       <div
-        className={`fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${
+        className={`fixed inset-0 z-30 transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        } ${disableBackdropBlur ? 'bg-black/20' : 'bg-black/40 backdrop-blur-[2px]'}`}
         onClick={onClose}
       />
 
@@ -166,7 +170,7 @@ export default function InspectorSlideOver({
         {/* Tab Navigation */}
         <div className="border-b border-white/10 px-4 py-3">
           <div className="flex gap-1 rounded-xl bg-white/5 p-1">
-            {(['content', 'logic', 'variables', 'preview'] as InspectorTab[]).map((tab) => (
+            {(['content', 'preview', 'logic', 'variables'] as InspectorTab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => onTabChange(tab)}
@@ -331,12 +335,14 @@ export default function InspectorSlideOver({
                                 placeholder="Button-Text"
                                 className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                               />
-                              <input
-                                value={reply.payload}
-                                onChange={(e) => onUpdateQuickReply(reply.id, { payload: e.target.value })}
-                                placeholder="Payload / interne Aktion"
-                                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
-                              />
+                              {!hidePayloadField && (
+                                <input
+                                  value={reply.payload}
+                                  onChange={(e) => onUpdateQuickReply(reply.id, { payload: e.target.value })}
+                                  placeholder="Payload / interne Aktion"
+                                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
+                                />
+                              )}
                               <div>
                                 <label className="text-xs font-semibold text-zinc-500">Weiterleiten zu</label>
                                 <select

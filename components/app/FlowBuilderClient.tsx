@@ -234,7 +234,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [keywordInput, setKeywordInput] = useState("");
   const [nodeSearchQuery, setNodeSearchQuery] = useState("");
   const [nodeSearchOpen, setNodeSearchOpen] = useState(false);
-  const [builderMode, setBuilderMode] = useState<BuilderMode>("pro");
+  const [builderMode, setBuilderMode] = useState<BuilderMode>("simple");
   const [isInspectorOpen, setInspectorOpen] = useState(false);
   const [isAddMenuOpen, setAddMenuOpen] = useState(false);
   const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
@@ -1293,15 +1293,15 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                 <option value="Aktiv">Aktiv</option>
               </select>
 
-              {/* Test Button */}
+              {/* Preview Button */}
               <button
                 onClick={() => {
                   setInspectorTab("preview");
                   setInspectorOpen(true);
                 }}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-indigo-500/50 hover:text-white transition-colors"
+                className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition-all"
               >
-                Test
+                Vorschau
               </button>
 
               {/* Save Button */}
@@ -1548,6 +1548,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         }}
         inspectorTab={inspectorTab}
         onTabChange={setInspectorTab}
+        disableBackdropBlur={builderMode === "simple"}
+        hidePayloadField={builderMode === "simple"}
         selectedNode={selectedNode}
         selectedNodeReplies={selectedNodeReplies}
         selectedInputMode={selectedInputMode}
