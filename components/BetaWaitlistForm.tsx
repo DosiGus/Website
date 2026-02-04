@@ -122,7 +122,7 @@ export default function BetaWaitlistForm() {
               </>
             ) : (
               <>
-                Pilotzugang anfragen
+                Zugang anfragen
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </>
             )}
