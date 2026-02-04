@@ -259,7 +259,7 @@ export default function HomePage() {
 
               {/* Subheadline */}
               <p className="mt-4 text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg md:text-xl">
-                Automatische Antworten für Instagram, WhatsApp und Facebook.
+                Automatische Antworten für Gastronomiebetriebe auf Instagram, WhatsApp und Facebook.
               </p>
 
               {/* CTA */}
@@ -523,7 +523,7 @@ export default function HomePage() {
             ?
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:mt-6 sm:text-lg">
-            Setup, Integrationen und Launch in Minuten.
+            Setup, Integrationen und Launch.
           </p>
           <div className="mt-8 sm:mt-10">
             <Link

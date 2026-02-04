@@ -3,27 +3,27 @@ import { Users, Zap, Heart, MapPin, Mail, Building } from "lucide-react";
 export const metadata = {
   title: "Über Wesponde – Unsere Mission",
   description:
-    "Erfahre mehr über die Mission von Wesponde: Automatisierte Kommunikation für Restaurants, Salons und Praxen.",
+    "Erfahre mehr über die Mission von Wesponde: Automatische Antworten für Gastronomiebetriebe auf Instagram, WhatsApp und Facebook.",
 };
 
 const values = [
   {
     icon: Zap,
-    title: "Smart",
+    title: "Schnell",
     description:
-      "Wir nutzen KI dort, wo sie echten Mehrwert bringt: bessere Antworten, schnellere Abläufe und klare Entscheidungen.",
+      "Fertige Templates und ein Setup-Assistent – du bist in Minuten startklar, nicht in Wochen.",
   },
   {
     icon: Users,
     title: "Einfach",
     description:
-      "Wesponde lässt sich in Minuten mit Meta-Accounts, POS-Systemen und CRMs verbinden – ohne komplexe Implementierung.",
+      "Keine technischen Kenntnisse nötig. Verbinde deine Social-Media-Kanäle und leg los.",
   },
   {
     icon: Heart,
-    title: "Serviceorientiert",
+    title: "Persönlich",
     description:
-      "Wir bauen Produkte, die Gespräche menschlicher machen. Automatisierung bedeutet für uns mehr Zeit für echte Beratung.",
+      "Automatisierte Antworten, die sich anfühlen wie echte Gespräche. Deine Gäste merken keinen Unterschied.",
   },
 ];
 
@@ -63,15 +63,13 @@ export default function AboutPage() {
             &bdquo;Wir glauben, dass großartige Gespräche den Unterschied machen.&ldquo;
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-zinc-400">
-            Wesponde wurde mit der Vision gegründet, Kommunikation zwischen Unternehmen und
-            Kund:innen einfacher, menschlicher und effizienter zu gestalten. Während Service-Teams
-            von manuellen Nachrichten überrollt werden, erwarten Gäste sofortige Antworten –
-            und zwar in ihren Lieblingsmessengern.
+            Wesponde wurde mit der Vision gegründet, Kommunikation zwischen Unternehmen und Kunden
+            einfacher, menschlicher und effizienter zu gestalten. Während Service-Teams von manuellen
+            Nachrichten überrollt werden, erwarten Gäste sofortige Antworten.
           </p>
           <p className="mt-4 text-lg leading-relaxed text-zinc-400">
-            Deshalb kombinieren wir Automatisierung mit persönlicher Ansprache: Von Restaurants
-            über Salons bis zu Praxen helfen wir Teams, Buchungen anzunehmen, Fragen zu klären und
-            Stammkund:innen zu begeistern – rund um die Uhr.
+            Deshalb kombinieren wir Automatisierung mit persönlicher Ansprache – um Buchungen
+            anzunehmen, Fragen zu klären und Kunden zu begeistern.
           </p>
         </div>
 
@@ -98,16 +96,16 @@ export default function AboutPage() {
               Was wir bauen
             </span>
             <h2 className="mt-4 font-display text-2xl font-medium text-white sm:text-3xl">
-              Ein Operating System für Service-Unternehmen
+              Automatische Antworten für Gastronomie
             </h2>
             <p className="mt-4 text-zinc-400">
-              Mit Wesponde orchestrierst du Instagram DMs, Facebook Nachrichten, WhatsApp
-              Business Chats und POS-Daten auf einer zentralen Oberfläche. OAuth-Verbindungen zu
-              Meta, plentymarkets, Lightspeed und Co. entstehen in wenigen Klicks.
+              Wesponde verbindet deine Instagram-, Facebook- und WhatsApp-Kanäle und beantwortet
+              Anfragen automatisch. Reservierungen, Öffnungszeiten, Speisekarten – alles läuft
+              von selbst.
             </p>
             <p className="mt-4 text-zinc-400">
-              Unser Team sitzt in Berlin und arbeitet eng mit Pilot-Kund:innen zusammen, um jeden
-              Monat neue Automationen zu veröffentlichen.
+              Du wählst ein Template, passt es an und bist in Minuten live. Ohne technisches
+              Wissen, ohne Wartezeit.
             </p>
           </div>
 

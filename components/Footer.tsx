@@ -123,13 +123,13 @@ export default function Footer() {
               Bereit für automatisierte Gespräche?
             </h4>
             <p className="mt-2 text-xs text-zinc-400">
-              Sichere dir den Pilotzugang und starte in unter zwei Wochen.
+              Sichere dir den Demo Zugang und starte in Minuten.
             </p>
             <a
               href="/#beta"
               className="mt-4 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40"
             >
-              Pilotzugang
+              Demo Zugang
               <ArrowRight className="h-3 w-3" />
             </a>
           </div>

@@ -71,55 +71,67 @@ export default function LoginPage({ searchParams }: { searchParams: { view?: str
               {heading}
             </h1>
             {isSignup ? (
-              <p className="mt-4 text-lg text-zinc-400">
-                Melde dich an, um unser Produkt zu testen und erste Konversations‑Demos zu sehen.{" "}
-                <Link href="/login?view=login" className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300">
-                  Schon registriert? Einloggen
-                </Link>
-              </p>
-            ) : (
-              <p className="mt-4 text-lg text-zinc-400">
-                Verwende deine Geschäfts‑E‑Mail oder verbinde deinen Meta‑Business‑Account via OAuth.
-                Nach dem Login wirst du zur App weitergeleitet.{" "}
-                <Link href="/login?view=signup" className="text-indigo-400 underline underline-offset-4 hover:text-indigo-300">
-                  Noch kein Zugang? Jetzt testen
-                </Link>
-              </p>
-            )}
+              <>
+                <p className="mt-4 text-lg text-zinc-400">
+                  Melde dich kostenlos an, um unser Produkt zu testen und erste Konversations‑Demos zu sehen.
+                </p>
 
-            {/* Features */}
-            <div className="mt-10 space-y-4">
-              {features.map((feature) => (
-                <div key={feature.title} className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white/5 text-zinc-400">
-                    <feature.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-white">{feature.title}</h3>
-                    <p className="text-sm text-zinc-500">{feature.description}</p>
-                  </div>
+                {/* Fragen Card - direkt unter der Beschreibung bei Signup */}
+                <div className="mt-10 rounded-xl border border-white/10 bg-zinc-900/50 p-6">
+                  <h3 className="font-semibold text-white">Fragen zum Testzugang?</h3>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Wir helfen dir beim Einstieg und beantworten deine Fragen.
+                  </p>
+                  <Link
+                    href="/contact"
+                    className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+                  >
+                    Kontakt aufnehmen
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <>
+                <p className="mt-4 text-lg text-zinc-400">
+                  Verwende deine Geschäfts‑E‑Mail oder verbinde deinen Meta‑Business‑Account via OAuth.
+                  Nach dem Login wirst du zur App weitergeleitet.{" "}
+                  <Link href="/login?view=signup" className="text-indigo-400 underline underline-offset-4 hover:text-indigo-300">
+                    Noch kein Zugang? Jetzt testen
+                  </Link>
+                </p>
 
-            {/* No Access Card */}
-            <div className="mt-10 rounded-xl border border-white/10 bg-zinc-900/50 p-6">
-              <h3 className="font-semibold text-white">
-                {isSignup ? "Fragen zum Testzugang?" : "Noch kein Zugang?"}
-              </h3>
-              <p className="mt-2 text-sm text-zinc-400">
-                {isSignup
-                  ? "Wir helfen dir beim Einstieg und beantworten deine Fragen."
-                  : "Unser Success‑Team schaltet dich nach einem kurzen Onboarding frei."}
-              </p>
-              <Link
-                href="/contact"
-                className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-indigo-400 transition-colors hover:text-indigo-300"
-              >
-                Kontakt aufnehmen
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
+                {/* Features - nur bei Login */}
+                <div className="mt-10 space-y-4">
+                  {features.map((feature) => (
+                    <div key={feature.title} className="flex items-start gap-4">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white/5 text-zinc-400">
+                        <feature.icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-white">{feature.title}</h3>
+                        <p className="text-sm text-zinc-500">{feature.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* No Access Card - nur bei Login */}
+                <div className="mt-10 rounded-xl border border-white/10 bg-zinc-900/50 p-6">
+                  <h3 className="font-semibold text-white">Noch kein Zugang?</h3>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Unser Success‑Team schaltet dich nach einem kurzen Onboarding frei.
+                  </p>
+                  <Link
+                    href="/contact"
+                    className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-indigo-400 transition-colors hover:text-indigo-300"
+                  >
+                    Kontakt aufnehmen
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right Column - Form */}
