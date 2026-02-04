@@ -161,29 +161,30 @@ export default function FlowBuilderDemo() {
 
   return (
     <div className="relative mx-auto w-full max-w-4xl">
-      <div className="absolute left-1/2 top-1/2 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px]" />
+      {/* Glow - reduced blur for performance */}
+      <div className="absolute left-1/2 top-1/2 h-[300px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[60px] sm:h-[400px] sm:w-[600px] sm:blur-[100px]" />
 
       <div className="relative">
         <div className="relative mx-auto w-full overflow-hidden rounded-t-xl border border-zinc-700 bg-zinc-900 shadow-2xl">
           {/* Browser Chrome */}
-          <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900 px-4 py-2">
+          <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900 px-3 py-2 sm:px-4">
             <div className="flex gap-1.5">
-              <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
-              <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
-              <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
+              <div className="h-2 w-2 rounded-full bg-red-500/80 sm:h-2.5 sm:w-2.5" />
+              <div className="h-2 w-2 rounded-full bg-yellow-500/80 sm:h-2.5 sm:w-2.5" />
+              <div className="h-2 w-2 rounded-full bg-green-500/80 sm:h-2.5 sm:w-2.5" />
             </div>
-            <div className="ml-4 flex flex-1 items-center gap-2 rounded-md bg-zinc-800 px-3 py-1">
-              <svg className="h-3 w-3 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <div className="ml-2 flex flex-1 items-center gap-2 rounded-md bg-zinc-800 px-2 py-1 sm:ml-4 sm:px-3">
+              <svg className="hidden h-3 w-3 text-zinc-500 sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10" strokeLinecap="round" />
               </svg>
-              <span className="text-[11px] text-zinc-400">app.wesponde.com/flows/builder</span>
+              <span className="truncate text-[10px] text-zinc-400 sm:text-[11px]">app.wesponde.com/flows/builder</span>
             </div>
           </div>
 
-          {/* Split View */}
-          <div className="flex h-[380px] sm:h-[420px]">
-            {/* Left Panel */}
-            <div className="relative w-[45%] border-r border-zinc-800 bg-zinc-950 p-4">
+          {/* Split View - Canvas hidden on mobile */}
+          <div className="flex h-[340px] sm:h-[380px] md:h-[420px]">
+            {/* Left Panel - Full width on mobile, 45% on desktop */}
+            <div className="relative w-full border-zinc-800 bg-zinc-950 p-3 sm:p-4 md:w-[45%] md:border-r">
               {/* Step Indicator */}
               <div className="mb-4 rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
                 <div className="flex items-center gap-2">
@@ -289,8 +290,8 @@ export default function FlowBuilderDemo() {
               )}
             </div>
 
-            {/* Right Panel - Canvas */}
-            <div className="relative flex-1 overflow-hidden bg-[#08080a]">
+            {/* Right Panel - Canvas (hidden on mobile) */}
+            <div className="relative hidden flex-1 overflow-hidden bg-[#08080a] md:block">
               {/* Grid */}
               <div
                 className="absolute inset-0 opacity-30"
@@ -407,20 +408,20 @@ export default function FlowBuilderDemo() {
         </div>
 
         {/* Laptop Base */}
-        <div className="relative mx-auto h-4 w-[80%] rounded-b-xl bg-gradient-to-b from-zinc-700 to-zinc-800">
-          <div className="absolute left-1/2 top-0 h-1 w-16 -translate-x-1/2 rounded-b bg-zinc-600" />
+        <div className="relative mx-auto h-3 w-[85%] rounded-b-xl bg-gradient-to-b from-zinc-700 to-zinc-800 sm:h-4 sm:w-[80%]">
+          <div className="absolute left-1/2 top-0 h-0.5 w-12 -translate-x-1/2 rounded-b bg-zinc-600 sm:h-1 sm:w-16" />
         </div>
-        <div className="mx-auto h-1.5 w-[90%] rounded-b-lg bg-zinc-800 shadow-xl" />
+        <div className="mx-auto h-1 w-[92%] rounded-b-lg bg-zinc-800 shadow-xl sm:h-1.5 sm:w-[90%]" />
       </div>
 
       {/* Feature Pills */}
-      <div className="mt-8 flex flex-wrap justify-center gap-3">
+      <div className="mt-6 flex flex-wrap justify-center gap-2 sm:mt-8 sm:gap-3">
         {['Drag & Drop', 'Branchen-Templates', 'Live-Vorschau', 'Keine Programmierung'].map((feature) => (
           <span
             key={feature}
-            className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400"
+            className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-[10px] text-zinc-400 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs"
           >
-            <Check className="h-3 w-3 text-emerald-500" />
+            <Check className="h-2.5 w-2.5 text-emerald-500 sm:h-3 sm:w-3" />
             {feature}
           </span>
         ))}

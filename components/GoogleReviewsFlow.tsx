@@ -42,12 +42,12 @@ export default function GoogleReviewsFlow() {
   return (
     <div className="relative">
       {/* Main Flow Visualization */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
         {/* Step 1: DM Request */}
-        <div className={`relative overflow-hidden rounded-2xl border bg-zinc-900/50 p-6 backdrop-blur-sm transition-all duration-500 ${
+        <div className={`relative overflow-hidden rounded-xl border bg-zinc-900/50 p-4 transition-all duration-500 sm:rounded-2xl sm:p-6 ${
           step >= 1 ? 'border-indigo-500/30 shadow-lg shadow-indigo-500/10' : 'border-white/10'
         }`}>
-          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-indigo-500/10 blur-2xl" />
+          <div className="absolute -right-8 -top-8 hidden h-24 w-24 rounded-full bg-indigo-500/10 blur-2xl sm:block" />
 
           <div className="relative">
             {/* Instagram Badge */}
@@ -95,7 +95,16 @@ export default function GoogleReviewsFlow() {
           </div>
         </div>
 
-        {/* Connector Arrow */}
+        {/* Connector Arrow - Mobile: vertical, Desktop: horizontal */}
+        <div className="flex items-center justify-center py-2 lg:hidden">
+          <div className={`flex items-center gap-2 transition-all duration-500 ${
+            step >= 3 ? 'opacity-100' : 'opacity-30'
+          }`}>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900">
+              <ArrowRight className="h-4 w-4 rotate-90 text-indigo-400" />
+            </div>
+          </div>
+        </div>
         <div className="hidden items-center justify-center lg:flex">
           <div className={`flex items-center gap-2 transition-all duration-500 ${
             step >= 3 ? 'opacity-100' : 'opacity-30'
@@ -109,10 +118,10 @@ export default function GoogleReviewsFlow() {
         </div>
 
         {/* Step 2: Google Redirect */}
-        <div className={`relative overflow-hidden rounded-2xl border bg-zinc-900/50 p-6 backdrop-blur-sm transition-all duration-500 ${
+        <div className={`relative overflow-hidden rounded-xl border bg-zinc-900/50 p-4 transition-all duration-500 sm:rounded-2xl sm:p-6 ${
           step >= 4 ? 'border-amber-500/30 shadow-lg shadow-amber-500/10' : 'border-white/10'
         }`}>
-          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-amber-500/10 blur-2xl" />
+          <div className="absolute -right-8 -top-8 hidden h-24 w-24 rounded-full bg-amber-500/10 blur-2xl sm:block" />
 
           <div className="relative">
             {/* Google Badge */}
@@ -173,15 +182,15 @@ export default function GoogleReviewsFlow() {
       </div>
 
       {/* Stats Row */}
-      <div className="mt-8 grid grid-cols-3 gap-4">
+      <div className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:gap-4">
         {[
           { value: '+41%', label: 'mehr Reviews', color: 'text-emerald-400' },
           { value: '4.8', label: 'Ø Rating', color: 'text-amber-400' },
           { value: '< 2min', label: 'bis zur Bewertung', color: 'text-indigo-400' },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-white/10 bg-zinc-900/50 p-4 text-center">
-            <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
-            <div className="mt-1 text-xs text-zinc-500">{stat.label}</div>
+          <div key={stat.label} className="rounded-lg border border-white/10 bg-zinc-900/50 p-2.5 text-center sm:rounded-xl sm:p-4">
+            <div className={`text-lg font-bold sm:text-2xl ${stat.color}`}>{stat.value}</div>
+            <div className="mt-0.5 text-[10px] text-zinc-500 sm:mt-1 sm:text-xs">{stat.label}</div>
           </div>
         ))}
       </div>

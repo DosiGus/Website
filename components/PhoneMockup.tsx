@@ -129,21 +129,21 @@ export default function PhoneMockup() {
 
   return (
     <div className="relative flex items-center justify-center">
-      {/* Subtle glow behind phone */}
-      <div className="absolute h-[400px] w-[300px] rounded-[60px] bg-gradient-to-b from-indigo-500/20 via-violet-500/10 to-transparent blur-[60px]" />
+      {/* Subtle glow behind phone - reduced blur for mobile performance */}
+      <div className="absolute h-[300px] w-[220px] rounded-[60px] bg-gradient-to-b from-indigo-500/15 via-violet-500/10 to-transparent blur-[40px] sm:h-[400px] sm:w-[300px] sm:from-indigo-500/20 sm:blur-[60px]" />
 
       {/* Phone Frame */}
-      <div className="relative w-[280px] sm:w-[300px]">
-        {/* Side Buttons */}
-        <div className="absolute -left-[3px] top-[100px] h-8 w-[3px] rounded-l-sm bg-zinc-700" />
-        <div className="absolute -left-[3px] top-[140px] h-14 w-[3px] rounded-l-sm bg-zinc-700" />
-        <div className="absolute -left-[3px] top-[200px] h-14 w-[3px] rounded-l-sm bg-zinc-700" />
-        <div className="absolute -right-[3px] top-[160px] h-20 w-[3px] rounded-r-sm bg-zinc-700" />
+      <div className="relative w-[260px] sm:w-[280px] md:w-[300px]">
+        {/* Side Buttons - hidden on smallest screens */}
+        <div className="absolute -left-[3px] top-[100px] hidden h-8 w-[3px] rounded-l-sm bg-zinc-700 sm:block" />
+        <div className="absolute -left-[3px] top-[140px] hidden h-14 w-[3px] rounded-l-sm bg-zinc-700 sm:block" />
+        <div className="absolute -left-[3px] top-[200px] hidden h-14 w-[3px] rounded-l-sm bg-zinc-700 sm:block" />
+        <div className="absolute -right-[3px] top-[160px] hidden h-20 w-[3px] rounded-r-sm bg-zinc-700 sm:block" />
 
         {/* Phone Body */}
-        <div className="relative overflow-hidden rounded-[45px] border-[3px] border-zinc-800 bg-zinc-900 shadow-2xl shadow-black/60">
+        <div className="relative overflow-hidden rounded-[40px] border-[2px] border-zinc-800 bg-zinc-900 shadow-2xl shadow-black/60 sm:rounded-[45px] sm:border-[3px]">
           {/* Screen */}
-          <div className="relative h-[540px] overflow-hidden bg-zinc-950 sm:h-[580px]">
+          <div className="relative h-[500px] overflow-hidden bg-zinc-950 sm:h-[540px] md:h-[580px]">
             {/* Subtle screen reflection */}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.03] via-transparent to-transparent" />
 
@@ -208,7 +208,7 @@ export default function PhoneMockup() {
             </div>
 
             {/* Messages Area */}
-            <div className="relative z-10 h-[340px] space-y-2.5 overflow-hidden px-3 py-3 sm:h-[380px]">
+            <div className="relative z-10 h-[310px] space-y-2 overflow-hidden px-3 py-2 sm:h-[340px] sm:space-y-2.5 sm:py-3 md:h-[380px]">
               {conversationFlow.map((message) => {
                 if (!visibleMessages.includes(message.id)) return null;
                 if (message.type === 'quick-reply-selection') {

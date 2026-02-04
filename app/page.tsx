@@ -186,26 +186,26 @@ export default function HomePage() {
 
       {/* ==================== HERO SECTION ==================== */}
       <section className="relative min-h-screen overflow-hidden">
-        {/* Background Effects */}
+        {/* Background Effects - reduced blur for mobile performance */}
         <div className="absolute inset-0 bg-grid-dark" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/50 to-zinc-950" />
-        <div className="absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/20 blur-[120px]" />
-        <div className="absolute right-0 top-1/2 h-[400px] w-[400px] -translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px]" />
+        <div className="absolute left-1/2 top-0 h-[400px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/15 blur-[60px] sm:h-[600px] sm:w-[800px] sm:bg-indigo-500/20 sm:blur-[120px]" />
+        <div className="absolute right-0 top-1/2 hidden h-[400px] w-[400px] -translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px] sm:block" />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-32 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-16 lg:grid-cols-[1.1fr,0.9fr] lg:gap-20">
+        <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 sm:pb-24 sm:pt-32 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-[1.1fr,0.9fr] lg:gap-20">
             {/* Left Content */}
             <div className="max-w-2xl">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-sm">
-                <Sparkles className="h-4 w-4 text-indigo-400" />
-                <span className="text-xs font-medium tracking-wide text-zinc-300">
-                  Enterprise Messaging für Service-Brands
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 sm:gap-2 sm:px-4 sm:py-2">
+                <Sparkles className="h-3.5 w-3.5 text-indigo-400 sm:h-4 sm:w-4" />
+                <span className="text-[11px] font-medium tracking-wide text-zinc-300 sm:text-xs">
+                  Enterprise Messaging
                 </span>
               </div>
 
               {/* Headline */}
-              <h1 className="mt-8 font-display text-5xl font-medium tracking-tight sm:text-6xl lg:text-7xl">
+              <h1 className="mt-6 font-display text-4xl font-medium tracking-tight sm:mt-8 sm:text-5xl md:text-6xl lg:text-7xl">
                 Aus DMs werden{" "}
                 <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
                   Buchungen
@@ -213,9 +213,8 @@ export default function HomePage() {
               </h1>
 
               {/* Subheadline */}
-              <p className="mt-6 text-lg leading-relaxed text-zinc-400 sm:text-xl">
-                Wesponde orchestriert Instagram-, Facebook- und WhatsApp-Konversationen, bestätigt
-                Reservierungen, sendet Reminder und aktiviert Reviews – konsistent im Markenton.
+              <p className="mt-4 text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg md:text-xl">
+                Wesponde automatisiert Instagram, Facebook und WhatsApp – Reservierungen, Reminder und Reviews.
               </p>
 
               {/* CTAs */}
@@ -234,14 +233,15 @@ export default function HomePage() {
               </div>
 
               {/* Stats */}
-              <div className="mt-16 grid grid-cols-3 gap-8">
+              <div className="mt-10 grid grid-cols-3 gap-4 sm:mt-16 sm:gap-8">
                 {heroStats.map((stat) => (
                   <div key={stat.label} className="relative">
-                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
-                      <stat.icon className="h-3.5 w-3.5" />
-                      {stat.label}
+                    <div className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500 sm:gap-2 sm:text-xs sm:tracking-widest">
+                      <stat.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <span className="hidden sm:inline">{stat.label}</span>
+                      <span className="sm:hidden">{stat.label.split(' ')[0]}</span>
                     </div>
-                    <div className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                    <div className="mt-1 text-2xl font-semibold tracking-tight text-white sm:mt-2 sm:text-3xl md:text-4xl">
                       {stat.value}
                     </div>
                   </div>
@@ -249,18 +249,18 @@ export default function HomePage() {
               </div>
 
               {/* Trust Badges */}
-              <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4 text-xs text-zinc-500">
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  Meta Business Partner
+              <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3 text-[11px] text-zinc-500 sm:mt-12 sm:gap-x-8 sm:gap-y-4 sm:text-xs">
+                <span className="flex items-center gap-1.5 sm:gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
+                  Meta Partner
                 </span>
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  DSGVO-konform
+                <span className="flex items-center gap-1.5 sm:gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
+                  DSGVO
                 </span>
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  Enterprise-ready
+                <span className="flex items-center gap-1.5 sm:gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
+                  Enterprise
                 </span>
               </div>
             </div>
@@ -274,9 +274,9 @@ export default function HomePage() {
       </section>
 
       {/* ==================== OUTCOMES SECTION ==================== */}
-      <section id="outcomes" className="relative overflow-hidden bg-zinc-900/50 py-32">
+      <section id="outcomes" className="relative overflow-hidden bg-zinc-900/50 py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-grid-dark opacity-50" />
-        <div className="absolute left-0 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px]" />
+        <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
@@ -291,22 +291,22 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:mt-16 sm:gap-6 lg:grid-cols-4">
             {outcomes.map((outcome, index) => (
               <div
                 key={outcome.label}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
+                className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-white/20 hover:bg-white/10 sm:rounded-2xl sm:p-6"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div
-                  className={`absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${outcome.color} opacity-20 blur-2xl transition-opacity group-hover:opacity-30`}
+                  className={`absolute -right-8 -top-8 hidden h-24 w-24 rounded-full bg-gradient-to-br ${outcome.color} opacity-20 blur-2xl transition-opacity group-hover:opacity-30 sm:block`}
                 />
                 <div className="relative">
-                  <div className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+                  <div className="text-2xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
                     {outcome.value}
                   </div>
-                  <div className="mt-3 text-base font-medium text-white">{outcome.label}</div>
-                  <div className="mt-1 text-sm text-zinc-500">{outcome.detail}</div>
+                  <div className="mt-1.5 text-sm font-medium text-white sm:mt-3 sm:text-base">{outcome.label}</div>
+                  <div className="mt-0.5 text-xs text-zinc-500 sm:mt-1 sm:text-sm">{outcome.detail}</div>
                 </div>
               </div>
             ))}
@@ -315,9 +315,9 @@ export default function HomePage() {
       </section>
 
       {/* ==================== FEATURES SECTION ==================== */}
-      <section id="product" className="relative py-32">
+      <section id="product" className="relative py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/50 to-zinc-950" />
-        <div className="absolute right-0 top-0 h-[600px] w-[600px] -translate-y-1/2 translate-x-1/2 rounded-full bg-violet-500/10 blur-[120px]" />
+        <div className="absolute right-0 top-0 hidden h-[600px] w-[600px] -translate-y-1/2 translate-x-1/2 rounded-full bg-violet-500/10 blur-[120px] sm:block" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -333,20 +333,20 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-20 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:mt-20 sm:gap-8 lg:grid-cols-3">
             {features.map((feature, index) => (
               <div
                 key={feature.title}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-8 transition-all hover:border-white/20 hover:bg-zinc-900"
+                className="group relative overflow-hidden rounded-xl border border-white/10 bg-zinc-900/50 p-4 transition-all hover:border-white/20 hover:bg-zinc-900 sm:rounded-2xl sm:p-8"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div
-                  className={`mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${feature.gradient}`}
+                  className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br sm:mb-6 sm:h-12 sm:w-12 sm:rounded-xl ${feature.gradient}`}
                 >
-                  <feature.icon className="h-6 w-6 text-white" />
+                  <feature.icon className="h-5 w-5 text-white sm:h-6 sm:w-6" />
                 </div>
-                <h3 className="text-xl font-semibold text-white">{feature.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-zinc-400">{feature.description}</p>
+                <h3 className="text-base font-semibold text-white sm:text-xl">{feature.title}</h3>
+                <p className="mt-1.5 text-xs leading-relaxed text-zinc-400 sm:mt-3 sm:text-sm">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -354,25 +354,24 @@ export default function HomePage() {
       </section>
 
       {/* ==================== FLOW BUILDER SECTION ==================== */}
-      <section id="flow-builder" className="relative overflow-hidden py-32">
+      <section id="flow-builder" className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-zinc-900/30" />
-        <div className="absolute right-0 top-1/2 h-[600px] w-[600px] -translate-y-1/2 translate-x-1/2 rounded-full bg-indigo-500/10 blur-[120px]" />
+        <div className="absolute right-0 top-1/2 hidden h-[600px] w-[600px] -translate-y-1/2 translate-x-1/2 rounded-full bg-indigo-500/10 blur-[120px] sm:block" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-16 text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-indigo-400">
-              <Workflow className="h-3.5 w-3.5" />
+          <div className="mb-10 text-center sm:mb-16">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-indigo-400 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs">
+              <Workflow className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               Flow Builder
             </span>
-            <h2 className="mt-6 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+            <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:mt-6 sm:text-4xl md:text-5xl">
               Flows erstellen in{" "}
               <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
                 Minuten
               </span>
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
-              Drag & Drop Editor für Konversationsabläufe. Keine Programmierung nötig –
-              verbinde Nodes, definiere Quick Replies und geh live.
+            <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400 sm:mt-4 sm:text-lg">
+              Drag & Drop Editor für Konversationsabläufe. Keine Programmierung nötig.
             </p>
           </div>
 
@@ -381,25 +380,24 @@ export default function HomePage() {
       </section>
 
       {/* ==================== GOOGLE REVIEWS SECTION ==================== */}
-      <section id="reviews" className="relative py-32">
+      <section id="reviews" className="relative py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/30 to-zinc-950" />
-        <div className="absolute left-0 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-[100px]" />
+        <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-[100px] sm:block" />
 
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-16 max-w-3xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-amber-400">
-              <Star className="h-3.5 w-3.5" />
+          <div className="mb-10 max-w-3xl sm:mb-16">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-400 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs">
+              <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               Review Automation
             </span>
-            <h2 className="mt-6 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+            <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:mt-6 sm:text-4xl md:text-5xl">
               Google Bewertungen{" "}
               <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
                 automatisiert
               </span>
             </h2>
-            <p className="mt-4 text-lg text-zinc-400">
-              Nach dem Besuch fragen wir automatisch per DM nach einer Bewertung –
-              positive Reviews werden direkt zu Google weitergeleitet.
+            <p className="mt-3 text-sm text-zinc-400 sm:mt-4 sm:text-lg">
+              Nach dem Besuch fragen wir automatisch per DM nach einer Bewertung.
             </p>
           </div>
 
@@ -408,9 +406,9 @@ export default function HomePage() {
       </section>
 
       {/* ==================== USE CASES SECTION ==================== */}
-      <section id="use-cases" className="relative overflow-hidden py-32">
+      <section id="use-cases" className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-zinc-900/30" />
-        <div className="absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px]" />
+        <div className="absolute left-1/2 top-0 hidden h-[500px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
@@ -425,25 +423,25 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-16 grid gap-6 sm:grid-cols-2">
+          <div className="mt-10 grid gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-6">
             {useCases.map((useCase, index) => (
               <div
                 key={useCase.industry}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
+                className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-white/20 hover:bg-white/10 sm:rounded-2xl sm:p-8"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="flex items-start justify-between">
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+                  <div className="flex-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500 sm:text-xs">
                       {useCase.industry}
                     </span>
-                    <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                    <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2 py-0.5 text-xs font-medium text-indigo-400 sm:mt-4 sm:gap-2 sm:px-3 sm:py-1 sm:text-sm">
+                      <span className="h-1 w-1 rounded-full bg-indigo-400 sm:h-1.5 sm:w-1.5" />
                       {useCase.scenario}
                     </div>
-                    <p className="mt-4 text-base text-zinc-300">{useCase.outcome}</p>
+                    <p className="mt-2 text-sm text-zinc-300 sm:mt-4 sm:text-base">{useCase.outcome}</p>
                   </div>
-                  <span className="text-4xl">{useCase.icon}</span>
+                  <span className="ml-2 text-2xl sm:text-4xl">{useCase.icon}</span>
                 </div>
               </div>
             ))}
@@ -452,7 +450,7 @@ export default function HomePage() {
       </section>
 
       {/* ==================== WORKFLOW SECTION ==================== */}
-      <section id="workflow" className="relative py-32">
+      <section id="workflow" className="relative py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/30 to-zinc-950" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -468,17 +466,17 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-20 grid gap-8 lg:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:mt-20 sm:gap-8 lg:grid-cols-3">
             {steps.map((step, index) => (
               <div
                 key={step.title}
-                className="relative rounded-2xl border border-white/10 bg-zinc-900/50 p-8"
+                className="relative rounded-xl border border-white/10 bg-zinc-900/50 p-5 sm:rounded-2xl sm:p-8"
               >
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-lg font-bold text-white">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-base font-bold text-white sm:mb-6 sm:h-12 sm:w-12 sm:text-lg">
                   {step.step}
                 </div>
-                <h3 className="text-xl font-semibold text-white">{step.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-zinc-400">{step.description}</p>
+                <h3 className="text-lg font-semibold text-white sm:text-xl">{step.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-400 sm:mt-3 sm:text-sm">{step.description}</p>
                 {index < steps.length - 1 && (
                   <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 lg:block">
                     <ArrowRight className="h-6 w-6 text-zinc-700" />
@@ -491,27 +489,27 @@ export default function HomePage() {
       </section>
 
       {/* ==================== TESTIMONIAL SECTION ==================== */}
-      <section id="testimonials" className="relative overflow-hidden py-32">
+      <section id="testimonials" className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10" />
-        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/5 blur-[100px]" />
+        <div className="absolute left-1/2 top-1/2 hidden h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/5 blur-[100px] sm:block" />
 
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <div className="inline-flex items-center gap-1">
+          <div className="inline-flex items-center gap-0.5">
             {[...Array(5)].map((_, i) => (
-              <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400" />
+              <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400 sm:h-5 sm:w-5" />
             ))}
           </div>
-          <blockquote className="mt-8">
-            <p className="font-display text-2xl font-medium leading-relaxed text-white sm:text-3xl lg:text-4xl">
+          <blockquote className="mt-6 sm:mt-8">
+            <p className="font-display text-xl font-medium leading-relaxed text-white sm:text-2xl md:text-3xl lg:text-4xl">
               &ldquo;{testimonial.quote}&rdquo;
             </p>
           </blockquote>
-          <div className="mt-8 flex items-center justify-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500" />
+          <div className="mt-6 flex items-center justify-center gap-3 sm:mt-8 sm:gap-4">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 sm:h-12 sm:w-12" />
             <div className="text-left">
-              <div className="font-semibold text-white">{testimonial.author}</div>
-              <div className="text-sm text-zinc-400">
-                {testimonial.role} · {testimonial.company}
+              <div className="text-sm font-semibold text-white sm:text-base">{testimonial.author}</div>
+              <div className="text-xs text-zinc-400 sm:text-sm">
+                {testimonial.role}
               </div>
             </div>
           </div>
@@ -519,32 +517,32 @@ export default function HomePage() {
       </section>
 
       {/* ==================== BETA SIGNUP SECTION ==================== */}
-      <section id="beta" className="relative py-32">
+      <section id="beta" className="relative py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-zinc-900/50" />
-        <div className="absolute left-0 top-0 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px]" />
-        <div className="absolute bottom-0 right-0 h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px]" />
+        <div className="absolute left-0 top-0 hidden h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px] sm:block" />
+        <div className="absolute bottom-0 right-0 hidden h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-16 lg:grid-cols-2">
+          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
             <div>
-              <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
+              <span className="inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-400 sm:text-xs">
                 Pilotzugang
               </span>
-              <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-                Enterprise-Onboarding für ausgewählte Partner
+              <h2 className="mt-3 font-display text-3xl font-medium tracking-tight sm:mt-4 sm:text-4xl md:text-5xl">
+                Enterprise-Onboarding für Partner
               </h2>
-              <p className="mt-4 text-lg text-zinc-400">
+              <p className="mt-3 text-sm text-zinc-400 sm:mt-4 sm:text-lg">
                 Persönlicher Setup, geprüfte Abläufe, live in unter zwei Wochen.
               </p>
-              <ul className="mt-8 space-y-4">
+              <ul className="mt-6 space-y-3 sm:mt-8 sm:space-y-4">
                 {[
                   "Persönliches Onboarding & Flow-Setup",
-                  "Integration von Meta, WhatsApp und Kassensystemen",
+                  "Integration von Meta & WhatsApp",
                   "Dashboard-Zugang für dein Team",
                   "Dedicated Success Manager",
                 ].map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-zinc-300">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  <li key={item} className="flex items-center gap-2 text-sm text-zinc-300 sm:gap-3 sm:text-base">
+                    <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-500 sm:h-5 sm:w-5" />
                     {item}
                   </li>
                 ))}
@@ -558,32 +556,32 @@ export default function HomePage() {
       </section>
 
       {/* ==================== FINAL CTA SECTION ==================== */}
-      <section className="relative overflow-hidden py-32">
+      <section className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent" />
-        <div className="absolute left-1/2 top-0 h-[400px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/20 blur-[120px]" />
+        <div className="absolute left-1/2 top-0 hidden h-[400px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/20 blur-[120px] sm:block" />
 
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="font-display text-4xl font-medium tracking-tight sm:text-5xl lg:text-6xl">
+          <h2 className="font-display text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
             Bereit für automatisierte{" "}
             <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
               Konversationen
             </span>
             ?
           </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400">
-            Setup, Integrationen, QA und Launch-Begleitung – gemeinsam mit deinem Team.
+          <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:mt-6 sm:text-lg">
+            Setup, Integrationen und Launch-Begleitung – gemeinsam mit deinem Team.
           </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row sm:gap-4">
             <Link
               href="/contact"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:shadow-white/20"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:shadow-white/20 sm:w-auto sm:px-8 sm:py-4"
             >
               Ergebnis-Check anfragen
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-8 py-4 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10"
+              className="inline-flex w-full items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition-all hover:border-white/25 hover:bg-white/10 sm:w-auto sm:px-8 sm:py-4"
             >
               Partner-Login
             </Link>
