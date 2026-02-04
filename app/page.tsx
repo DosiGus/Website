@@ -247,40 +247,29 @@ export default function HomePage() {
           <div className="grid items-center gap-12 lg:grid-cols-[1.1fr,0.9fr] lg:gap-20">
             {/* Left Content */}
             <div className="max-w-2xl">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 sm:gap-2 sm:px-4 sm:py-2">
-                <Sparkles className="h-3.5 w-3.5 text-indigo-400 sm:h-4 sm:w-4" />
-                <span className="text-[11px] font-medium tracking-wide text-zinc-300 sm:text-xs">
-                  Messaging für Service-Teams
-                </span>
-              </div>
-
               {/* Headline */}
               <h1 className="mt-6 font-display text-4xl font-medium tracking-tight sm:mt-8 sm:text-5xl md:text-6xl lg:text-7xl">
-                Aus DMs werden{" "}
-                <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
-                  Buchungen
+                Gespräche, die zu{" "}
+                <span className="text-emerald-400">
+                  Gästen
                 </span>
+                {" "}werden
               </h1>
 
               {/* Subheadline */}
               <p className="mt-4 text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg md:text-xl">
-                Wesponde macht aus DMs klare Abläufe – Reservierungen, Erinnerungen und Bewertungen ohne Mehraufwand.
+                Automatische Antworten für Instagram, WhatsApp und Facebook.
               </p>
 
-              {/* CTAs */}
-              <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-                <WatchDemoButton
-                  className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:shadow-white/20"
-                  label="Demo für Service-Teams ansehen"
-                />
-                <a
-                  href="#beta"
-                  className="group inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10"
+              {/* CTA */}
+              <div className="mt-10">
+                <Link
+                  href="/login?view=signup"
+                  className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:bg-emerald-500 hover:text-white hover:shadow-emerald-500/30"
                 >
-                  Pilotzugang für dein Team anfragen
+                  Demo starten
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </a>
+                </Link>
               </div>
 
               {/* Stats */}
@@ -303,15 +292,15 @@ export default function HomePage() {
               <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3 text-[11px] text-zinc-500 sm:mt-12 sm:gap-x-8 sm:gap-y-4 sm:text-xs">
                 <span className="flex items-center gap-1.5 sm:gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
-                  Meta Partner
+                  In 5 Minuten eingerichtet
                 </span>
                 <span className="flex items-center gap-1.5 sm:gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
-                  DSGVO-konform
+                  Sofort einsatzbereit
                 </span>
                 <span className="flex items-center gap-1.5 sm:gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
-                  Persönliches Onboarding
+                  Läuft ab Tag 1
                 </span>
               </div>
             </div>
@@ -320,6 +309,45 @@ export default function HomePage() {
             <div className="relative flex justify-center lg:justify-end">
               <PhoneMockup />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== WORKFLOW SECTION ==================== */}
+      <section id="workflow" className="relative py-16 sm:py-24 lg:py-32">
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 to-zinc-900/50" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
+              Ablauf
+            </span>
+            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              In Tagen live, nicht in Monaten
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
+              Wir übernehmen Setup, QA und die ersten Abläufe gemeinsam mit deinem Team.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-4 sm:mt-20 sm:gap-8 lg:grid-cols-3">
+            {steps.map((step, index) => (
+              <div
+                key={step.title}
+                className="relative rounded-xl border border-white/10 bg-zinc-900/50 p-5 sm:rounded-2xl sm:p-8"
+              >
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-base font-bold text-white sm:mb-6 sm:h-12 sm:w-12 sm:text-lg">
+                  {step.step}
+                </div>
+                <h3 className="text-lg font-semibold text-white sm:text-xl">{step.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-400 sm:mt-3 sm:text-sm">{step.description}</p>
+                {index < steps.length - 1 && (
+                  <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 lg:block">
+                    <ArrowRight className="h-6 w-6 text-zinc-700" />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -365,91 +393,29 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ==================== FEATURES SECTION ==================== */}
-      <section id="product" className="relative py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/50 to-zinc-950" />
-        <div className="absolute right-0 top-0 hidden h-[600px] w-[600px] -translate-y-1/2 translate-x-1/2 rounded-full bg-violet-500/10 blur-[120px] sm:block" />
+      {/* ==================== GOOGLE REVIEWS SECTION ==================== */}
+      <section id="reviews" className="relative py-16 sm:py-24 lg:py-32">
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/30 to-zinc-950" />
+        <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-[100px] sm:block" />
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
-              Produkt
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 max-w-3xl sm:mb-16">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-400 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs">
+              <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              Bewertungsanfrage
             </span>
-            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              Alles für klare, geführte Gespräche
+            <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:mt-6 sm:text-4xl md:text-5xl">
+              Google Bewertungen{" "}
+              <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+                automatisiert
+              </span>
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
-              Antworten, Übergaben und Tonalität sind sauber definiert – ohne technisches Bauchgefühl.
+            <p className="mt-3 text-sm text-zinc-400 sm:mt-4 sm:text-lg">
+              Nach dem Besuch fragen wir automatisch per DM nach einer Bewertung.
             </p>
           </div>
 
-          <div className="mt-10 grid grid-cols-2 gap-3 sm:mt-20 sm:gap-8 lg:grid-cols-3">
-            {features.map((feature, index) => (
-              <div
-                key={feature.title}
-                className="group relative overflow-hidden rounded-xl border border-white/10 bg-zinc-900/50 p-4 transition-all hover:border-white/20 hover:bg-zinc-900 sm:rounded-2xl sm:p-8"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div
-                  className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br sm:mb-6 sm:h-12 sm:w-12 sm:rounded-xl ${feature.gradient}`}
-                >
-                  <feature.icon className="h-5 w-5 text-white sm:h-6 sm:w-6" />
-                </div>
-                <h3 className="text-base font-semibold text-white sm:text-xl">{feature.title}</h3>
-                <p className="mt-1.5 text-xs leading-relaxed text-zinc-400 sm:mt-3 sm:text-sm">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ==================== DIFFERENTIATORS SECTION ==================== */}
-      <section id="why-wesponde" className="relative py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-zinc-900/40" />
-        <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[100px] sm:block" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
-              Warum Wesponde
-            </span>
-            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              Klarer Unterschied zu generischen Tools
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
-              Speziell für Service‑Teams gebaut – mit fertigen Abläufen, die sofort wirken.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-4 sm:mt-16 sm:grid-cols-3 sm:gap-6">
-            {differentiators.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-xl border border-white/10 bg-zinc-900/50 p-5 sm:rounded-2xl sm:p-7"
-              >
-                <h3 className="text-lg font-semibold text-white">{item.title}</h3>
-                <p className="mt-2 text-sm text-zinc-400">{item.description}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 sm:mt-16">
-            <div className="grid grid-cols-1 gap-2 border-b border-white/10 px-5 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 sm:grid-cols-[1.2fr,1fr,1fr] sm:gap-6">
-              <span>Vergleich</span>
-              <span className="text-emerald-400">Wesponde</span>
-              <span>Andere Tools</span>
-            </div>
-            {comparisonRows.map((row) => (
-              <div
-                key={row.label}
-                className="grid grid-cols-1 gap-2 border-b border-white/10 px-5 py-4 text-sm sm:grid-cols-[1.2fr,1fr,1fr] sm:gap-6"
-              >
-                <span className="text-zinc-400">{row.label}</span>
-                <span className="font-semibold text-emerald-400">{row.wesponde}</span>
-                <span className="text-zinc-400">{row.others}</span>
-              </div>
-            ))}
-          </div>
+          <GoogleReviewsFlow />
         </div>
       </section>
 
@@ -476,32 +442,6 @@ export default function HomePage() {
           </div>
 
           <FlowBuilderDemo />
-        </div>
-      </section>
-
-      {/* ==================== GOOGLE REVIEWS SECTION ==================== */}
-      <section id="reviews" className="relative py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/30 to-zinc-950" />
-        <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-[100px] sm:block" />
-
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 max-w-3xl sm:mb-16">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-400 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs">
-              <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              Bewertungsanfrage
-            </span>
-            <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:mt-6 sm:text-4xl md:text-5xl">
-              Google Bewertungen{" "}
-              <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
-                automatisiert
-              </span>
-            </h2>
-            <p className="mt-3 text-sm text-zinc-400 sm:mt-4 sm:text-lg">
-              Nach dem Besuch fragen wir automatisch per DM nach einer Bewertung.
-            </p>
-          </div>
-
-          <GoogleReviewsFlow />
         </div>
       </section>
 
@@ -543,45 +483,6 @@ export default function HomePage() {
                   </div>
                   <span className="ml-2 text-2xl sm:text-4xl">{useCase.icon}</span>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ==================== WORKFLOW SECTION ==================== */}
-      <section id="workflow" className="relative py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/30 to-zinc-950" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
-              Ablauf
-            </span>
-            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              In Tagen live, nicht in Monaten
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
-              Wir übernehmen Setup, QA und die ersten Abläufe gemeinsam mit deinem Team.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-4 sm:mt-20 sm:gap-8 lg:grid-cols-3">
-            {steps.map((step, index) => (
-              <div
-                key={step.title}
-                className="relative rounded-xl border border-white/10 bg-zinc-900/50 p-5 sm:rounded-2xl sm:p-8"
-              >
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-base font-bold text-white sm:mb-6 sm:h-12 sm:w-12 sm:text-lg">
-                  {step.step}
-                </div>
-                <h3 className="text-lg font-semibold text-white sm:text-xl">{step.title}</h3>
-                <p className="mt-2 text-xs leading-relaxed text-zinc-400 sm:mt-3 sm:text-sm">{step.description}</p>
-                {index < steps.length - 1 && (
-                  <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 lg:block">
-                    <ArrowRight className="h-6 w-6 text-zinc-700" />
-                  </div>
-                )}
               </div>
             ))}
           </div>
