@@ -6,16 +6,16 @@ import {
   defaultTriggers,
   defaultMetadata,
 } from "../../../lib/defaultFlow";
-import { requireUser } from "../../../lib/apiAuth";
+import { requireUser, requireAccountMember } from "../../../lib/apiAuth";
 import { fallbackTemplates } from "../../../lib/flowTemplates";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
 export async function GET(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`flows:${user.id}`, RATE_LIMITS.generous);
+    const rateLimit = checkRateLimit(`flows:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from("flows")
       .select("id, name, status, updated_at, nodes, edges, triggers, metadata")
-      .eq("user_id", user.id)
+      .eq("account_id", accountId)
       .order("updated_at", { ascending: false });
 
     if (error) {
@@ -42,10 +42,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`flows:${user.id}`, RATE_LIMITS.standard);
+    const rateLimit = checkRateLimit(`flows:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -111,6 +111,7 @@ export async function POST(request: Request) {
       .from("flows")
       .insert({
         user_id: user.id,
+        account_id: accountId,
         name,
         nodes: nodesToUse,
         edges: edgesToUse,

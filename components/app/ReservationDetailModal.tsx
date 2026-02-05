@@ -45,6 +45,7 @@ export default function ReservationDetailModal({ reservation, onClose }: Props) 
   };
 
   const statusConfig = STATUS_CONFIG[reservation.status];
+  const contactName = reservation.contacts?.display_name;
 
   const getSourceLabel = (source: string) => {
     switch (source) {
@@ -102,7 +103,12 @@ export default function ReservationDetailModal({ reservation, onClose }: Props) 
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wider text-zinc-500">Gast</p>
-                <p className="font-medium text-white">{reservation.guest_name}</p>
+                <p className="font-medium text-white">{contactName || reservation.guest_name}</p>
+                {contactName && contactName !== reservation.guest_name && (
+                  <p className="text-xs text-zinc-500">
+                    Reservierung: {reservation.guest_name}
+                  </p>
+                )}
               </div>
             </div>
 

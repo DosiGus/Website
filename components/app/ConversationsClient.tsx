@@ -14,6 +14,10 @@ interface Conversation {
     variables?: Record<string, string>;
     reservationId?: string;
   } | null;
+  contacts: {
+    id: string;
+    display_name: string | null;
+  } | null;
   last_message_at: string | null;
   created_at: string;
   flows: {
@@ -139,6 +143,11 @@ export default function ConversationsClient() {
     });
   };
 
+  const getConversationName = (conv: Conversation) =>
+    conv.contacts?.display_name ||
+    conv.metadata?.variables?.name ||
+    conv.instagram_sender_id;
+
   if (loading) {
     return (
       <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-8 backdrop-blur-xl">
@@ -181,9 +190,14 @@ export default function ConversationsClient() {
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-zinc-500" />
                 <span className="font-medium text-white">
-                  {selectedConversation.instagram_sender_id}
+                  {getConversationName(selectedConversation)}
                 </span>
               </div>
+              {selectedConversation.contacts?.display_name && (
+                <div className="text-xs text-zinc-500">
+                  IG: {selectedConversation.instagram_sender_id}
+                </div>
+              )}
               {selectedConversation.flows && (
                 <div className="text-xs text-zinc-400">
                   Flow: {selectedConversation.flows.name}
@@ -295,13 +309,18 @@ export default function ConversationsClient() {
                 </div>
                 <div>
                   <div className="font-medium text-white">
-                    {conv.instagram_sender_id}
+                    {getConversationName(conv)}
                   </div>
                   <div className="flex items-center gap-3 text-sm text-zinc-400">
                     {conv.flows && (
                       <span className="flex items-center gap-1">
                         <Bot className="h-3 w-3" />
                         {conv.flows.name}
+                      </span>
+                    )}
+                    {conv.contacts?.display_name && (
+                      <span className="text-zinc-500">
+                        IG: {conv.instagram_sender_id}
                       </span>
                     )}
                     <span className="flex items-center gap-1">

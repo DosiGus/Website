@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut } from "lucide-react";
+import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../lib/supabaseBrowserClient";
 
 export default function SettingsPage() {
@@ -15,6 +15,37 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [teamLoading, setTeamLoading] = useState(true);
+  const [teamError, setTeamError] = useState<string | null>(null);
+  const [teamNotice, setTeamNotice] = useState<string | null>(null);
+  const [teamSavingId, setTeamSavingId] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
+  const [canManageTeam, setCanManageTeam] = useState(false);
+
+  type TeamRole = "owner" | "admin" | "member" | "viewer";
+  type TeamMember = {
+    userId: string;
+    role: TeamRole;
+    joinedAt: string | null;
+    email: string | null;
+    fullName: string | null;
+  };
+
+  const ROLE_LABELS: Record<TeamRole, string> = {
+    owner: "Owner",
+    admin: "Admin",
+    member: "Mitarbeiter",
+    viewer: "Viewer",
+  };
+
+  const ROLE_OPTIONS: { value: TeamRole; label: string }[] = [
+    { value: "owner", label: "Owner" },
+    { value: "admin", label: "Admin" },
+    { value: "member", label: "Mitarbeiter" },
+    { value: "viewer", label: "Viewer" },
+  ];
 
   // Notification settings
   const [notifications, setNotifications] = useState({
@@ -41,6 +72,94 @@ export default function SettingsPage() {
     }
     loadUser();
   }, [supabase, router]);
+
+  const loadTeam = useCallback(async () => {
+    setTeamLoading(true);
+    setTeamError(null);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setTeamError("Bitte erneut anmelden.");
+      setTeamLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/account/members", {
+        headers: { authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setTeamError(data?.error || "Team konnte nicht geladen werden.");
+        setTeamLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+      setTeamMembers(data.members || []);
+      setCurrentUserId(data.currentUserId || null);
+      setCurrentUserRole(data.currentUserRole || null);
+      setCanManageTeam(Boolean(data.canManage));
+    } catch {
+      setTeamError("Team konnte nicht geladen werden.");
+    } finally {
+      setTeamLoading(false);
+    }
+  }, [supabase]);
+
+  const updateMemberRole = async (memberId: string, nextRole: TeamRole) => {
+    if (!canManageTeam) return;
+
+    const member = teamMembers.find((item) => item.userId === memberId);
+    if (!member || member.role === nextRole) return;
+
+    setTeamSavingId(memberId);
+    setTeamError(null);
+    setTeamNotice(null);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setTeamError("Bitte erneut anmelden.");
+      setTeamSavingId(null);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/account/members", {
+        method: "PATCH",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ userId: memberId, role: nextRole }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        setTeamError(payload?.error || "Rolle konnte nicht aktualisiert werden.");
+        setTeamSavingId(null);
+        return;
+      }
+
+      setTeamMembers((prev) =>
+        prev.map((item) =>
+          item.userId === memberId ? { ...item, role: nextRole } : item
+        )
+      );
+      setTeamNotice("Rolle aktualisiert.");
+    } catch {
+      setTeamError("Rolle konnte nicht aktualisiert werden.");
+    } finally {
+      setTeamSavingId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!loading) {
+      loadTeam();
+    }
+  }, [loading, loadTeam]);
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -83,6 +202,21 @@ export default function SettingsPage() {
       </div>
     );
   }
+
+  const ownerCount = teamMembers.filter((member) => member.role === "owner").length;
+  const sortedMembers = [...teamMembers].sort((a, b) => {
+    const roleOrder: Record<TeamRole, number> = {
+      owner: 0,
+      admin: 1,
+      member: 2,
+      viewer: 3,
+    };
+    const roleDiff = roleOrder[a.role] - roleOrder[b.role];
+    if (roleDiff !== 0) return roleDiff;
+    const aName = (a.fullName || a.email || a.userId).toLowerCase();
+    const bName = (b.fullName || b.email || b.userId).toLowerCase();
+    return aName.localeCompare(bName);
+  });
 
   return (
     <div className="space-y-8">
@@ -225,6 +359,109 @@ export default function SettingsPage() {
                 className="h-5 w-5 rounded border-zinc-600 bg-zinc-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
               />
             </label>
+          </div>
+        </div>
+
+        {/* Team Section */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-500">
+              <Users className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Team & Rollen</h2>
+              <p className="text-sm text-zinc-400">Verwalte, wer Zugriff hat</p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {teamLoading ? (
+              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+                Team wird geladen...
+              </div>
+            ) : teamError ? (
+              <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+                {teamError}
+              </div>
+            ) : sortedMembers.length === 0 ? (
+              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+                Keine Team-Mitglieder gefunden.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sortedMembers.map((member) => {
+                  const isCurrentUser = member.userId === currentUserId;
+                  const canEditMember =
+                    canManageTeam &&
+                    (currentUserRole === "owner" || member.role !== "owner");
+                  const label = member.fullName || member.email || member.userId;
+                  const secondary =
+                    member.fullName && member.email ? member.email : null;
+                  return (
+                    <div
+                      key={member.userId}
+                      className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-white">
+                            {label}
+                          </span>
+                          {isCurrentUser && (
+                            <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-zinc-300">
+                              Du
+                            </span>
+                          )}
+                        </div>
+                        {secondary && (
+                          <div className="text-xs text-zinc-500">{secondary}</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {canManageTeam ? (
+                          <select
+                            value={member.role}
+                            onChange={(e) =>
+                              updateMemberRole(member.userId, e.target.value as TeamRole)
+                            }
+                            disabled={!canEditMember || teamSavingId === member.userId}
+                            className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs font-medium text-white focus:border-indigo-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {ROLE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="rounded-lg bg-white/10 px-3 py-1 text-xs font-medium text-zinc-300">
+                            {ROLE_LABELS[member.role]}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!teamLoading && !teamError && teamNotice && (
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+                {teamNotice}
+              </div>
+            )}
+
+            {!teamLoading && !teamError && !canManageTeam && (
+              <p className="text-xs text-zinc-500">
+                Rollen können nur von Owner/Admin geändert werden.
+              </p>
+            )}
+
+            {!teamLoading && !teamError && canManageTeam && ownerCount <= 1 && (
+              <p className="text-xs text-zinc-500">
+                Mindestens ein Owner muss bestehen bleiben.
+              </p>
+            )}
           </div>
         </div>
 

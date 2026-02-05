@@ -40,10 +40,12 @@ export function getMissingReservationFields(
  */
 export async function createReservationFromVariables(
   userId: string,
+  accountId: string,
   conversationId: string,
   flowId: string | null,
   variables: ExtractedVariables,
-  instagramSenderId?: string
+  instagramSenderId?: string,
+  contactId?: string
 ): Promise<ReservationCreationResult> {
   const missing = getMissingReservationFields(variables);
 
@@ -79,6 +81,8 @@ export async function createReservationFromVariables(
       .from("reservations")
       .insert({
         user_id: userId,
+        account_id: accountId,
+        contact_id: contactId || null,
         ...input,
       })
       .select("id")

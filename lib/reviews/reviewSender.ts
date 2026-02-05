@@ -22,13 +22,13 @@ type ReviewRequestStatus =
   | "skipped"
   | "failed";
 
-export async function ensureReviewFlow(userId: string): Promise<ReviewFlowData> {
+export async function ensureReviewFlow(userId: string, accountId: string): Promise<ReviewFlowData> {
   const supabase = createSupabaseServerClient();
 
   const { data: activeFlow, error: activeError } = await supabase
     .from("flows")
     .select("id, nodes, edges, metadata, status, updated_at")
-    .eq("user_id", userId)
+    .eq("account_id", accountId)
     .eq("status", "Aktiv")
     .contains("metadata", { reviewFlow: true })
     .order("updated_at", { ascending: false })
@@ -50,7 +50,7 @@ export async function ensureReviewFlow(userId: string): Promise<ReviewFlowData> 
   const { data: existingFlow, error: flowError } = await supabase
     .from("flows")
     .select("id, nodes, edges, metadata, updated_at")
-    .eq("user_id", userId)
+    .eq("account_id", accountId)
     .contains("metadata", { reviewFlow: true })
     .order("updated_at", { ascending: false })
     .limit(1)
@@ -83,6 +83,7 @@ export async function ensureReviewFlow(userId: string): Promise<ReviewFlowData> 
     .from("flows")
     .insert({
       user_id: userId,
+      account_id: accountId,
       name: template.name,
       nodes: template.nodes,
       edges: template.edges,
@@ -165,7 +166,7 @@ export async function sendReviewRequestForReservation(
 
   const { data: integration, error: integrationError } = await supabase
     .from("integrations")
-    .select("id, access_token, instagram_id, google_review_url")
+    .select("id, account_id, access_token, instagram_id, google_review_url")
     .eq("id", conversation.integration_id)
     .single();
 
@@ -207,7 +208,7 @@ export async function sendReviewRequestForReservation(
     return { success: true, status: "already_sent", reviewRequestId: existingRequest.id };
   }
 
-  const reviewFlow = await ensureReviewFlow(reservation.user_id);
+  const reviewFlow = await ensureReviewFlow(reservation.user_id, integration.account_id);
   const reviewRequest = await upsertReviewRequest({
     supabase,
     reservationId: reservation.id,
@@ -261,6 +262,7 @@ export async function sendReviewRequestForReservation(
     message_type: flowResponse.quickReplies.length > 0 ? "quick_reply" : "text",
     content: flowResponse.text,
     instagram_message_id: sendResult.data.message_id,
+    channel_message_id: sendResult.data.message_id,
     flow_id: reviewFlow.flowId,
     node_id: REVIEW_START_NODE_ID,
   });

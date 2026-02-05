@@ -199,9 +199,21 @@ export default function ReservationsClient() {
     if (!searchQuery) return reservations;
     const query = searchQuery.toLowerCase();
     return reservations.filter((r) =>
-      r.guest_name.toLowerCase().includes(query)
+      r.guest_name.toLowerCase().includes(query) ||
+      (r.contacts?.display_name || "").toLowerCase().includes(query)
     );
   }, [reservations, searchQuery]);
+
+  const getReservationPrimaryName = (reservation: Reservation) =>
+    reservation.contacts?.display_name || reservation.guest_name;
+
+  const getReservationSecondaryName = (reservation: Reservation) => {
+    const contactName = reservation.contacts?.display_name;
+    if (contactName && contactName !== reservation.guest_name) {
+      return `Reservierung: ${reservation.guest_name}`;
+    }
+    return null;
+  };
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -587,7 +599,12 @@ export default function ReservationsClient() {
                   {filteredReservations.map((reservation) => (
                     <tr key={reservation.id} className="transition-colors hover:bg-white/5">
                       <td className="whitespace-nowrap px-6 py-4 font-medium text-white">
-                        {reservation.guest_name}
+                        <div>{getReservationPrimaryName(reservation)}</div>
+                        {getReservationSecondaryName(reservation) && (
+                          <div className="text-xs text-zinc-500">
+                            {getReservationSecondaryName(reservation)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-zinc-300">
                         {formatDate(reservation.reservation_date)}

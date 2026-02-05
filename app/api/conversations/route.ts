@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "../../../lib/apiAuth";
+import { requireUser, requireAccountMember } from "../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
@@ -11,10 +11,10 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`conversations:${user.id}`, RATE_LIMITS.generous);
+    const rateLimit = checkRateLimit(`conversations:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -34,6 +34,9 @@ export async function GET(request: Request) {
       .select(`
         id,
         instagram_sender_id,
+        channel,
+        channel_sender_id,
+        contact_id,
         status,
         current_flow_id,
         current_node_id,
@@ -43,9 +46,13 @@ export async function GET(request: Request) {
         flows:current_flow_id (
           id,
           name
+        ),
+        contacts:contact_id (
+          id,
+          display_name
         )
       `, { count: "exact" })
-      .eq("user_id", user.id)
+      .eq("account_id", accountId)
       .order("last_message_at", { ascending: false, nullsFirst: false })
       .range(offset, offset + limit - 1);
 

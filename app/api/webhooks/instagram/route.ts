@@ -30,6 +30,11 @@ import {
   createReservationFromVariables,
   getMissingReservationFields,
 } from "../../../../lib/webhook/reservationCreator";
+import {
+  findOrCreateContact,
+  updateContactDisplayName,
+  touchContact,
+} from "../../../../lib/contacts";
 
 function extractReviewRating(text: string): number | null {
   if (!text) return null;
@@ -179,7 +184,7 @@ async function processMessagingEvent(
   // Find the integration by Instagram account ID
   const { data: integration, error: integrationError } = await supabase
     .from("integrations")
-    .select("id, user_id, access_token")
+    .select("id, user_id, account_id, access_token")
     .eq("instagram_id", instagramAccountId)
     .eq("status", "connected")
     .single();
@@ -190,6 +195,7 @@ async function processMessagingEvent(
   }
 
   const userId = integration.user_id;
+  const accountId = integration.account_id;
   const accessToken = integration.access_token;
 
   if (!accessToken) {
@@ -197,10 +203,28 @@ async function processMessagingEvent(
     return;
   }
 
+  let contactId: string | null = null;
+  try {
+    const contact = await findOrCreateContact(
+      accountId,
+      "instagram_dm",
+      senderId
+    );
+    contactId = contact.contactId;
+  } catch (error) {
+    await reqLogger.warn("webhook", "Failed to resolve contact", {
+      metadata: {
+        accountId,
+        senderId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+    });
+  }
+
   // Get or create conversation
   let { data: conversation } = await supabase
     .from("conversations")
-    .select("id, current_flow_id, current_node_id, metadata")
+    .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id")
     .eq("integration_id", integration.id)
     .eq("instagram_sender_id", senderId)
     .single();
@@ -210,12 +234,16 @@ async function processMessagingEvent(
       .from("conversations")
       .insert({
         user_id: userId,
+        account_id: accountId,
         integration_id: integration.id,
+        contact_id: contactId,
         instagram_sender_id: senderId,
+        channel: "instagram_dm",
+        channel_sender_id: senderId,
         status: "active",
         metadata: {},
       })
-      .select("id, current_flow_id, current_node_id, metadata")
+      .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id")
       .single();
 
     if (convError) {
@@ -224,6 +252,26 @@ async function processMessagingEvent(
     }
 
     conversation = newConversation;
+  } else if (contactId && !conversation.contact_id) {
+    const { error: contactUpdateError } = await supabase
+      .from("conversations")
+      .update({
+        contact_id: contactId,
+        channel: "instagram_dm",
+        channel_sender_id: senderId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", conversation.id);
+
+    if (contactUpdateError) {
+      await reqLogger.warn("webhook", "Failed to backfill contact on conversation", {
+        metadata: {
+          conversationId: conversation.id,
+          contactId,
+          error: contactUpdateError.message,
+        },
+      });
+    }
   }
 
   // Extract message content
@@ -369,6 +417,19 @@ async function processMessagingEvent(
     mergedVariables = { ...mergedVariables, ...overrideVariables };
   }
 
+  if (contactId && typeof mergedVariables.name === "string") {
+    try {
+      await updateContactDisplayName(contactId, mergedVariables.name);
+    } catch (error) {
+      await reqLogger.warn("webhook", "Failed to update contact display name", {
+        metadata: {
+          contactId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+      });
+    }
+  }
+
   // Update metadata if new variables were extracted or overridden
   if (Object.keys(newVariables).length > 0 || hasOverrides) {
     const updatedMetadata: ConversationMetadata = {
@@ -447,12 +508,26 @@ async function processMessagingEvent(
     content: messageText,
     quick_reply_payload: quickReplyPayload,
     instagram_message_id: instagramMessageId,
+    channel_message_id: instagramMessageId,
     flow_id: conversation.current_flow_id,
     node_id: conversation.current_node_id,
   });
 
   if (incomingMsgError) {
     await reqLogger.error("webhook", `Failed to save incoming message: ${incomingMsgError.message}`);
+  }
+
+  if (contactId) {
+    try {
+      await touchContact(contactId);
+    } catch (error) {
+      await reqLogger.warn("webhook", "Failed to update contact last_seen", {
+        metadata: {
+          contactId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+      });
+    }
   }
 
   // Determine response
@@ -555,7 +630,7 @@ async function processMessagingEvent(
         .from("reservations")
         .select("id, guest_name, reservation_date, reservation_time")
         .eq("instagram_sender_id", senderId)
-        .eq("user_id", userId)
+        .eq("account_id", accountId)
         .in("status", ["pending", "confirmed"])
         .order("created_at", { ascending: false })
         .limit(1)
@@ -637,7 +712,7 @@ async function processMessagingEvent(
         .from("reservations")
         .select("id, guest_name, reservation_date, reservation_time, guest_count, status")
         .eq("instagram_sender_id", senderId)
-        .eq("user_id", userId)
+        .eq("account_id", accountId)
         .in("status", ["pending", "confirmed"])
         .order("created_at", { ascending: false })
         .limit(1)
@@ -677,7 +752,7 @@ async function processMessagingEvent(
       }
     }
 
-    const matchedFlow = await findMatchingFlow(userId, messageText);
+    const matchedFlow = await findMatchingFlow(accountId, messageText);
 
     if (matchedFlow) {
       // Reset variables and reservationId when starting a NEW flow
@@ -759,6 +834,7 @@ async function processMessagingEvent(
         message_type: flowResponse.quickReplies.length > 0 ? "quick_reply" : "text",
         content: flowResponse.text,
         instagram_message_id: sendResult.data.message_id,
+        channel_message_id: sendResult.data.message_id,
         flow_id: matchedFlowId,
         node_id: matchedNodeId,
       });
@@ -951,10 +1027,12 @@ async function processMessagingEvent(
         if (shouldCreateReservation && canCreateReservation(mergedVariables)) {
           const reservationResult = await createReservationFromVariables(
             userId,
+            accountId,
             conversation.id,
             matchedFlowId,
             mergedVariables,
-            senderId
+            senderId,
+            contactId ?? undefined
           );
 
           if (reservationResult.success) {

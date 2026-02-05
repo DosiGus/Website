@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "../../../lib/apiAuth";
+import { requireUser, requireAccountMember } from "../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
 export async function GET(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`integrations:${user.id}`, RATE_LIMITS.generous);
+    const rateLimit = checkRateLimit(`integrations:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       .select(
         "provider,status,account_name,instagram_id,instagram_username,page_id,expires_at,updated_at,google_review_url",
       )
-      .eq("user_id", user.id);
+      .eq("account_id", accountId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -37,10 +37,10 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`integrations:${user.id}`, RATE_LIMITS.strict);
+    const rateLimit = checkRateLimit(`integrations:${accountId}`, RATE_LIMITS.strict);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -70,7 +70,7 @@ export async function DELETE(request: Request) {
         account_name: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", user.id)
+      .eq("account_id", accountId)
       .eq("provider", provider);
 
     if (error) {
@@ -85,7 +85,7 @@ export async function DELETE(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
     const rateLimit = checkRateLimit(`integrations:${user.id}:update`, RATE_LIMITS.standard);
@@ -115,7 +115,7 @@ export async function PATCH(request: Request) {
         google_review_url: body.google_review_url || null,
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", user.id)
+      .eq("account_id", accountId)
       .eq("provider", provider)
       .select(
         "provider,status,account_name,instagram_id,instagram_username,page_id,expires_at,updated_at,google_review_url",

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
-import { requireUser } from "../../../lib/apiAuth";
+import { requireUser, requireAccountMember } from "../../../lib/apiAuth";
 
 export async function GET(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
     const supabaseAdmin = createSupabaseServerClient();
 
     const { searchParams } = new URL(request.url);
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     let query = supabaseAdmin
       .from("logs")
       .select("*", { count: "exact" })
-      .eq("user_id", user.id)
+      .eq("account_id", accountId)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 

@@ -25,24 +25,28 @@ Wesponde is a B2B SaaS platform for automating customer conversations (Instagram
 ### Authentication & API
 
 - Browser auth: Supabase client (`lib/supabaseBrowserClient.ts`) with email/password + Meta OAuth
-- API routes: Bearer token auth via `lib/apiAuth.ts` → `requireUser()` validates JWT against Supabase
+- API routes: Bearer token auth via `lib/apiAuth.ts` → `requireAccountMember()` resolves user + account membership. Legacy `requireUser()` still available.
 - Server-side operations use a service-role client (`lib/supabaseServerClient.ts`) for admin access
 
 ### Database (Supabase PostgreSQL)
 
-Schema in `supabase/schema.sql`. All tables use RLS (Row-Level Security) scoped to `auth.uid() = user_id`.
+Schema in `supabase/schema.sql`. Multi-tenant model: all data scoped to `account_id` via `accounts` table. RLS uses `user_account_ids()` helper function. Legacy `user_id` policies remain for backward compatibility.
 
 | Table | Purpose |
 |-------|---------|
-| `flows` | User conversation flows (nodes/edges/triggers stored as JSONB) |
+| `accounts` | Tenant entity (restaurant, salon, praxis) |
+| `account_members` | User-to-account membership with roles (owner/admin/member/viewer) |
+| `contacts` | End-customers/guests, trackable across conversations |
+| `contact_channels` | Channel identities per contact (Instagram PSID, WhatsApp, etc.) |
+| `flows` | Conversation flows (nodes/edges/triggers as JSONB), scoped to `account_id` |
 | `flow_templates` | Pre-built templates (restaurant, salon, medical) |
-| `integrations` | Meta/Instagram OAuth tokens and connection status |
+| `integrations` | Meta/Instagram OAuth tokens, connection status, `channel` field |
 | `review_requests` | Review follow-up tracking (rating, feedback, sent status) |
 | `oauth_states` | CSRF protection for OAuth flow |
-| `messages` | Incoming/outgoing messages from Instagram/WhatsApp |
-| `conversations` | Conversation threads with customers (includes `metadata.variables` and `metadata.reservationId`) |
-| `reservations` | Bookings/appointments extracted from conversations |
-| `logs` | Webhook/system logs for debugging |
+| `messages` | Incoming/outgoing messages, `channel_message_id` for channel-agnostic lookup |
+| `conversations` | Conversation threads with `contact_id`, `channel`, `channel_sender_id` |
+| `reservations` | Bookings/appointments with `contact_id` for guest tracking |
+| `logs` | Webhook/system logs (`account_id` nullable for system logs) |
 
 ### Flow Builder
 
@@ -269,15 +273,19 @@ app/
 
 lib/
   webhook/
-    flowMatcher.ts          # Match messages to flows
+    flowMatcher.ts          # Match messages to flows (by account_id)
     flowExecutor.ts         # Execute flow nodes
     variableExtractor.ts    # Extract user data from messages
     variableSubstitutor.ts  # Replace {{placeholders}}
-    reservationCreator.ts   # Create reservations
+    reservationCreator.ts   # Create reservations (with account_id + contact_id)
   meta/
     instagramApi.ts         # Send Instagram messages
     types.ts                # Meta API types
     webhookVerify.ts        # Webhook signature verification
+  reviews/
+    reviewSender.ts         # Send Google review requests after reservations
+  contacts.ts               # findOrCreateContact(), updateContactDisplayName()
+  apiAuth.ts                # requireUser() + requireAccountMember() -> { user, accountId, role }
   flowTypes.ts              # Flow type definitions
   flowLint.ts               # Flow validation
   flowTemplates.ts          # Template definitions

@@ -151,6 +151,38 @@ export async function GET(request: Request) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  let accountId = (stateRow as { account_id?: string | null }).account_id ?? null;
+  if (!accountId) {
+    const { data: membership, error: membershipError } = await supabase
+      .from("account_members")
+      .select("account_id")
+      .eq("user_id", stateRow.user_id)
+      .limit(1)
+      .maybeSingle();
+
+    if (membershipError) {
+      await log.error("oauth", "Failed to resolve account membership", {
+        requestId,
+        userId: stateRow.user_id,
+        metadata: { error: membershipError.message },
+      });
+    }
+
+    accountId = membership?.account_id ?? null;
+  }
+
+  if (!accountId) {
+    await log.error("oauth", "Account ID missing for OAuth callback", {
+      requestId,
+      userId: stateRow.user_id,
+    });
+    const redirectUrl = new URL(
+      `/app/integrations?error=${encodeURIComponent("Account fehlt fuer OAuth-Verbindung.")}`,
+      request.url,
+    );
+    return NextResponse.redirect(redirectUrl);
+  }
+
   // Exchange code for short-lived token
   const tokenResponse = await fetch(
     `${META_GRAPH_BASE}/oauth/access_token?` +
@@ -382,6 +414,7 @@ export async function GET(request: Request) {
       .upsert(
         {
           user_id: stateRow.user_id,
+          account_id: accountId,
           provider: "meta",
           status: "connected",
           access_token: firstPage.access_token,

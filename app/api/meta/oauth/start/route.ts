@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../../lib/supabaseServerClient";
-import { requireUser } from "../../../../../lib/apiAuth";
+import { requireAccountMember } from "../../../../../lib/apiAuth";
 import { META_PERMISSIONS } from "../../../../../lib/meta/types";
 import { createRequestLogger } from "../../../../../lib/logger";
 import crypto from "crypto";
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const requestId = crypto.randomUUID();
   const log = createRequestLogger("oauth");
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
     await log.info("oauth", "OAuth start requested", {
       requestId,
       userId: user.id,
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     const supabase = createSupabaseServerClient();
     const { error } = await supabase.from("oauth_states").insert({
       user_id: user.id,
+      account_id: accountId,
       state,
       expires_at: expiresAt,
     });

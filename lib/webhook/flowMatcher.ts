@@ -15,16 +15,16 @@ export type MatchedFlow = {
  * Returns the first matching flow or null if no match.
  */
 export async function findMatchingFlow(
-  userId: string,
+  accountId: string,
   messageText: string
 ): Promise<MatchedFlow | null> {
   const supabase = createSupabaseServerClient();
 
-  // Load all active flows for this user
+  // Load all active flows for this account
   const { data: flows, error } = await supabase
     .from("flows")
     .select("id, name, triggers, nodes, edges")
-    .eq("user_id", userId)
+    .eq("account_id", accountId)
     .eq("status", "Aktiv");
 
   if (error) {

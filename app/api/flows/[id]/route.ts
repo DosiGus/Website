@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
-import { requireUser } from "../../../../lib/apiAuth";
+import { requireUser, requireAccountMember } from "../../../../lib/apiAuth";
 import { defaultMetadata } from "../../../../lib/defaultFlow";
 
 export async function GET(
@@ -8,13 +8,13 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from("flows")
       .select("*")
       .eq("id", params.id)
-      .eq("user_id", user.id)
+      .eq("account_id", accountId)
       .single();
 
     if (error) {
@@ -32,7 +32,7 @@ export async function PUT(
   { params }: { params: { id: string } },
 ) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
     const body = await request.json();
     const supabase = createSupabaseServerClient();
     const { error } = await supabase
@@ -47,7 +47,7 @@ export async function PUT(
         updated_at: new Date().toISOString(),
       })
       .eq("id", params.id)
-      .eq("user_id", user.id);
+      .eq("account_id", accountId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -64,13 +64,13 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
     const supabase = createSupabaseServerClient();
     const { error } = await supabase
       .from("flows")
       .delete()
       .eq("id", params.id)
-      .eq("user_id", user.id);
+      .eq("account_id", accountId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

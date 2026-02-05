@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "../../../lib/apiAuth";
+import { requireUser, requireAccountMember } from "../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import {
   Reservation,
@@ -21,10 +21,10 @@ import { sendReviewRequestForReservation } from "../../../lib/reviews/reviewSend
  */
 export async function GET(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`reservations:${user.id}`, RATE_LIMITS.generous);
+    const rateLimit = checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -59,8 +59,8 @@ export async function GET(request: Request) {
     // Build query
     let query = supabase
       .from("reservations")
-      .select("*", { count: "exact" })
-      .eq("user_id", user.id)
+      .select("*, contacts:contact_id (id, display_name)", { count: "exact" })
+      .eq("account_id", accountId)
       .order("reservation_date", { ascending: true })
       .order("reservation_time", { ascending: true })
       .range(offset, offset + limit - 1);
@@ -115,10 +115,10 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`reservations:${user.id}`, RATE_LIMITS.standard);
+    const rateLimit = checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -153,6 +153,7 @@ export async function POST(request: Request) {
       .from("reservations")
       .insert({
         user_id: user.id,
+        account_id: accountId,
         guest_name,
         reservation_date,
         reservation_time,
@@ -189,10 +190,10 @@ export async function POST(request: Request) {
  */
 export async function PATCH(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`reservations:${user.id}`, RATE_LIMITS.standard);
+    const rateLimit = checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -238,7 +239,7 @@ export async function PATCH(request: Request) {
       .from("reservations")
       .update(updateData)
       .eq("id", id)
-      .eq("user_id", user.id)
+      .eq("account_id", accountId)
       .select()
       .single();
 
@@ -283,10 +284,10 @@ export async function PATCH(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`reservations:${user.id}`, RATE_LIMITS.standard);
+    const rateLimit = checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -319,7 +320,7 @@ export async function DELETE(request: Request) {
       .from("reservations")
       .delete()
       .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("account_id", accountId);
 
     if (error) {
       console.error("Reservation DELETE error:", error);

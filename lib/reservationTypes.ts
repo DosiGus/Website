@@ -12,7 +12,13 @@ export type ReservationStatus =
 export type Reservation = {
   id: string;
   user_id: string;
+  account_id: string;
   conversation_id: string | null;
+  contact_id: string | null;
+  contacts?: {
+    id: string;
+    display_name: string | null;
+  } | null;
   flow_id: string | null;
   guest_name: string;
   reservation_date: string; // ISO date: YYYY-MM-DD
@@ -38,6 +44,7 @@ export type CreateReservationInput = {
   email?: string | null;
   special_requests?: string | null;
   conversation_id?: string;
+  contact_id?: string | null;
   flow_id?: string;
   instagram_sender_id?: string;
 };
