@@ -84,6 +84,79 @@ create policy "Admins entfernen Mitglieder"
   ));
 
 -- =============================================================================
+-- 1.1 ACCOUNT BOOTSTRAP (AUTO-CREATE ON SIGNUP)
+-- =============================================================================
+
+create or replace function public.create_account_for_user(
+  target_user_id uuid,
+  target_email text,
+  target_meta jsonb default '{}'::jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  existing_account_id uuid;
+  account_name text;
+  account_slug text;
+begin
+  select account_id into existing_account_id
+  from public.account_members
+  where user_id = target_user_id
+  limit 1;
+
+  if existing_account_id is not null then
+    return existing_account_id;
+  end if;
+
+  account_slug := replace(target_user_id::text, '-', '');
+
+  select id into existing_account_id
+  from public.accounts
+  where slug = account_slug
+  limit 1;
+
+  if existing_account_id is null then
+    account_name := coalesce(
+      nullif(target_meta->>'full_name', ''),
+      nullif(target_meta->>'name', ''),
+      nullif(split_part(target_email, '@', 1), ''),
+      'Mein Betrieb'
+    );
+
+    insert into public.accounts (name, slug, vertical)
+    values (account_name, account_slug, 'restaurant')
+    returning id into existing_account_id;
+  end if;
+
+  insert into public.account_members (account_id, user_id, role)
+  values (existing_account_id, target_user_id, 'owner')
+  on conflict (account_id, user_id) do nothing;
+
+  return existing_account_id;
+end;
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.create_account_for_user(new.id, new.email, new.raw_user_meta_data);
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute procedure public.handle_new_user();
+
+-- =============================================================================
 -- 2. CONTACTS & CHANNELS
 -- =============================================================================
 
