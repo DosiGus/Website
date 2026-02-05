@@ -32,17 +32,21 @@ Wesponde is a B2B SaaS platform for automating customer conversations (Instagram
 
 Schema in `supabase/schema.sql`. Multi-tenant model: all data scoped to `account_id` via `accounts` table. RLS uses `user_account_ids()` helper function. Legacy `user_id` policies remain for backward compatibility.
 
+**Auto-provisioning:** A database trigger (`on_auth_user_created`) calls `create_account_for_user()` on signup, which creates an `accounts` row + `account_members` (owner) entry automatically.
+
+**OAuth flow:** `oauth_states` carries `account_id` from the start route so the callback can associate the integration with the correct account.
+
 | Table | Purpose |
 |-------|---------|
 | `accounts` | Tenant entity (restaurant, salon, praxis) |
 | `account_members` | User-to-account membership with roles (owner/admin/member/viewer) |
 | `contacts` | End-customers/guests, trackable across conversations |
-| `contact_channels` | Channel identities per contact (Instagram PSID, WhatsApp, etc.) |
+| `contact_channels` | Channel identities per contact, with `account_id` + unique `(account_id, channel, channel_identifier)` |
 | `flows` | Conversation flows (nodes/edges/triggers as JSONB), scoped to `account_id` |
 | `flow_templates` | Pre-built templates (restaurant, salon, medical) |
 | `integrations` | Meta/Instagram OAuth tokens, connection status, `channel` field |
 | `review_requests` | Review follow-up tracking (rating, feedback, sent status) |
-| `oauth_states` | CSRF protection for OAuth flow |
+| `oauth_states` | CSRF protection for OAuth flow, carries `account_id` for callback |
 | `messages` | Incoming/outgoing messages, `channel_message_id` for channel-agnostic lookup |
 | `conversations` | Conversation threads with `contact_id`, `channel`, `channel_sender_id` |
 | `reservations` | Bookings/appointments with `contact_id` for guest tracking |

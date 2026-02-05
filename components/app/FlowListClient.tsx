@@ -1,8 +1,8 @@
 'use client';
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Copy, Search, Star, Trash2, Pencil, Check, X, AlertTriangle, CheckCircle } from "lucide-react";
 import type { Edge, Node } from "reactflow";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
@@ -20,26 +20,42 @@ type FlowSummary = {
   metadata?: FlowMetadata;
 };
 
+type FlowStatus = "Aktiv" | "Entwurf";
+type FlowFilter = "all" | FlowStatus | "Favoriten" | "Warnungen" | "Valide";
+
 type Props = {
   variant: "grid" | "table";
+  statusFilterOverride?: FlowStatus;
+  showReservationCounts?: boolean;
+};
+
+type ReservationCountRow = {
+  flow_id: string | null;
 };
 
 type PendingAction = { id: string; type: "duplicate" | "template" | "delete" } | null;
 
-export default function FlowListClient({ variant }: Props) {
+export default function FlowListClient({
+  variant,
+  statusFilterOverride,
+  showReservationCounts = false,
+}: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
   const [flows, setFlows] = useState<FlowSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "Aktiv" | "Entwurf">("all");
+  const [statusFilter, setStatusFilter] = useState<FlowFilter>("all");
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [reservationCounts, setReservationCounts] = useState<Record<string, number>>({});
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const lastStatusParamRef = useRef<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("wesponde-flow-favorites");
@@ -92,6 +108,81 @@ export default function FlowListClient({ variant }: Props) {
     loadFlows();
   }, [userId, supabase]);
 
+  useEffect(() => {
+    if (statusFilterOverride) return;
+
+    const statusParam = searchParams.get("status");
+    if (statusParam === lastStatusParamRef.current) return;
+    lastStatusParamRef.current = statusParam;
+
+    if (!statusParam) {
+      setStatusFilter("all");
+      return;
+    }
+
+    const normalized = statusParam.toLowerCase();
+    let nextStatus: FlowFilter | null = null;
+
+    if (normalized === "aktiv") nextStatus = "Aktiv";
+    if (normalized === "entwurf") nextStatus = "Entwurf";
+    if (normalized === "favoriten") nextStatus = "Favoriten";
+    if (normalized === "warnungen") nextStatus = "Warnungen";
+    if (normalized === "valide") nextStatus = "Valide";
+    if (normalized === "all") nextStatus = "all";
+
+    if (nextStatus && nextStatus !== statusFilter) {
+      setStatusFilter(nextStatus);
+    }
+  }, [searchParams, statusFilter, statusFilterOverride]);
+
+  useEffect(() => {
+    if (!showReservationCounts) {
+      setReservationCounts({});
+      return;
+    }
+
+    const flowIds = flows
+      .filter((flow) =>
+        statusFilterOverride ? flow.status === statusFilterOverride : true
+      )
+      .map((flow) => flow.id);
+
+    if (!flowIds.length) {
+      setReservationCounts({});
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadReservationCounts() {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("flow_id")
+        .in("flow_id", flowIds);
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("Failed to load reservation counts:", error);
+        setReservationCounts({});
+        return;
+      }
+
+      const counts: Record<string, number> = {};
+      (data as ReservationCountRow[] | null)?.forEach((row) => {
+        if (!row.flow_id) return;
+        counts[row.flow_id] = (counts[row.flow_id] ?? 0) + 1;
+      });
+      setReservationCounts(counts);
+    }
+
+    loadReservationCounts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [flows, showReservationCounts, statusFilterOverride, supabase]);
+
   const flowsWithWarnings = useMemo(
     () =>
       flows.map((flow) => {
@@ -104,19 +195,40 @@ export default function FlowListClient({ variant }: Props) {
     [flows],
   );
 
+  const effectiveStatusFilter: FlowFilter =
+    statusFilterOverride ?? statusFilter;
+
   const filteredFlows = useMemo(() => {
+    const matchesFilter = (flow: FlowSummary & { warningCount: number }) => {
+      switch (effectiveStatusFilter) {
+        case "all":
+          return true;
+        case "Aktiv":
+        case "Entwurf":
+          return flow.status === effectiveStatusFilter;
+        case "Favoriten":
+          return favorites.includes(flow.id);
+        case "Warnungen":
+          return flow.warningCount > 0;
+        case "Valide":
+          return flow.warningCount === 0;
+        default:
+          return true;
+      }
+    };
+
     return flowsWithWarnings
       .filter((flow) =>
         flow.name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
-      .filter((flow) => (statusFilter === "all" ? true : flow.status === statusFilter))
+      .filter((flow) => matchesFilter(flow))
       .sort((a, b) => {
         const aFav = favorites.includes(a.id);
         const bFav = favorites.includes(b.id);
         if (aFav === bFav) return 0;
         return aFav ? -1 : 1;
       });
-  }, [flowsWithWarnings, searchQuery, statusFilter, favorites]);
+  }, [flowsWithWarnings, searchQuery, effectiveStatusFilter, favorites]);
 
   const toggleFavorite = (flowId: string) => {
     setFavorites((prev) =>
@@ -289,9 +401,23 @@ export default function FlowListClient({ variant }: Props) {
   }
 
   if (!filteredFlows.length) {
+    const emptyMessage = searchQuery
+      ? "Keine Flows gefunden."
+      : effectiveStatusFilter === "Aktiv"
+        ? "Noch keine aktiven Flows vorhanden."
+        : effectiveStatusFilter === "Entwurf"
+          ? "Noch keine Entwürfe vorhanden."
+          : effectiveStatusFilter === "Favoriten"
+            ? "Noch keine Favoriten markiert."
+            : effectiveStatusFilter === "Warnungen"
+              ? "Keine Flows mit Warnungen."
+              : effectiveStatusFilter === "Valide"
+                ? "Keine validen Flows gefunden."
+                : "Noch keine Flows vorhanden.";
+
     return (
       <div className="rounded-xl border border-dashed border-white/20 bg-zinc-900/30 p-8 text-center text-sm text-zinc-400">
-        Noch keine Flows vorhanden.{" "}
+        {emptyMessage}{" "}
         <Link href="/app/flows/new" className="font-semibold text-indigo-400 hover:text-indigo-300">
           Erstelle den ersten Flow.
         </Link>
@@ -323,15 +449,20 @@ export default function FlowListClient({ variant }: Props) {
           onChange={(event) => setSearchQuery(event.target.value)}
         />
       </div>
-      <select
-        value={statusFilter}
-        onChange={(event) => setStatusFilter(event.target.value as "all" | "Aktiv" | "Entwurf")}
-        className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white focus:border-indigo-500/50 focus:outline-none"
-      >
-        <option value="all" className="bg-zinc-900">Alle Stati</option>
-        <option value="Aktiv" className="bg-zinc-900">Aktive</option>
-        <option value="Entwurf" className="bg-zinc-900">Entwürfe</option>
-      </select>
+      {!statusFilterOverride ? (
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value as FlowFilter)}
+          className="app-select"
+        >
+          <option value="all">Status filtern</option>
+          <option value="Aktiv">Aktive</option>
+          <option value="Entwurf">Entwürfe</option>
+          <option value="Favoriten">Favoriten</option>
+          <option value="Warnungen">Mit Warnungen</option>
+          <option value="Valide">Ohne Warnungen</option>
+        </select>
+      ) : null}
     </div>
   );
 
@@ -380,6 +511,14 @@ export default function FlowListClient({ variant }: Props) {
                 {renderWarningPill(flow.warningCount)}
                 <span className="text-zinc-600">•</span>
                 <span>{flow.nodes.length} Nodes · {flow.edges.length} Verbindungen</span>
+                {showReservationCounts ? (
+                  <>
+                    <span className="text-zinc-600">•</span>
+                    <span>
+                      {(reservationCounts[flow.id] ?? 0).toLocaleString("de-DE")} Reservierungen
+                    </span>
+                  </>
+                ) : null}
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link

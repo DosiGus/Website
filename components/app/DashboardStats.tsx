@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Workflow, Plug, CalendarCheck, Clock } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
@@ -72,6 +73,7 @@ export default function DashboardStats() {
       icon: Workflow,
       gradient: "from-indigo-500 to-violet-500",
       bgGlow: "bg-indigo-500/20",
+      href: "/app/flows?status=Aktiv",
     },
     {
       label: "Verbundene Kanäle",
@@ -80,6 +82,7 @@ export default function DashboardStats() {
       icon: Plug,
       gradient: "from-emerald-500 to-teal-500",
       bgGlow: "bg-emerald-500/20",
+      href: "/app/integrations",
     },
     {
       label: "Reservierungen",
@@ -88,6 +91,7 @@ export default function DashboardStats() {
       icon: CalendarCheck,
       gradient: "from-amber-500 to-orange-500",
       bgGlow: "bg-amber-500/20",
+      href: "/app/reservations",
     },
     {
       label: "Ausstehend",
@@ -96,6 +100,7 @@ export default function DashboardStats() {
       icon: Clock,
       gradient: "from-rose-500 to-pink-500",
       bgGlow: "bg-rose-500/20",
+      href: "/app/reservations?status=pending",
     },
   ];
 
@@ -121,9 +126,10 @@ export default function DashboardStats() {
       {statItems.map((stat) => {
         const Icon = stat.icon;
         return (
-          <div
+          <Link
             key={stat.label}
-            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 transition-all hover:border-white/20 hover:bg-zinc-900"
+            href={stat.href}
+            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 transition-all hover:border-white/20 hover:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
           >
             {/* Background glow */}
             <div className={`absolute -right-8 -top-8 h-24 w-24 rounded-full ${stat.bgGlow} blur-2xl opacity-50 transition-opacity group-hover:opacity-70`} />
@@ -140,7 +146,7 @@ export default function DashboardStats() {
               </p>
               <p className="mt-1 text-xs text-zinc-500">{stat.description}</p>
             </div>
-          </div>
+          </Link>
         );
       })}
     </section>

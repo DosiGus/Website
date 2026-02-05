@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Node, Edge } from "reactflow";
-import { RotateCcw, Send, Bot, User, Play, AlertCircle } from "lucide-react";
+import { RotateCcw, Send, MessageCircle, User, Play, AlertCircle } from "lucide-react";
 import type { FlowQuickReply, FlowTrigger } from "../../lib/flowTypes";
 
 type SimulatorMessage = {
@@ -273,12 +273,12 @@ export default function FlowSimulator({
                 >
                   <div className="flex items-center gap-2 mb-1">
                     {msg.type === "bot" ? (
-                      <Bot className="h-3 w-3 text-zinc-500" />
+                      <MessageCircle className="h-3 w-3 text-zinc-500" />
                     ) : (
                       <User className="h-3 w-3 text-white/70" />
                     )}
                     <span className="text-[10px] uppercase tracking-wide opacity-60">
-                      {msg.type === "bot" ? "Bot" : "Du"}
+                      {msg.type === "bot" ? "Service" : "Du"}
                     </span>
                   </div>
                   <p className="text-sm whitespace-pre-wrap">{msg.text}</p>

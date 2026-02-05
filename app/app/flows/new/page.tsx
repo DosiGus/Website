@@ -6,6 +6,7 @@ import { Eye, Loader2, Sparkles, FileText, LayoutTemplate, X, ArrowLeft } from "
 import { createSupabaseBrowserClient } from "../../../../lib/supabaseBrowserClient";
 import type { FlowTemplate } from "../../../../lib/flowTemplates";
 import FlowSetupWizard from "../../../../components/app/FlowSetupWizard";
+import FlowSimulator from "../../../../components/app/FlowSimulator";
 import type { Node, Edge } from "reactflow";
 import type { FlowTrigger } from "../../../../lib/flowTypes";
 
@@ -251,128 +252,179 @@ export default function NewFlowPage() {
         </div>
       </div>
 
-      {/* Templates Section - show when in template mode */}
+      {/* Templates Modal - show when in template mode */}
       {creationMode === "template" && (
-        <section className="space-y-4">
-          <button
-            onClick={() => setCreationMode("choose")}
-            className="flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Zurück zur Auswahl
-          </button>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-wide text-zinc-500">Templates</p>
-              <h2 className="text-2xl font-semibold text-white">Starte mit einer Vorlage</h2>
-              <p className="text-zinc-400">
-                Spare Zeit mit fertigen Journeys für Restaurants, Salons oder Praxen.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
-                placeholder="Template durchsuchen…"
-                value={templateSearch}
-                onChange={(event) => setTemplateSearch(event.target.value)}
-              />
-              <select
-                value={verticalFilter}
-                onChange={(event) => setVerticalFilter(event.target.value)}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white focus:border-indigo-500 focus:outline-none"
-              >
-                {uniqueVerticals.map((vertical) => (
-                  <option key={vertical} value={vertical} className="bg-zinc-900 text-white">
-                    {vertical === "alle" ? "Alle Branchen" : vertical}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          {loadingTemplates ? (
-            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 text-sm text-zinc-400">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Templates werden geladen …
-            </div>
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-3">
-              {filteredTemplates.map((template) => (
-                <div
-                  key={template.id}
-                  className="flex flex-col justify-between rounded-2xl border border-white/10 bg-zinc-900/50 p-5 transition-all hover:border-white/20"
-                >
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-zinc-500">
-                      {template.vertical}
-                    </p>
-                    <h3 className="mt-2 text-lg font-semibold text-white">
-                      {template.name}
-                    </h3>
-                    <p className="mt-2 text-sm text-zinc-400">{template.description}</p>
-                  </div>
-                  <div className="mt-5 flex gap-2">
-                    <button
-                      onClick={() => createFlow(template.id)}
-                      className="flex-1 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40"
-                    >
-                      Flow erstellen
-                    </button>
-                    <button
-                      onClick={() => setPreviewTemplate(template)}
-                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
-                      title="Template ansehen"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {!filteredTemplates.length && (
-                <p className="rounded-2xl border border-dashed border-white/10 bg-zinc-900/30 p-6 text-sm text-zinc-500">
-                  Keine Templates für diese Filter gefunden.
-                </p>
-              )}
-            </div>
-          )}
-        </section>
-      )}
-
-      {previewTemplate ? (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-6xl rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-500">
-                  {previewTemplate.vertical}
+                <p className="text-sm uppercase tracking-wide text-zinc-500">Templates</p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Starte mit einer Vorlage
+                </h2>
+                <p className="mt-2 text-zinc-400">
+                  Vorlagen geben dir eine fertige Struktur, die du sofort an dein Geschäft anpassen kannst.
                 </p>
-                <h3 className="text-2xl font-semibold text-white">{previewTemplate.name}</h3>
-                <p className="mt-2 text-sm text-zinc-400">{previewTemplate.description}</p>
               </div>
               <button
-                onClick={() => setPreviewTemplate(null)}
+                onClick={() => setCreationMode("choose")}
                 className="rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Templates schließen"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                Schritte
-              </p>
-              <ol className="space-y-2 text-sm text-zinc-400">
-                {previewTemplate.nodes.map((node, index) => (
-                  <li key={node.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <span className="font-medium text-zinc-300">Step {index + 1}:</span>{" "}
-                    {node.data?.label}
-                  </li>
-                ))}
-              </ol>
-              <p className="text-xs text-zinc-500">
-                {previewTemplate.edges.length} Verbindungen ·{" "}
-                {previewTemplate.nodes.length} Nodes
-              </p>
+
+            <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-2 text-sm text-zinc-500">
+                <ArrowLeft className="h-4 w-4" />
+                <span>Zurück zur Auswahl</span>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
+                  placeholder="Template durchsuchen…"
+                  value={templateSearch}
+                  onChange={(event) => setTemplateSearch(event.target.value)}
+                />
+                <select
+                  value={verticalFilter}
+                  onChange={(event) => setVerticalFilter(event.target.value)}
+                  className="app-select"
+                >
+                  {uniqueVerticals.map((vertical) => (
+                    <option key={vertical} value={vertical} className="bg-zinc-900 text-white">
+                      {vertical === "alle" ? "Alle Branchen" : vertical}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="mt-6 flex gap-3">
+
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
+              {loadingTemplates ? (
+                <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 text-sm text-zinc-400">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Templates werden geladen …
+                </div>
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-3">
+                  {filteredTemplates.map((template) => (
+                    <div
+                      key={template.id}
+                      className="flex flex-col justify-between rounded-2xl border border-white/10 bg-zinc-900/50 p-5 transition-all hover:border-white/20"
+                    >
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-zinc-500">
+                          {template.vertical}
+                        </p>
+                        <h3 className="mt-2 text-lg font-semibold text-white">
+                          {template.name}
+                        </h3>
+                        <p className="mt-2 text-sm text-zinc-400">{template.description}</p>
+                      </div>
+                      <div className="mt-5 flex gap-2">
+                        <button
+                          onClick={() => createFlow(template.id)}
+                          className="flex-1 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40"
+                        >
+                          Flow erstellen
+                        </button>
+                        <button
+                          onClick={() => setPreviewTemplate(template)}
+                          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                          title="Template ansehen"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {!filteredTemplates.length && (
+                    <p className="rounded-2xl border border-dashed border-white/10 bg-zinc-900/30 p-6 text-sm text-zinc-500">
+                      Keine Templates für diese Filter gefunden.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {previewTemplate ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-5xl rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-zinc-500">
+                  {previewTemplate.vertical}
+                </p>
+                <h3 className="mt-1 text-2xl font-semibold text-white">
+                  {previewTemplate.name}
+                </h3>
+                <p className="mt-2 text-sm text-zinc-400">
+                  {previewTemplate.description}
+                </p>
+              </div>
+              <button
+                onClick={() => setPreviewTemplate(null)}
+                className="rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Vorschau schließen"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+              <div className="space-y-4">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Überblick
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Starte rechts die Vorschau und teste den Ablauf direkt.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2 text-xs text-zinc-400">
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                      {previewTemplate.nodes.length} Schritte
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                      {previewTemplate.edges.length} Verbindungen
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                      {previewTemplate.triggers?.length ?? 0} Startpunkte
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Schritte in Kurzform
+                  </p>
+                  <ol className="mt-3 space-y-2 text-sm text-zinc-400 max-h-52 overflow-y-auto">
+                    {previewTemplate.nodes.map((node, index) => (
+                      <li key={node.id} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                        <span className="font-medium text-zinc-300">
+                          Schritt {index + 1}:
+                        </span>{" "}
+                        {node.data?.label}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <FlowSimulator
+                  nodes={previewTemplate.nodes as Node[]}
+                  edges={previewTemplate.edges as Edge[]}
+                  triggers={(previewTemplate.triggers ?? []) as FlowTrigger[]}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 border-t border-white/10 px-6 py-4">
               <button
                 onClick={() => {
                   createFlow(previewTemplate.id);
@@ -386,7 +438,7 @@ export default function NewFlowPage() {
                 onClick={() => setPreviewTemplate(null)}
                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10"
               >
-                Abbrechen
+                Schließen
               </button>
             </div>
           </div>

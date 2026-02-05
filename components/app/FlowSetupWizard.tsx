@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -11,25 +11,29 @@ import {
   Phone,
   Users,
   Sparkles,
+  Zap,
 } from "lucide-react";
 import { Node, Edge } from "reactflow";
 import type { FlowTrigger, FlowQuickReply } from "../../lib/flowTypes";
 
-type WizardStep = 1 | 2 | 3 | 4 | 5;
+type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 type WizardConfig = {
   // Step 1: Greeting
   restaurantName: string;
   greetingMessage: string;
-  // Step 2: Dates
-  dateOptions: ("heute" | "morgen" | "uebermorgen" | "naechste_woche")[];
-  // Step 3: Times
+  triggerKeywords: string[];
+  triggerInput: string;
+  // Step 2: Einstieg
+  // Step 3: Dates
+  dateOptions: ("heute" | "morgen" | "uebermorgen" | "wunschdatum")[];
+  // Step 4: Times
   timeSlots: string[];
   customTimeSlots: string;
-  // Step 4: Guests
+  // Step 5: Guests
   maxGuests: number;
   guestOptions: number[];
-  // Step 5: Contact
+  // Step 6: Contact
   collectPhone: boolean;
   collectEmail: boolean;
   collectSpecialRequests: boolean;
@@ -46,10 +50,28 @@ type FlowSetupWizardProps = {
   onCancel: () => void;
 };
 
+const buildGreetingMessage = (restaurantName: string) => {
+  const trimmedName = restaurantName.trim();
+  const intro = trimmedName
+    ? `Willkommen bei ${trimmedName}! 👋`
+    : "Willkommen! 👋";
+  return `${intro} Schön, dass du uns schreibst. Möchtest du einen Tisch reservieren?`;
+};
+
+const buildConfirmationMessage = (restaurantName: string) => {
+  const trimmedName = restaurantName.trim();
+  const intro = trimmedName
+    ? `Danke für deine Anfrage bei ${trimmedName}.`
+    : "Danke für deine Anfrage.";
+  return `${intro} Wir bestätigen dir die Reservierung in Kürze.`;
+};
+
 const defaultConfig: WizardConfig = {
   restaurantName: "",
-  greetingMessage: "Hallo! 👋 Schön, dass du uns schreibst. Möchtest du einen Tisch reservieren?",
-  dateOptions: ["heute", "morgen"],
+  greetingMessage: buildGreetingMessage(""),
+  triggerKeywords: ["reservieren", "tisch", "reservierung", "buchen"],
+  triggerInput: "",
+  dateOptions: ["heute", "morgen", "wunschdatum"],
   timeSlots: ["12:00", "13:00", "18:00", "19:00", "20:00"],
   customTimeSlots: "",
   maxGuests: 8,
@@ -57,14 +79,14 @@ const defaultConfig: WizardConfig = {
   collectPhone: true,
   collectEmail: false,
   collectSpecialRequests: true,
-  confirmationMessage: "Perfekt! Deine Reservierung ist eingegangen. Wir bestätigen dir diese in Kürze. Bis bald! 🎉",
+  confirmationMessage: buildConfirmationMessage(""),
 };
 
 const DATE_OPTIONS = [
   { id: "heute", label: "Heute" },
   { id: "morgen", label: "Morgen" },
   { id: "uebermorgen", label: "Übermorgen" },
-  { id: "naechste_woche", label: "Nächste Woche" },
+  { id: "wunschdatum", label: "Wunschdatum" },
 ] as const;
 
 const TIME_PRESETS = [
@@ -76,28 +98,48 @@ const TIME_PRESETS = [
 export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizardProps) {
   const [step, setStep] = useState<WizardStep>(1);
   const [config, setConfig] = useState<WizardConfig>(defaultConfig);
+  const [greetingTouched, setGreetingTouched] = useState(false);
+  const [confirmationTouched, setConfirmationTouched] = useState(false);
 
   const updateConfig = useCallback(<K extends keyof WizardConfig>(key: K, value: WizardConfig[K]) => {
     setConfig(prev => ({ ...prev, [key]: value }));
   }, []);
+
+  const syncAutoMessages = useCallback((restaurantName: string, currentConfig: WizardConfig) => {
+    const nextGreeting = buildGreetingMessage(restaurantName);
+    if (!greetingTouched && currentConfig.greetingMessage !== nextGreeting) {
+      updateConfig("greetingMessage", nextGreeting);
+    }
+
+    const nextConfirmation = buildConfirmationMessage(restaurantName);
+    if (!confirmationTouched && currentConfig.confirmationMessage !== nextConfirmation) {
+      updateConfig("confirmationMessage", nextConfirmation);
+    }
+  }, [confirmationTouched, greetingTouched, updateConfig]);
+
+  useEffect(() => {
+    syncAutoMessages(config.restaurantName, config);
+  }, [config, syncAutoMessages]);
 
   const canProceed = useCallback(() => {
     switch (step) {
       case 1:
         return config.restaurantName.trim().length > 0;
       case 2:
-        return config.dateOptions.length > 0;
+        return config.triggerKeywords.length > 0;
       case 3:
-        return config.timeSlots.length > 0;
+        return config.dateOptions.length > 0;
       case 4:
-        return config.guestOptions.length > 0;
+        return config.timeSlots.length > 0;
       case 5:
+        return config.guestOptions.length > 0;
+      case 6:
         return true;
     }
   }, [step, config]);
 
   const nextStep = () => {
-    if (step < 5) setStep((step + 1) as WizardStep);
+    if (step < 6) setStep((step + 1) as WizardStep);
   };
 
   const prevStep = () => {
@@ -107,9 +149,7 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
   const generateFlow = useCallback(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
-    let nodeIdCounter = 1;
 
-    const makeNodeId = () => `wizard-node-${nodeIdCounter++}`;
     const makeEdgeId = (source: string, target: string) => `e-${source}-${target}`;
     const makeQuickReply = (id: string, label: string, targetNodeId: string): FlowQuickReply => ({
       id,
@@ -118,9 +158,32 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       targetNodeId,
     });
 
+    const greetingId = "wizard-greeting";
+    const dateNodeId = "wizard-date";
+    const timeNodeId = "wizard-time";
+    const guestNodeId = "wizard-guest";
+    const nameNodeId = "wizard-name";
+    const phoneNodeId = "wizard-phone";
+    const emailNodeId = "wizard-email";
+    const specialNodeId = "wizard-special";
+    const confirmNodeId = "wizard-confirm";
+
+    const wantsCustomDate = config.dateOptions.includes("wunschdatum");
+    const dateCustomNodeId = wantsCustomDate ? "wizard-date-input" : null;
+    const allowCustomTime = true;
+    const timeCustomNodeId = allowCustomTime ? "wizard-time-input" : null;
+
+    const baseGuestOptions = config.guestOptions.slice(0, 4);
+    const maxBaseGuests = baseGuestOptions.length
+      ? Math.max(...baseGuestOptions)
+      : 0;
+    const shouldOfferCustomGuests =
+      config.guestOptions.length > baseGuestOptions.length ||
+      config.maxGuests > maxBaseGuests;
+    const guestCustomNodeId = shouldOfferCustomGuests ? "wizard-guest-input" : null;
+    const nameNodeY = guestCustomNodeId ? 1080 : 920;
+
     // Node 1: Greeting
-    const greetingId = makeNodeId();
-    const dateNodeId = makeNodeId();
     nodes.push({
       id: greetingId,
       position: { x: 100, y: 100 },
@@ -138,8 +201,10 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
     });
 
     // Node 2: Date selection
-    const timeNodeId = makeNodeId();
     const dateQuickReplies = config.dateOptions.map((opt) => {
+      if (opt === "wunschdatum" && dateCustomNodeId) {
+        return makeQuickReply("qr-date-custom", "Wunschdatum", dateCustomNodeId);
+      }
       const label = DATE_OPTIONS.find(d => d.id === opt)?.label || opt;
       return makeQuickReply(`qr-date-${opt}`, label, timeNodeId);
     });
@@ -163,11 +228,43 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       data: { quickReplyId: "qr-yes" },
     });
 
+    if (dateCustomNodeId) {
+      nodes.push({
+        id: dateCustomNodeId,
+        position: { x: 100, y: 420 },
+        type: "wesponde",
+        data: {
+          label: "Wunschdatum",
+          text: "Nenne uns bitte dein Wunschdatum (z. B. 14.02. oder Samstag).",
+          variant: "message",
+          quickReplies: [],
+          inputMode: "free_text",
+          collects: "date",
+          placeholder: "z. B. 14.02. oder Samstag",
+        },
+      });
+      edges.push({
+        id: makeEdgeId(dateNodeId, dateCustomNodeId),
+        source: dateNodeId,
+        target: dateCustomNodeId,
+        data: { quickReplyId: "qr-date-custom" },
+      });
+      edges.push({
+        id: makeEdgeId(dateCustomNodeId, timeNodeId),
+        source: dateCustomNodeId,
+        target: timeNodeId,
+      });
+    }
+
     // Node 3: Time selection
-    const guestNodeId = makeNodeId();
-    const timeQuickReplies = config.timeSlots.slice(0, 4).map((slot) =>
-      makeQuickReply(`qr-time-${slot}`, `${slot} Uhr`, guestNodeId)
-    );
+    const timeQuickReplies = [
+      ...config.timeSlots.slice(0, 4).map((slot) =>
+        makeQuickReply(`qr-time-${slot}`, `${slot} Uhr`, guestNodeId)
+      ),
+      ...(timeCustomNodeId
+        ? [makeQuickReply("qr-time-custom", "Andere Uhrzeit", timeCustomNodeId)]
+        : []),
+    ];
 
     nodes.push({
       id: timeNodeId,
@@ -175,53 +272,121 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       type: "wesponde",
       data: {
         label: "Uhrzeit wählen",
-        text: "Um wie viel Uhr?",
+        text: "Welche Uhrzeit passt dir am besten?",
         variant: "message",
         inputMode: "buttons",
         quickReplies: timeQuickReplies,
       },
     });
     // Edges from date options to time
-    dateQuickReplies.forEach((qr) => {
-      edges.push({
-        id: makeEdgeId(dateNodeId, `${timeNodeId}-${qr.id}`),
-        source: dateNodeId,
-        target: timeNodeId,
-        data: { quickReplyId: qr.id },
+    dateQuickReplies
+      .filter((qr) => qr.targetNodeId === timeNodeId)
+      .forEach((qr) => {
+        edges.push({
+          id: makeEdgeId(dateNodeId, `${timeNodeId}-${qr.id}`),
+          source: dateNodeId,
+          target: timeNodeId,
+          data: { quickReplyId: qr.id },
+        });
       });
-    });
+
+    if (timeCustomNodeId) {
+      nodes.push({
+        id: timeCustomNodeId,
+        position: { x: 100, y: 600 },
+        type: "wesponde",
+        data: {
+          label: "Wunschzeit",
+          text: "Welche Uhrzeit wünschst du dir? (z. B. 19:30)",
+          variant: "message",
+          quickReplies: [],
+          inputMode: "free_text",
+          collects: "time",
+          placeholder: "z. B. 19:30",
+        },
+      });
+      edges.push({
+        id: makeEdgeId(timeNodeId, timeCustomNodeId),
+        source: timeNodeId,
+        target: timeCustomNodeId,
+        data: { quickReplyId: "qr-time-custom" },
+      });
+      edges.push({
+        id: makeEdgeId(timeCustomNodeId, guestNodeId),
+        source: timeCustomNodeId,
+        target: guestNodeId,
+      });
+    }
 
     // Node 4: Guest count
-    const nameNodeId = makeNodeId();
-    const guestQuickReplies = config.guestOptions.slice(0, 4).map((count) =>
-      makeQuickReply(`qr-guests-${count}`, `${count} ${count === 1 ? "Person" : "Personen"}`, nameNodeId)
-    );
+    const guestQuickReplies = [
+      ...baseGuestOptions.map((count) =>
+        makeQuickReply(
+          `qr-guests-${count}`,
+          `${count} ${count === 1 ? "Person" : "Personen"}`,
+          nameNodeId
+        )
+      ),
+      ...(guestCustomNodeId
+        ? [makeQuickReply("qr-guests-custom", "Mehr Personen", guestCustomNodeId)]
+        : []),
+    ];
 
     nodes.push({
       id: guestNodeId,
-      position: { x: 100, y: 640 },
+      position: { x: 100, y: 740 },
       type: "wesponde",
       data: {
         label: "Personenanzahl",
-        text: "Für wie viele Personen?",
+        text: "Für wie viele Personen möchtest du reservieren?",
         variant: "message",
         inputMode: "buttons",
         quickReplies: guestQuickReplies,
       },
     });
     timeQuickReplies.forEach((qr) => {
-      edges.push({
-        id: makeEdgeId(timeNodeId, `${guestNodeId}-${qr.id}`),
-        source: timeNodeId,
-        target: guestNodeId,
-        data: { quickReplyId: qr.id },
-      });
+      if (qr.targetNodeId === guestNodeId) {
+        edges.push({
+          id: makeEdgeId(timeNodeId, `${guestNodeId}-${qr.id}`),
+          source: timeNodeId,
+          target: guestNodeId,
+          data: { quickReplyId: qr.id },
+        });
+      }
     });
+
+    if (guestCustomNodeId) {
+      nodes.push({
+        id: guestCustomNodeId,
+        position: { x: 100, y: 920 },
+        type: "wesponde",
+        data: {
+          label: "Personenanzahl",
+          text: "Wie viele Personen seid ihr? (z. B. 4 Personen)",
+          variant: "message",
+          quickReplies: [],
+          inputMode: "free_text",
+          collects: "guestCount",
+          placeholder: "z. B. 4 Personen",
+        },
+      });
+      edges.push({
+        id: makeEdgeId(guestNodeId, guestCustomNodeId),
+        source: guestNodeId,
+        target: guestCustomNodeId,
+        data: { quickReplyId: "qr-guests-custom" },
+      });
+      edges.push({
+        id: makeEdgeId(guestCustomNodeId, nameNodeId),
+        source: guestCustomNodeId,
+        target: nameNodeId,
+      });
+    }
 
     // Node 5: Name (Freitext)
     nodes.push({
       id: nameNodeId,
-      position: { x: 100, y: 820 },
+      position: { x: 100, y: nameNodeY },
       type: "wesponde",
       data: {
         label: "Name",
@@ -234,19 +399,20 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       },
     });
     guestQuickReplies.forEach((qr) => {
-      edges.push({
-        id: makeEdgeId(guestNodeId, `${nameNodeId}-${qr.id}`),
-        source: guestNodeId,
-        target: nameNodeId,
-        data: { quickReplyId: qr.id },
-      });
+      if (qr.targetNodeId === nameNodeId) {
+        edges.push({
+          id: makeEdgeId(guestNodeId, `${nameNodeId}-${qr.id}`),
+          source: guestNodeId,
+          target: nameNodeId,
+          data: { quickReplyId: qr.id },
+        });
+      }
     });
 
     let lastNodeId = nameNodeId;
-    let currentY = 1000;
+    let currentY = nameNodeY + 180;
 
     if (config.collectPhone) {
-      const phoneNodeId = makeNodeId();
       nodes.push({
         id: phoneNodeId,
         position: { x: 100, y: currentY },
@@ -271,7 +437,6 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
     }
 
     if (config.collectEmail) {
-      const emailNodeId = makeNodeId();
       nodes.push({
         id: emailNodeId,
         position: { x: 100, y: currentY },
@@ -296,7 +461,6 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
     }
 
     if (config.collectSpecialRequests) {
-      const specialNodeId = makeNodeId();
       nodes.push({
         id: specialNodeId,
         position: { x: 100, y: currentY },
@@ -320,7 +484,6 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       currentY += 180;
     }
 
-    const confirmNodeId = makeNodeId();
     nodes.push({
       id: confirmNodeId,
       position: { x: 100, y: currentY },
@@ -340,12 +503,22 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
     });
 
     // Create trigger
+    const triggerKeywords = Array.from(
+      new Set(
+        config.triggerKeywords
+          .map((keyword) => keyword.trim())
+          .filter(Boolean)
+      )
+    );
+
     const triggers: FlowTrigger[] = [
       {
         id: "trigger-wizard-1",
         type: "KEYWORD",
         config: {
-          keywords: ["reservieren", "tisch", "reservierung", "buchen"],
+          keywords: triggerKeywords.length
+            ? triggerKeywords
+            : ["reservieren", "tisch", "reservierung", "buchen"],
           matchType: "CONTAINS",
         },
         startNodeId: greetingId,
@@ -362,7 +535,7 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
 
   const renderStepIndicator = () => (
     <div className="flex items-center justify-center gap-2 mb-8">
-      {[1, 2, 3, 4, 5].map((s) => (
+      {[1, 2, 3, 4, 5, 6].map((s) => (
         <div
           key={s}
           className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all ${
@@ -388,6 +561,9 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       <p className="text-zinc-400">
         Wie heißt dein Restaurant und wie möchtest du deine Gäste begrüßen?
       </p>
+      <p className="text-xs text-zinc-500">
+        Tipp: Der Restaurant-Name wird automatisch in die Begrüßung eingefügt.
+      </p>
 
       <div className="space-y-4">
         <div>
@@ -409,12 +585,15 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
           </label>
           <textarea
             value={config.greetingMessage}
-            onChange={(e) => updateConfig("greetingMessage", e.target.value)}
+            onChange={(e) => {
+              setGreetingTouched(true);
+              updateConfig("greetingMessage", e.target.value);
+            }}
             rows={3}
             className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
           <p className="mt-1 text-xs text-zinc-500">
-            Diese Nachricht sehen Gäste als erstes, wenn sie den Bot starten.
+            Diese Nachricht sehen Gäste als erstes, wenn sie die Unterhaltung starten.
           </p>
         </div>
       </div>
@@ -422,6 +601,97 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
   );
 
   const renderStep2 = () => (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 text-emerald-400">
+        <Zap className="h-6 w-6" />
+        <h2 className="text-xl font-semibold text-white">Einstieg</h2>
+      </div>
+      <p className="text-zinc-400">
+        Welche Wörter tippen Gäste, um die Unterhaltung zu starten?
+      </p>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-zinc-300 mb-2">
+            Einstiegswörter *
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={config.triggerInput}
+              onChange={(e) => updateConfig("triggerInput", e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const nextValue = config.triggerInput.trim();
+                  if (nextValue && !config.triggerKeywords.includes(nextValue)) {
+                    updateConfig("triggerKeywords", [...config.triggerKeywords, nextValue]);
+                    updateConfig("triggerInput", "");
+                  }
+                }
+              }}
+              placeholder="z. B. reservieren, tisch"
+              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const nextValue = config.triggerInput.trim();
+                if (nextValue && !config.triggerKeywords.includes(nextValue)) {
+                  updateConfig("triggerKeywords", [...config.triggerKeywords, nextValue]);
+                  updateConfig("triggerInput", "");
+                }
+              }}
+              className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/15"
+            >
+              Hinzufügen
+            </button>
+          </div>
+          {config.triggerKeywords.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-emerald-300">Auswahl</span>
+                <span className="text-zinc-500">
+                  {config.triggerKeywords.length} ausgewählt
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {config.triggerKeywords.map((keyword) => (
+                  <span
+                    key={keyword}
+                    className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"
+                  >
+                    {keyword}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateConfig(
+                          "triggerKeywords",
+                          config.triggerKeywords.filter((item) => item !== keyword)
+                        )
+                      }
+                      className="text-emerald-300/70 hover:text-emerald-200"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-rose-400">
+              Bitte mindestens ein Wort hinzufügen.
+            </p>
+          )}
+          <p className="mt-2 text-xs text-zinc-500">
+            Gäste nutzen diese Wörter, um die Unterhaltung zu beginnen.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
     <div className="space-y-6">
       <div className="flex items-center gap-3 text-emerald-400">
         <CalendarDays className="h-6 w-6" />
@@ -467,19 +737,19 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       </div>
 
       <p className="text-xs text-zinc-500">
-        Wähle mindestens eine Option. Du kannst später weitere hinzufügen.
+        Tipp: Mit „Wunschdatum“ können Gäste ein konkretes Datum eintippen.
       </p>
     </div>
   );
 
-  const renderStep3 = () => (
+  const renderStep4 = () => (
     <div className="space-y-6">
       <div className="flex items-center gap-3 text-emerald-400">
         <Clock className="h-6 w-6" />
         <h2 className="text-xl font-semibold text-white">Uhrzeiten</h2>
       </div>
       <p className="text-zinc-400">
-        Welche Uhrzeiten bietest du für Reservierungen an?
+        Welche Uhrzeiten bietest du für Reservierungen an? Gäste können auch eine andere Uhrzeit anfragen.
       </p>
 
       <div className="space-y-4">
@@ -562,7 +832,7 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
     </div>
   );
 
-  const renderStep4 = () => (
+  const renderStep5 = () => (
     <div className="space-y-6">
       <div className="flex items-center gap-3 text-emerald-400">
         <Users className="h-6 w-6" />
@@ -639,14 +909,14 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
     </div>
   );
 
-  const renderStep5 = () => (
+  const renderStep6 = () => (
     <div className="space-y-6">
       <div className="flex items-center gap-3 text-emerald-400">
         <Phone className="h-6 w-6" />
         <h2 className="text-xl font-semibold text-white">Kontaktdaten & Abschluss</h2>
       </div>
       <p className="text-zinc-400">
-        Welche Informationen soll der Bot am Ende abfragen?
+        Welche Informationen sollen am Ende erfragt werden?
       </p>
       <p className="text-xs text-zinc-500">
         Der Name wird immer abgefragt.
@@ -696,7 +966,10 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
         </label>
         <textarea
           value={config.confirmationMessage}
-          onChange={(e) => updateConfig("confirmationMessage", e.target.value)}
+          onChange={(e) => {
+            setConfirmationTouched(true);
+            updateConfig("confirmationMessage", e.target.value);
+          }}
           rows={3}
           className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
         />
@@ -725,6 +998,7 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
           {step === 3 && renderStep3()}
           {step === 4 && renderStep4()}
           {step === 5 && renderStep5()}
+          {step === 6 && renderStep6()}
         </div>
 
         {/* Navigation */}
@@ -748,7 +1022,7 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
             </button>
           )}
 
-          {step < 5 ? (
+          {step < 6 ? (
             <button
               type="button"
               onClick={nextStep}
@@ -773,14 +1047,15 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
 
       {/* Progress Summary */}
       <div className="mt-4 flex items-center justify-center gap-4 text-xs text-zinc-500">
-        <span>Schritt {step} von 5</span>
+        <span>Schritt {step} von 6</span>
         <span>•</span>
         <span>
           {step === 1 && "Begrüßung"}
-          {step === 2 && "Datum"}
-          {step === 3 && "Uhrzeit"}
-          {step === 4 && "Personen"}
-          {step === 5 && "Abschluss"}
+          {step === 2 && "Einstieg"}
+          {step === 3 && "Datum"}
+          {step === 4 && "Uhrzeit"}
+          {step === 5 && "Personen"}
+          {step === 6 && "Abschluss"}
         </span>
       </div>
     </div>

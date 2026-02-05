@@ -24,6 +24,8 @@ type InspectorSlideOverProps = {
   onClose: () => void;
   inspectorTab: InspectorTab;
   onTabChange: (tab: InspectorTab) => void;
+  hasUnsavedChanges: boolean;
+  onSave: () => void;
   disableBackdropBlur?: boolean;
 
   // Node editing
@@ -82,6 +84,8 @@ export default function InspectorSlideOver({
   onClose,
   inspectorTab,
   onTabChange,
+  hasUnsavedChanges,
+  onSave,
   disableBackdropBlur = false,
   selectedNode,
   selectedNodeReplies,
@@ -151,6 +155,7 @@ export default function InspectorSlideOver({
           fixed right-0 top-0 z-40 h-full w-[400px] max-w-[90vw]
           bg-zinc-900 shadow-2xl border-l border-white/10
           transform transition-transform duration-300 ease-out
+          flex flex-col
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
@@ -189,7 +194,7 @@ export default function InspectorSlideOver({
         </div>
 
         {/* Content Area */}
-        <div className="h-[calc(100%-140px)] overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           {/* Content Tab */}
           {inspectorTab === 'content' && (
             <div className="space-y-5">
@@ -267,7 +272,7 @@ export default function InspectorSlideOver({
                         <select
                           value={selectedNode.data?.collects ?? ''}
                           onChange={(e) => onFreeTextMetaChange('collects', e.target.value)}
-                          className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                          className="app-select mt-1 w-full"
                         >
                           <option value="">Keine Zuordnung</option>
                           <option value="name">Name</option>
@@ -280,11 +285,11 @@ export default function InspectorSlideOver({
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-zinc-500">Weiterleiten zu</label>
+                        <label className="text-xs font-semibold text-zinc-500">Führt zu</label>
                         <select
                           value={selectedFreeTextTarget ?? ''}
                           onChange={(e) => onFreeTextTargetChange(selectedNode.id, e.target.value || null)}
-                          className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                          className="app-select mt-1 w-full"
                         >
                           <option value="">Node wählen...</option>
                           {nodes
@@ -344,11 +349,11 @@ export default function InspectorSlideOver({
                                 />
                               )}
                               <div>
-                                <label className="text-xs font-semibold text-zinc-500">Weiterleiten zu</label>
+                                <label className="text-xs font-semibold text-zinc-500">Führt zu</label>
                                 <select
                                   value={reply.targetNodeId ?? ''}
                                   onChange={(e) => onQuickReplyTargetChange(reply.id, e.target.value, reply.label)}
-                                  className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                                  className="app-select mt-1 w-full"
                                 >
                                   <option value="">Node wählen...</option>
                                   <option value="__NEW_FREETEXT__">+ Freitext (neu)</option>
@@ -439,7 +444,7 @@ export default function InspectorSlideOver({
                     <select
                       value={((selectedEdge.data as any)?.tone as EdgeTone) ?? 'neutral'}
                       onChange={(e) => onEdgeFieldChange('tone', e.target.value)}
-                      className="mt-2 w-full rounded-xl border border-white/10 bg-zinc-800 px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                      className="app-select mt-2 w-full"
                     >
                       {Object.entries(EDGE_TONE_META).map(([value, meta]) => (
                         <option key={value} value={value}>
@@ -528,6 +533,25 @@ export default function InspectorSlideOver({
               <TriangleAlert className="h-4 w-4" /> Speichern fehlgeschlagen
             </div>
           )}
+        </div>
+
+        <div className="border-t border-white/10 bg-zinc-900/90 px-6 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold text-zinc-400">
+              {saveState === 'error'
+                ? 'Speichern fehlgeschlagen'
+                : hasUnsavedChanges
+                ? 'Änderungen nicht gespeichert'
+                : 'Alle Änderungen gespeichert'}
+            </span>
+            <button
+              onClick={onSave}
+              disabled={!hasUnsavedChanges || saveState === 'saving'}
+              className="rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {saveState === 'saving' ? 'Speichert...' : 'Speichern'}
+            </button>
+          </div>
         </div>
       </div>
     </>

@@ -425,7 +425,7 @@ export default function SettingsPage() {
                               updateMemberRole(member.userId, e.target.value as TeamRole)
                             }
                             disabled={!canEditMember || teamSavingId === member.userId}
-                            className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs font-medium text-white focus:border-indigo-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                            className="app-select disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {ROLE_OPTIONS.map((option) => (
                               <option key={option.value} value={option.value}>

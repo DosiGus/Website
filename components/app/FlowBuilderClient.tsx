@@ -36,7 +36,6 @@ import {
   Trash2,
   TriangleAlert,
   X,
-  Zap,
 } from "lucide-react";
 import FlowBuilderCanvas from "./FlowBuilderCanvas";
 import FlowListBuilder from "./FlowListBuilder";
@@ -216,6 +215,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [lintWarnings, setLintWarnings] = useState<FlowLintWarning[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -239,6 +239,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [isAddMenuOpen, setAddMenuOpen] = useState(false);
   const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedSnapshotRef = useRef<string>("");
 
   const snippets = useMemo(
     () => [
@@ -282,6 +283,14 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   );
 
   const decoratedEdges = useMemo(() => edges.map(decorateEdgeForCanvas), [edges]);
+
+  const currentSnapshot = useMemo(() => {
+    try {
+      return JSON.stringify({ flowName, status, nodes, edges, triggers, metadata });
+    } catch {
+      return "";
+    }
+  }, [flowName, status, nodes, edges, triggers, metadata]);
 
   const searchResults = useMemo(() => {
     if (!nodeSearchQuery.trim()) return [];
@@ -344,6 +353,16 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   }, [inlineEditNodeId, nodes]);
 
   useEffect(() => {
+    if (loading) return;
+    if (!lastSavedSnapshotRef.current) {
+      lastSavedSnapshotRef.current = currentSnapshot;
+      setHasUnsavedChanges(false);
+      return;
+    }
+    setHasUnsavedChanges(currentSnapshot !== lastSavedSnapshotRef.current);
+  }, [currentSnapshot, loading]);
+
+  useEffect(() => {
     async function loadUser() {
       const {
         data: { user },
@@ -380,8 +399,11 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         return;
       }
       const data: FlowResponse = await response.json();
+      const statusValue = (data.status as "Entwurf" | "Aktiv") ?? "Entwurf";
+      const triggersToUse = Array.isArray(data.triggers) ? (data.triggers as FlowTrigger[]) : defaultTriggers;
+      const metadataToUse = (data.metadata as FlowMetadata) ?? defaultMetadata;
       setFlowName(data.name);
-      setStatus((data.status as "Entwurf" | "Aktiv") ?? "Entwurf");
+      setStatus(statusValue);
       const normalized = ((data.nodes as Node[]) || defaultNodes).map(normalizeNode);
       const incomingEdges =
         Array.isArray(data.edges) && data.edges.length > 0
@@ -391,10 +413,23 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       const nodesToUse = ensureInputMode(normalized, edgesToUse);
       setEdges(edgesToUse);
       setNodes(nodesToUse);
-      setTriggers(Array.isArray(data.triggers) ? (data.triggers as FlowTrigger[]) : defaultTriggers);
-      setMetadata((data.metadata as FlowMetadata) ?? defaultMetadata);
+      setTriggers(triggersToUse);
+      setMetadata(metadataToUse);
       setLoading(false);
       setErrorMessage(null);
+      try {
+        lastSavedSnapshotRef.current = JSON.stringify({
+          flowName: data.name,
+          status: statusValue,
+          nodes: nodesToUse,
+          edges: edgesToUse,
+          triggers: triggersToUse,
+          metadata: metadataToUse,
+        });
+        setHasUnsavedChanges(false);
+      } catch {
+        lastSavedSnapshotRef.current = "";
+      }
     }
     fetchFlow();
   }, [flowId, userId, accessToken]);
@@ -995,6 +1030,19 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         }),
       });
       if (response.ok) {
+        try {
+          lastSavedSnapshotRef.current = JSON.stringify({
+            flowName,
+            status,
+            nodes,
+            edges,
+            triggers,
+            metadata,
+          });
+          setHasUnsavedChanges(false);
+        } catch {
+          lastSavedSnapshotRef.current = "";
+        }
         if (!silent) {
           setSaveState("saved");
           setTimeout(() => setSaveState("idle"), 2000);
@@ -1274,34 +1322,27 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
             {/* Right: Actions */}
             <div className="flex flex-wrap items-center gap-3">
-              {/* Trigger Button */}
-              <button
-                onClick={() => openTriggerModal()}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-indigo-500/50 hover:text-white transition-colors"
-              >
-                <Zap className="h-4 w-4" />
-                Trigger ({triggers.length})
-              </button>
-
-              {/* Status */}
-              <select
-                value={status}
-                onChange={(event) => setStatus(event.target.value as "Entwurf" | "Aktiv")}
-                className="rounded-xl border border-white/10 bg-zinc-800 px-4 py-2 text-sm font-semibold text-white focus:border-indigo-500 focus:outline-none transition-colors"
-              >
-                <option value="Entwurf">Entwurf</option>
-                <option value="Aktiv">Aktiv</option>
-              </select>
-
               {/* Preview Button */}
               <button
                 onClick={() => {
                   setInspectorTab("preview");
                   setInspectorOpen(true);
                 }}
-                className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition-all"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
               >
-                Vorschau
+                Flow Preview
+              </button>
+
+              {/* Status */}
+              <button
+                onClick={() => setStatus(status === "Aktiv" ? "Entwurf" : "Aktiv")}
+                className={
+                  status === "Aktiv"
+                    ? "rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-300 hover:border-amber-500/50 transition-colors"
+                    : "rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition-all"
+                }
+              >
+                {status === "Aktiv" ? "Archivieren" : "Live stellen"}
               </button>
 
               {/* Save Button */}
@@ -1448,6 +1489,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                 nodes={nodes}
                 edges={edges}
                 startNodeIds={startNodeIds}
+                triggers={triggers}
+                onOpenTriggerModal={() => openTriggerModal()}
                 onNodesChange={handleListNodesChange}
                 onEdgesChange={handleListEdgesChange}
                 selectedNodeId={selectedNodeId}
@@ -1548,6 +1591,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         }}
         inspectorTab={inspectorTab}
         onTabChange={setInspectorTab}
+        hasUnsavedChanges={hasUnsavedChanges}
+        onSave={() => handleSave()}
         disableBackdropBlur={builderMode === "simple"}
         hidePayloadField={builderMode === "simple"}
         selectedNode={selectedNode}
@@ -1686,7 +1731,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                         : prev,
                     )
                   }
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                  className="app-select mt-2 w-full"
                 >
                   <option value="CONTAINS">enthält Schlagwort</option>
                   <option value="EXACT">exaktes Schlagwort</option>
@@ -1701,7 +1746,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                       prev ? { ...prev, startNodeId: event.target.value || null } : prev,
                     )
                   }
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                  className="app-select mt-2 w-full"
                 >
                   <option value="">Node wählen...</option>
                   {nodes.map((node) => (

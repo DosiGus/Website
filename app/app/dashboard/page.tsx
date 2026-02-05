@@ -39,9 +39,9 @@ export default function DashboardPage() {
       <section className="space-y-6 rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">Deine Flows</h2>
+            <h2 className="text-xl font-semibold text-white">Deine aktiven Flows</h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Übersicht über die zuletzt bearbeiteten Automationen.
+              Übersicht über deine aktiven Automationen.
             </p>
           </div>
           <Link
@@ -52,7 +52,7 @@ export default function DashboardPage() {
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <FlowListClient variant="grid" />
+        <FlowListClient variant="grid" statusFilterOverride="Aktiv" showReservationCounts />
       </section>
     </div>
   );

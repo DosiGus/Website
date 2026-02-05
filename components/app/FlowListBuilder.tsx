@@ -17,13 +17,16 @@ import {
   ArrowRight,
   Check,
   AlertCircle,
+  Zap,
 } from "lucide-react";
-import type { FlowQuickReply } from "../../lib/flowTypes";
+import type { FlowQuickReply, FlowTrigger } from "../../lib/flowTypes";
 
 type FlowListBuilderProps = {
   nodes: Node[];
   edges: Edge[];
   startNodeIds: Set<string>;
+  triggers: FlowTrigger[];
+  onOpenTriggerModal: () => void;
   onNodesChange: (nodes: Node[]) => void;
   onEdgesChange: (edges: Edge[]) => void;
   selectedNodeId: string | null;
@@ -142,6 +145,8 @@ export default function FlowListBuilder({
   nodes,
   edges,
   startNodeIds,
+  triggers,
+  onOpenTriggerModal,
   onNodesChange,
   onEdgesChange,
   selectedNodeId,
@@ -149,20 +154,27 @@ export default function FlowListBuilder({
   onAddNode,
   onDeleteNode,
 }: FlowListBuilderProps) {
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Order nodes by flow path
   const orderedNodes = useMemo(() => buildFlowOrder(nodes, edges, startNodeIds), [nodes, edges, startNodeIds]);
+  const triggerKeywords = useMemo(() => {
+    const keywords: string[] = [];
+    triggers.forEach((trigger) => {
+      const list = trigger.config?.keywords ?? [];
+      list.forEach((keyword) => {
+        const trimmed = keyword.trim();
+        if (trimmed) keywords.push(trimmed);
+      });
+    });
+    return Array.from(new Set(keywords));
+  }, [triggers]);
 
   // Auto-expand selected node
   useEffect(() => {
     if (selectedNodeId) {
-      setExpandedNodes(prev => {
-        const next = new Set(prev);
-        next.add(selectedNodeId);
-        return next;
-      });
+      setExpandedNodeId(selectedNodeId);
       // Scroll to node
       requestAnimationFrame(() => {
         const element = document.querySelector(`[data-node-id="${selectedNodeId}"]`);
@@ -171,16 +183,8 @@ export default function FlowListBuilder({
     }
   }, [selectedNodeId]);
 
-  const toggleExpanded = useCallback((nodeId: string) => {
-    setExpandedNodes(prev => {
-      const next = new Set(prev);
-      if (next.has(nodeId)) {
-        next.delete(nodeId);
-      } else {
-        next.add(nodeId);
-      }
-      return next;
-    });
+  const setExpanded = useCallback((nodeId: string) => {
+    setExpandedNodeId(nodeId);
   }, []);
 
   const getFreeTextTarget = useCallback((nodeId: string) => {
@@ -422,10 +426,61 @@ export default function FlowListBuilder({
         {/* Vertical Connection Line */}
         <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-500/30 via-white/10 to-white/10" />
 
+        {/* Trigger Card */}
+        <div className="relative mb-4 ml-16">
+          <div className="absolute -left-[52px] top-4 flex h-10 w-10 items-center justify-center rounded-full border-2 border-emerald-500 bg-emerald-500 text-white">
+            <Zap className="h-4 w-4" />
+          </div>
+          <button
+            type="button"
+            onClick={onOpenTriggerModal}
+            className="relative w-full rounded-xl border-2 border-white/10 bg-zinc-900/50 p-4 text-left transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20">
+                <Zap className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-white">Trigger</h3>
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                    {triggers.length}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-sm text-zinc-500">
+                  Startpunkt der Unterhaltung – definiert, womit Gäste beginnen.
+                </p>
+                {triggerKeywords.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {triggerKeywords.slice(0, 5).map((keyword) => (
+                      <span
+                        key={keyword}
+                        className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-xs font-semibold text-emerald-300"
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                    {triggerKeywords.length > 5 ? (
+                      <span className="text-xs text-zinc-500">
+                        +{triggerKeywords.length - 5} weitere
+                      </span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-amber-400">
+                    Noch keine Startwörter hinterlegt.
+                  </p>
+                )}
+              </div>
+              <ChevronRight className="h-5 w-5 text-zinc-500" />
+            </div>
+          </button>
+        </div>
+
         {orderedNodes.map((node, index) => {
           const isStart = startNodeIds.has(node.id);
           const isSelected = selectedNodeId === node.id;
-          const isExpanded = expandedNodes.has(node.id);
+          const isExpanded = expandedNodeId === node.id;
           const inputMode = deriveInputMode(node, edges);
           const quickReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
           const freeTextTarget = getFreeTextTarget(node.id);
@@ -463,7 +518,7 @@ export default function FlowListBuilder({
                 <div
                   onClick={() => {
                     onSelectNode(node.id);
-                    toggleExpanded(node.id);
+                    setExpanded(node.id);
                   }}
                   className="flex cursor-pointer items-center gap-3 p-4"
                 >
@@ -575,7 +630,7 @@ export default function FlowListBuilder({
                             <select
                               value={(node.data as any)?.collects ?? ""}
                               onChange={(e) => updateFreeTextMeta(node.id, "collects", e.target.value)}
-                              className="w-full rounded-lg border border-amber-500/30 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                              className="app-select w-full"
                             >
                               <option value="">Keine Zuordnung</option>
                               <option value="name">Name</option>
@@ -594,7 +649,7 @@ export default function FlowListBuilder({
                             <select
                               value={freeTextTarget}
                               onChange={(e) => setFreeTextTarget(node.id, e.target.value)}
-                              className="w-full rounded-lg border border-amber-500/30 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                              className="app-select w-full"
                             >
                               <option value="">Schritt wählen...</option>
                               {nodes.filter(n => n.id !== node.id).map((n) => (
@@ -662,10 +717,13 @@ export default function FlowListBuilder({
                                   className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                                 />
                                 <ArrowRight className="h-4 w-4 text-zinc-500" />
+                                <span className="text-xs font-medium text-zinc-500 whitespace-nowrap">
+                                  führt zu
+                                </span>
                                 <select
                                   value={reply.targetNodeId || ""}
                                   onChange={(e) => handleQuickReplyTargetChange(node.id, reply.id, e.target.value, reply.label)}
-                                  className="w-36 rounded-lg border border-white/10 bg-zinc-800 px-2 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                                  className="app-select w-36"
                                 >
                                   <option value="">Ziel wählen...</option>
                                   <option value="__NEW_FREETEXT__">+ Neuer Freitext</option>

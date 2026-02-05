@@ -1,6 +1,6 @@
 # Wesponde Roadmap
 
-**Stand:** 2. Februar 2026
+**Stand:** 5. Februar 2026
 **Timeline:** Pilot in 2 Wochen, Finales Produkt in 2 Monaten
 
 ---
@@ -45,7 +45,7 @@
 
 | # | Feature | Aufwand | Beschreibung |
 |---|---------|---------|--------------|
-| 4 | Multi-Tenancy (Teams) | 3 Wochen | Mehrere Mitarbeiter pro Restaurant |
+| 4 | Multi-Tenancy (Teams) | 3 Wochen | DB + API fertig, UI/Invite-Flow offen |
 | 5 | Billing/Stripe | 2 Wochen | Subscription-Modell mit Stripe |
 | 6 | Kalender-View | 1-2 Wochen | Reservierungen als Kalender statt Tabelle |
 | 7 | Manuelles Messaging | 1 Woche | Restaurant kann Kunden direkt anschreiben |
@@ -54,7 +54,7 @@
 
 | # | Feature | Aufwand | Beschreibung |
 |---|---------|---------|--------------|
-| 8 | WhatsApp Integration | 2 Wochen | Zusätzlicher Kanal |
+| 8 | WhatsApp Integration | 2 Wochen | DB vorbereitet (channel-agnostik), API-Anbindung offen |
 | 9 | Analytics Dashboard | 2 Wochen | Statistiken zu Flows/Reservierungen |
 | 10 | Export (CSV/PDF) | 1 Woche | Reservierungen exportieren |
 | 11 | Kalender-Integration | 1 Woche | Google Calendar, iCal Sync |
@@ -111,7 +111,7 @@
 |---------|--------|
 | Email-Benachrichtigungen | 📋 |
 | Token Auto-Refresh | 📋 |
-| Multi-Tenancy | 📋 |
+| Multi-Tenancy (DB + API) | ✅ (UI offen) |
 | Billing/Stripe | 📋 |
 | WhatsApp Integration | 📋 |
 | Kalender-View | 📋 |
@@ -156,7 +156,7 @@ Restaurant kann Kunden direkt anschreiben (außerhalb von Flows), z.B. bei abgeb
 
 - **Instagram Test-Mode:** Permissions erfordern Test-User in Meta Developer Portal
 - **60-Tage Token:** Access Token muss erneuert werden (aktuell manuell)
-- **Single-User:** Aktuell 1 Account = 1 Restaurant (kein Team-Support)
+- **Multi-Tenant DB fertig:** accounts + account_members + RLS vorhanden, Team-Invite-UI fehlt noch
 
 ---
 

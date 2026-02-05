@@ -67,14 +67,21 @@ META_WEBHOOK_VERIFY_TOKEN=your_random_string
 ### Database Setup
 
 Run the SQL from `supabase/schema.sql` in your Supabase SQL Editor to create the required tables:
-- `flows` - Conversation flows
+- `accounts` - Tenant entities (restaurant, salon, practice)
+- `account_members` - Team memberships with roles (owner/admin/member/viewer)
+- `contacts` - End-customers/guests trackable across conversations
+- `contact_channels` - Channel identities (Instagram PSID, WhatsApp, etc.)
+- `flows` - Conversation flows (scoped to account)
 - `flow_templates` - Pre-built templates
-- `integrations` - Meta/Instagram connections
-- `review_requests` - Review follow-ups (rating/feedback tracking)
-- `conversations` - Chat threads
+- `integrations` - Meta/Instagram connections (scoped to account)
+- `conversations` - Chat threads with contact + channel support
 - `messages` - Individual messages
-- `reservations` - Bookings
+- `reservations` - Bookings with contact linking
+- `review_requests` - Review follow-ups (rating/feedback tracking)
+- `oauth_states` - OAuth CSRF protection
 - `logs` - System logs
+
+A signup trigger (`on_auth_user_created`) auto-creates an account and owner membership for new users.
 
 ## Project Structure
 

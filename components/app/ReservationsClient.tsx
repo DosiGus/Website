@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   Clock,
@@ -48,6 +48,7 @@ const ITEMS_PER_PAGE = 20;
 export default function ReservationsClient() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [userId, setUserId] = useState<string | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -74,6 +75,7 @@ export default function ReservationsClient() {
 
   // Pending action state
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const lastStatusParamRef = useRef<string | null>(null);
 
   // Stats
   const [stats, setStats] = useState({
@@ -95,6 +97,30 @@ export default function ReservationsClient() {
     }
     loadUser();
   }, [supabase, router]);
+
+  useEffect(() => {
+    const statusParam = searchParams.get("status");
+    if (statusParam === lastStatusParamRef.current) return;
+    lastStatusParamRef.current = statusParam;
+
+    if (!statusParam) {
+      setStatusFilter("all");
+      return;
+    }
+
+    const normalized = statusParam.toLowerCase();
+    const allowed: ReservationStatus[] = [
+      "pending",
+      "confirmed",
+      "cancelled",
+      "completed",
+      "no_show",
+    ];
+
+    if (allowed.includes(normalized as ReservationStatus)) {
+      setStatusFilter(normalized as ReservationStatus);
+    }
+  }, [searchParams]);
 
   // Load reservations
   const loadReservations = async () => {
@@ -511,10 +537,10 @@ export default function ReservationsClient() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as ReservationStatus | "all")}
-            className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-300 focus:border-indigo-500 focus:outline-none"
+            className="app-select"
           >
             {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value} className="bg-zinc-900 text-white">
+              <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}

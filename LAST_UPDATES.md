@@ -1,7 +1,46 @@
 # Wesponde - Letzte Updates
 
-**Letzte Session:** 2. Februar 2026
-**Status:** Google‑Review‑Flow integriert + Dashboard‑UI für Review‑Link, Reservierungsabschluss triggert Bewertung
+**Letzte Session:** 5. Februar 2026
+**Status:** Multi-Tenant DB-Restructuring abgeschlossen (Phase 1 + 2)
+
+---
+
+## Was wurde gemacht (5. Februar 2026)
+
+### DB-Restructuring: Multi-Tenant SaaS (Erledigt)
+
+**Ziel:** Datenbank von Single-User (`user_id`) auf Multi-Tenant (`account_id`) umgebaut.
+
+#### Phase 1: Account-Modell
+- **`accounts` Tabelle:** Tenant-Entity (Restaurant/Salon/Praxis) mit name, slug, vertical, settings
+- **`account_members` Tabelle:** User-zu-Account-Zuordnung mit Rollen (owner/admin/member/viewer)
+- **`account_id` auf allen Tabellen:** flows, integrations, conversations, reservations, review_requests, logs
+- **Backfill:** 3 bestehende User automatisch zu Accounts migriert, alle Daten verknuepft
+- **RLS:** `user_account_ids()` Helper-Funktion, account-basierte Policies parallel zu legacy user_id Policies
+- **Signup-Trigger:** `on_auth_user_created` erstellt automatisch Account + Owner-Membership bei Registrierung
+
+#### Phase 2: Kontakte & Kanal-Vorbereitung
+- **`contacts` Tabelle:** Gaeste/Endkunden, trackbar ueber mehrere Gespraeche
+- **`contact_channels` Tabelle:** Kanal-Identitaeten (Instagram PSID, WhatsApp, etc.) mit `account_id` + unique index
+- **Kanal-Spalten:** `channel`, `channel_sender_id` auf conversations, `channel_message_id` auf messages
+- **Backfill:** 2 Kontakte aus bestehenden Instagram-Sender-IDs erstellt und verknuepft
+
+#### Code-Aenderungen
+- **`lib/apiAuth.ts`:** Neue `requireAccountMember()` Funktion
+- **`lib/contacts.ts`:** Neues Modul fuer Kontakt-Verwaltung (findOrCreateContact, etc.)
+- **Alle API-Routes:** Umgestellt auf `account_id`-basierte Queries
+- **Webhook:** `account_id` + `channel` Unterstuetzung
+- **`supabase/schema.sql`:** Komplett neu geschrieben
+
+#### Security-Fixes
+- RLS-Luecke in `account_members` INSERT-Policy geschlossen (kein `or not exists` mehr)
+- `search_path` auf allen Funktionen gesetzt
+- RLS auf `oauth_states` und `flow_templates` aktiviert
+
+#### Offene Punkte
+- OAuth Callback Route muss `account_id` aus `oauth_states` lesen und in Integration schreiben
+- Kontakt-Modell im Webhook noch nicht verdrahtet (findOrCreateContact nicht aufgerufen)
+- Messages-RLS noch user-basiert (kein Team-Zugriff)
 
 ---
 
@@ -76,21 +115,27 @@
 | Bestehende Reservierung prüfen | ✅ | User wird gefragt: Stornieren/Behalten/Neu |
 | Reservierungs-Dashboard | ✅ | UI zum Verwalten von Buchungen |
 | Logging | ✅ | Webhook-Events werden geloggt |
-| Google‑Review‑Flow | ✅ | Bewertung nach „Besuch abgeschlossen“ inkl. Google‑Link |
+| Google‑Review‑Flow | ✅ | Bewertung nach „Besuch abgeschlossen" inkl. Google‑Link |
+| Multi-Tenant DB (Phase 1) | ✅ | Accounts, Team-Rollen, account_id auf allen Tabellen |
+| Kontakte & Kanaele (Phase 2 DB) | ✅ | contacts, contact_channels, channel-agnostische Spalten |
+| Signup Auto-Provisioning | ✅ | Trigger erstellt Account + Owner bei Registrierung |
 
 ### In Arbeit 🔄
 
 | Feature | Status | Beschreibung |
 |---------|--------|--------------|
-| Reservierungs-Benachrichtigungen | 🔄 | Email/Push bei neuer Reservierung |
+| OAuth Callback Fix | 🔄 | account_id in integrations schreiben |
+| Kontakte im Webhook | 🔄 | findOrCreateContact verdrahten |
 
 ### Geplant 📋
 
 | Feature | Status | Beschreibung |
 |---------|--------|--------------|
-| WhatsApp Integration | 📋 | Zusätzlicher Kanal |
+| Messages Team-Zugriff | 📋 | RLS + API auf account_id umstellen |
+| Reservierungs-Benachrichtigungen | 📋 | Email/Push bei neuer Reservierung |
+| WhatsApp Integration | 📋 | Zusätzlicher Kanal (DB vorbereitet) |
 | Kalender-Integration | 📋 | Google Calendar, iCal |
-| Multi-Language | 📋 | Englisch, weitere Sprachen |
+| Billing/Stripe | 📋 | Subscription-Modell |
 | Analytics Dashboard | 📋 | Statistiken zu Flows/Reservierungen |
 
 ---
@@ -128,15 +173,19 @@ d0b4793a Fix: Name, Telefon und Wünsche werden korrekt gespeichert
 | Datei | Beschreibung |
 |-------|--------------|
 | `app/api/webhooks/instagram/route.ts` | Webhook-Endpoint + Flow-Logik (HAUPTDATEI) |
-| `lib/webhook/flowExecutor.ts` | Flow-Ausführung + Summary-Fallback |
+| `lib/apiAuth.ts` | Auth: `requireUser()` + `requireAccountMember()` |
+| `lib/contacts.ts` | Kontakt-Verwaltung: findOrCreateContact, updateDisplayName |
+| `lib/webhook/flowExecutor.ts` | Flow-Ausfuehrung + Summary-Fallback |
+| `lib/webhook/flowMatcher.ts` | Flow-Matching nach account_id |
 | `lib/webhook/variableExtractor.ts` | Variablen erkennen (Name, Datum, Uhrzeit, etc.) |
 | `lib/webhook/variableSubstitutor.ts` | Platzhalter ersetzen |
-| `lib/webhook/reservationCreator.ts` | Reservierung erstellen |
+| `lib/webhook/reservationCreator.ts` | Reservierung erstellen (mit account_id + contact_id) |
 | `lib/flowTemplates.ts` | Templates (Summary-Platzhalter) |
 | `components/app/FlowBuilderClient.tsx` | Flow-Editor UI |
 | `components/app/FlowSimulator.tsx` | Testmodus im FlowBuilder |
 | `components/app/ReservationsClient.tsx` | Reservierungs-Dashboard |
-| `lib/reviews/reviewSender.ts` | Review‑Flow Versand (bei completed) |
+| `lib/reviews/reviewSender.ts` | Review-Flow Versand (bei completed) |
+| `supabase/schema.sql` | Komplettes DB-Schema (14 Tabellen, Multi-Tenant) |
 
 ---
 
