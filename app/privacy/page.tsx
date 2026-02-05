@@ -1,210 +1,160 @@
 import LegalLayout from "../../components/LegalLayout";
 
 export const metadata = {
-  title: "Privacy Policy — Wesponde",
-  description: "Datenschutzerklärung der Wesponde GmbH (Musterinhalt, bitte anpassen).",
+  title: "Datenschutzerklaerung - Wesponde",
+  description: "Datenschutzerklaerung fuer die Nutzung von Wesponde.",
 };
 
 export default function PrivacyPage() {
   return (
     <LegalLayout
-      title="Datenschutzerklärung"
-      description="Wir nehmen den Schutz Ihrer personenbezogenen Daten ernst. Nachfolgend informieren wir Sie gemäß Art. 13 DSGVO darüber, welche Daten wir auf dieser Website verarbeiten, zu welchem Zweck dies erfolgt und welche Rechte Sie haben."
-      lastUpdated="05. Juni 2024"
+      title="Datenschutzerklaerung"
+      description="Hier erlaeutern wir, welche personenbezogenen Daten wir verarbeiten, zu welchem Zweck und welche Rechte du hast."
+      lastUpdated="05.02.2026"
     >
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Verantwortliche Stelle
-        </h2>
+        <h2 className="text-xl font-semibold text-white">Verantwortliche Stelle</h2>
         <p>
-          Verantwortlich für die Datenverarbeitung auf dieser Website ist die Wesponde GmbH.
-          Bitte ersetzen Sie die nachstehenden Platzhalter durch Ihre tatsächlichen Angaben.
+          Verantwortlich fuer die Datenverarbeitung ist:
         </p>
         <dl className="grid gap-6 sm:grid-cols-2">
           <div>
-            <dt className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <dt className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
               Unternehmen
             </dt>
-            <dd className="mt-2 text-base font-medium text-slate-700">
-              Wesponde GmbH
+            <dd className="mt-2 text-base font-medium text-zinc-200">
+              Wesponde (Einzelunternehmen, Inhaber: Kevin Santos)
             </dd>
           </div>
           <div>
-            <dt className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <dt className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
               Kontakt Datenschutz
             </dt>
-            <dd className="mt-2 text-base text-slate-700">
-              privacy@wesponde.com
-              <br />
-              +49 (0) 123 456 789
+            <dd className="mt-2 text-base text-zinc-200">
+              wesponde@gmail.com
             </dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <dt className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
               Anschrift
             </dt>
-            <dd className="mt-2 text-base text-slate-700">
-              Musterstraße 1, 10115 Berlin, Deutschland
+            <dd className="mt-2 text-base text-zinc-200">
+              Kurzroederstrasse 26
+              <br />
+              60435 Frankfurt am Main
+              <br />
+              Deutschland
             </dd>
           </div>
         </dl>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Arten verarbeiteter Daten
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Kurzbeschreibung des Produkts</h2>
         <p>
-          Wir verarbeiten personenbezogene Daten nur, soweit dies zur Bereitstellung einer
-          funktionsfähigen Website sowie unserer Inhalte und Leistungen erforderlich ist.
+          Wesponde ist eine SaaS-Plattform fuer Gastronomie- und Servicebetriebe. Wir
+          automatisieren Social-Media-Konversationen (z. B. Instagram DMs), erfassen
+          Reservierungen und senden Review-Follow-ups.
         </p>
+      </section>
+
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Welche Daten verarbeiten wir?</h2>
         <ul className="list-disc space-y-2 pl-5">
-          <li>Bestandsdaten (z. B. Namen, Unternehmen, Ansprechpartner)</li>
-          <li>Kontaktdaten (z. B. E-Mail, Telefonnummer, Anschrift)</li>
-          <li>
-            Nutzungsdaten (z. B. aufgerufene Seiten, Zugriffsdaten, IP-Adresse,
-            Browserinformationen)
-          </li>
-          <li>
-            Inhaltsdaten (z. B. Angaben aus Kontaktformularen oder Supportanfragen)
-          </li>
+          <li>Accountdaten (z. B. Name, E-Mail, Login-Informationen)</li>
+          <li>Integrationsdaten (z. B. Instagram-/Page-IDs, Tokens, Status)</li>
+          <li>Konversations- und Nachrichteninhalte</li>
+          <li>Reservierungsdaten (Name, Datum, Uhrzeit, Gaestezahl, Kontaktangaben)</li>
+          <li>Kontaktdaten und Historie (Kontakte, Kanal-IDs)</li>
+          <li>Technische Logdaten (Fehler, Requests, Systemlogs)</li>
         </ul>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Zwecke der Verarbeitung &amp; Rechtsgrundlagen
-        </h2>
-        <p>
-          Die Verarbeitung Ihrer Daten erfolgt ausschließlich auf Grundlage der folgenden
-          Rechtsgrundlagen der DSGVO:
-        </p>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Zwecke der Verarbeitung</h2>
         <ul className="list-disc space-y-2 pl-5">
-          <li>
-            Art. 6 Abs. 1 lit. b DSGVO zur Erfüllung vertraglicher oder vorvertraglicher
-            Maßnahmen (z. B. Beantwortung von Anfragen)
-          </li>
-          <li>
-            Art. 6 Abs. 1 lit. f DSGVO aufgrund berechtigter Interessen (z. B. Betrieb und
-            Sicherheit der Website)
-          </li>
-          <li>
-            Art. 6 Abs. 1 lit. a DSGVO, sofern wir Ihre Einwilligung für bestimmte Zwecke
-            einholen (z. B. Cookies, Newsletter)
-          </li>
+          <li>Bereitstellung der Plattform und ihrer Funktionen</li>
+          <li>Automatisierte Beantwortung von Nachrichten</li>
+          <li>Erfassung und Verwaltung von Reservierungen</li>
+          <li>Qualitaetssicherung, Support und Fehleranalyse</li>
+          <li>Sicherheit und Missbrauchspruefung</li>
+        </ul>
+      </section>
+
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Rechtsgrundlagen</h2>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>Art. 6 Abs. 1 lit. b DSGVO (Vertragserfuellung)</li>
+          <li>Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse, z. B. Sicherheit)</li>
+          <li>Art. 6 Abs. 1 lit. a DSGVO (Einwilligung, falls erforderlich)</li>
+        </ul>
+      </section>
+
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Meta/Instagram APIs</h2>
+        <p>
+          Zur Bereitstellung der DM-Automationen verbinden wir deine Instagram-Business-
+          Konten ueber die Meta APIs. Dabei verarbeiten wir technische IDs sowie Inhalte
+          von Nachrichten, um Antworten zu senden und Reservierungen anzulegen.
+        </p>
+      </section>
+
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Empfaenger und Dienstleister</h2>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>Supabase (Datenbank, Authentifizierung, Hosting)</li>
+          <li>Vercel (Hosting der Webanwendung)</li>
+          <li>Meta Platforms (Instagram Graph API)</li>
         </ul>
         <p>
-          Wir verwenden Ihre Daten weder für Profiling noch zur automatisierten
-          Entscheidungsfindung.
+          Wir setzen diese Anbieter als Auftragsverarbeiter ein, soweit erforderlich.
+          Derzeit nutzen wir keine weiteren Dienstleister. Falls wir spaeter Tools wie
+          Stripe, E-Mail-Services oder Analytics einsetzen, aktualisieren wir diese
+          Erklaerung.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Bereitstellung der Website &amp; Server-Logfiles
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Drittlandtransfer</h2>
         <p>
-          Bei jedem Zugriff auf unsere Website erfassen wir automatisiert Daten und
-          Informationen, die Ihr Browser übermittelt. Hierzu gehören unter anderem IP-Adresse,
-          Datum und Uhrzeit des Abrufs, verwendeter Browser sowie das Betriebssystem.
-        </p>
-        <p>
-          Die Speicherung erfolgt aus Sicherheitsgründen (z. B. zur Aufklärung von
-          Missbrauchs- oder Betrugshandlungen) auf Basis unseres berechtigten Interesses
-          gemäß Art. 6 Abs. 1 lit. f DSGVO. Eine darüber hinausgehende Zusammenführung dieser
-          Daten mit anderen Datenquellen findet nicht statt.
+          Bei der Nutzung von Meta oder Hosting-Anbietern kann eine Datenuebertragung in
+          Drittlaender (z. B. USA) erfolgen. Wir achten auf geeignete Garantien wie
+          Standardvertragsklauseln, sofern erforderlich.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Cookies, Analyse-Tools &amp; Einwilligungen
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Speicherdauer</h2>
         <p>
-          Soweit wir Cookies oder vergleichbare Technologien einsetzen, die nicht zwingend
-          erforderlich sind, holen wir vorab Ihre ausdrückliche Einwilligung ein (Art. 6
-          Abs. 1 lit. a DSGVO). Technisch notwendige Cookies setzen wir auf Grundlage unseres
-          berechtigten Interesses nach Art. 6 Abs. 1 lit. f DSGVO ein.
-        </p>
-        <p>
-          Werden Analysedienste genutzt, erfolgt dies ausschließlich in pseudonymisierter oder
-          anonymisierter Form. Details hierzu (z. B. Anbieter, Speicherdauer) sollten Sie in
-          diesem Abschnitt ergänzen, sobald entsprechende Dienste eingebunden werden.
+          Wir speichern personenbezogene Daten nur so lange, wie dies fuer die Zwecke
+          erforderlich ist oder gesetzliche Pflichten bestehen. Systemlogs speichern wir
+          in der Regel bis zu 90 Tage.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">Speicherdauer</h2>
-        <p>
-          Wir verarbeiten und speichern personenbezogene Daten nur für den Zeitraum, der zur
-          Erreichung des Speicherungszwecks erforderlich ist oder sofern dies durch den
-          europäischen oder nationalen Gesetzgeber vorgeschrieben wurde.
-        </p>
-        <p>
-          Entfallen der Speicherungszweck oder läuft eine einschlägige gesetzliche
-          Aufbewahrungsfrist ab, werden die personenbezogenen Daten routinemäßig und
-          entsprechend den gesetzlichen Vorschriften gesperrt oder gelöscht.
-        </p>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Deine Rechte</h2>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>Auskunft, Berichtigung, Loeschung</li>
+          <li>Einschraenkung der Verarbeitung</li>
+          <li>Datenuebertragbarkeit</li>
+          <li>Widerspruch gegen Verarbeitung</li>
+        </ul>
       </section>
 
-      <section className="space-y-6 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Rechte der betroffenen Person
-        </h2>
-        <div className="rounded-2xl border border-brand/20 bg-brand/5 p-6">
-          <p>
-            Ihnen stehen die folgenden Rechte bezüglich Ihrer personenbezogenen Daten zu.
-            Bitte richten Sie entsprechende Anfragen an{" "}
-            <a
-              className="font-semibold text-brand-dark hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-              href="mailto:privacy@wesponde.com"
-            >
-              privacy@wesponde.com
-            </a>
-            .
-          </p>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            <li className="rounded-xl bg-white/60 p-4 text-sm font-medium text-slate-700 shadow-sm">
-              Auskunft nach Art. 15 DSGVO
-            </li>
-            <li className="rounded-xl bg-white/60 p-4 text-sm font-medium text-slate-700 shadow-sm">
-              Berichtigung nach Art. 16 DSGVO
-            </li>
-            <li className="rounded-xl bg-white/60 p-4 text-sm font-medium text-slate-700 shadow-sm">
-              Löschung nach Art. 17 DSGVO
-            </li>
-            <li className="rounded-xl bg-white/60 p-4 text-sm font-medium text-slate-700 shadow-sm">
-              Einschränkung der Verarbeitung nach Art. 18 DSGVO
-            </li>
-            <li className="rounded-xl bg-white/60 p-4 text-sm font-medium text-slate-700 shadow-sm">
-              Datenübertragbarkeit nach Art. 20 DSGVO
-            </li>
-            <li className="rounded-xl bg-white/60 p-4 text-sm font-medium text-slate-700 shadow-sm">
-              Widerspruch nach Art. 21 DSGVO
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">Datensicherheit</h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Datenloeschung</h2>
         <p>
-          Wir treffen angemessene technische und organisatorische Maßnahmen, um Ihre Daten
-          gegen unbefugte Zugriffe, Manipulation und Verlust zu schützen. Dazu zählen unter
-          anderem Verschlüsselungstechnologien, Zugriffsbeschränkungen sowie
-          Sicherheitsüberprüfungen unserer Systeme.
+          Informationen zur Datenloeschung findest du hier:{" "}
+          <a href="/data-deletion">https://wesponde.com/data-deletion</a>
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Aktualität und Änderungen dieser Datenschutzerklärung
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Datensicherheit</h2>
         <p>
-          Wir behalten uns vor, diese Datenschutzerklärung anzupassen, damit sie stets den
-          aktuellen rechtlichen Anforderungen entspricht oder um Änderungen unserer Leistungen
-          in der Datenschutzerklärung umzusetzen. Für Ihren erneuten Besuch gilt dann die neue
-          Datenschutzerklärung.
+          Wir treffen angemessene technische und organisatorische Massnahmen, um Daten vor
+          unbefugtem Zugriff, Verlust und Missbrauch zu schuetzen.
         </p>
       </section>
     </LegalLayout>

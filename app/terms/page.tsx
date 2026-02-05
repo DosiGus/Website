@@ -1,184 +1,125 @@
 import LegalLayout from "../../components/LegalLayout";
 
 export const metadata = {
-  title: "Terms of Service — Wesponde",
-  description:
-    "Allgemeine Geschäftsbedingungen (AGB) der Wesponde GmbH (Musterinhalt, bitte individualisieren).",
+  title: "AGB - Wesponde",
+  description: "Allgemeine Geschaeftsbedingungen von Wesponde.",
 };
 
 export default function TermsPage() {
   return (
     <LegalLayout
-      title="Allgemeine Geschäftsbedingungen"
-      description="Diese Allgemeinen Geschäftsbedingungen regeln die Nutzung der Website und der Dienstleistungen der Wesponde GmbH. Bitte lesen Sie die folgenden Bestimmungen aufmerksam, bevor Sie unsere Leistungen in Anspruch nehmen."
-      lastUpdated="05. Juni 2024"
+      title="Allgemeine Geschaeftsbedingungen (AGB)"
+      description="Diese AGB regeln die Nutzung der Wesponde-Plattform."
+      lastUpdated="05.02.2026"
     >
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-slate-900">1. Geltungsbereich</h2>
+        <h2 className="text-xl font-semibold text-white">1. Geltungsbereich</h2>
         <p>
-          Die nachstehenden Bedingungen gelten für sämtliche Verträge zwischen der Wesponde
-          GmbH (nachfolgend „Wesponde“ oder „wir“) und unseren Kundinnen und Kunden sowie
-          Besucherinnen und Besuchern der Website. Abweichende Geschäftsbedingungen finden
-          nur Anwendung, wenn sie ausdrücklich schriftlich bestätigt wurden.
+          Diese AGB gelten fuer alle Vertrage zwischen Wesponde (Einzelunternehmen, Inhaber:
+          Kevin Santos) und ihren Geschaeftskunden (B2B). Die Plattform richtet sich
+          ausschliesslich an Unternehmer im Sinne von § 14 BGB; Verbraucher sind
+          ausgeschlossen. Abweichende Bedingungen finden nur Anwendung, wenn sie
+          schriftlich bestaetigt wurden.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          2. Vertragsgegenstand und Leistungen
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">2. Leistungsbeschreibung</h2>
         <p>
-          Wesponde stellt digitale Produkte und Services zur Verfügung, die Kommunikation und
-          Zusammenarbeit erleichtern. Art und Umfang der Leistungen ergeben sich aus dem
-          jeweils geschlossenen Vertrag, Angebotsunterlagen oder Produktbeschreibungen auf
-          der Website.
-        </p>
-        <p>
-          Änderungen oder Erweiterungen der Leistungen behalten wir uns vor, sofern diese
-          für Kundinnen und Kunden zumutbar sind und keine wesentlichen Vertragsbestandteile
-          betreffen.
+          Wesponde ist eine SaaS-Plattform zur Automatisierung von Social-Media-
+          Konversationen (z. B. Instagram DMs), zur Erfassung von Reservierungen und zur
+          Nachverfolgung von Reviews. Der konkrete Leistungsumfang ergibt sich aus dem
+          gewaehlten Paket bzw. Angebot.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          3. Registrierung und Benutzerkonten
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">3. Registrierung und Zugang</h2>
         <p>
-          Für bestimmte Funktionen ist gegebenenfalls ein persönliches Benutzerkonto
-          erforderlich. Die Registrierung muss mit wahrheitsgemäßen Angaben erfolgen. Sie
-          sind verpflichtet, Zugangsdaten vertraulich zu behandeln und vor dem Zugriff
-          unbefugter Dritter zu schützen.
-        </p>
-        <p>
-          Missbräuchliche Nutzung oder die Weitergabe des Kontos kann zur Sperrung oder
-          Kündigung des Accounts führen.
+          Fuer die Nutzung der Plattform ist ein Nutzerkonto erforderlich. Der Kunde stellt
+          sicher, dass alle Angaben korrekt sind und Zugangsdaten vertraulich behandelt
+          werden.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          4. Verantwortungsvolle Nutzung &amp; Pflichten
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">4. Integrationen und Drittanbieter</h2>
         <p>
-          Unsere Services dürfen nur im Rahmen der geltenden Gesetze und dieser
-          Geschäftsbedingungen genutzt werden. Untersagt ist insbesondere das Einstellen
-          rechtswidriger Inhalte, das Versenden von Spam sowie der Versuch, Sicherheitsmechanismen
-          zu umgehen oder die Systemintegrität zu beeinträchtigen.
-        </p>
-        <p>
-          Sie verpflichten sich, uns unverzüglich über Störungen oder sicherheitsrelevante
-          Ereignisse zu informieren.
+          Fuer die Nutzung bestimmter Funktionen ist die Verbindung zu Drittanbietern
+          (z. B. Meta/Instagram) erforderlich. Der Kunde stellt sicher, dass er die
+          erforderlichen Rechte besitzt und die Richtlinien der Drittanbieter einhaelt.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          5. Vergütung &amp; Zahlungsbedingungen
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">5. Pflichten des Kunden</h2>
         <p>
-          Soweit Leistungen kostenpflichtig sind, gelten die im Angebot ausgewiesenen Preise.
-          Alle Preise verstehen sich zuzüglich der gesetzlichen Umsatzsteuer, sofern nicht
-          anders angegeben. Rechnungen sind innerhalb von 14 Tagen ohne Abzug zur Zahlung
-          fällig, sofern nichts Abweichendes vereinbart wurde.
-        </p>
-        <p>
-          Bei Zahlungsverzug behalten wir uns vor, den Zugang zu kostenpflichtigen Services
-          vorübergehend zu sperren.
+          Der Kunde nutzt die Plattform nur im Rahmen der geltenden Gesetze und unterlaesst
+          missbraeuchliche Nutzung (z. B. Spam, rechtswidrige Inhalte, Umgehung von
+          Sicherheitsmechanismen).
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          6. Geistiges Eigentum &amp; Nutzungsrechte
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">6. Verguetung und Zahlung</h2>
         <p>
-          Sämtliche Rechte an Inhalten, Marken, Layouts, Software und sonstigen Materialien
-          liegen bei Wesponde oder den jeweiligen Rechteinhabern. Eine Weitergabe, Vervielfältigung
-          oder anderweitige Nutzung bedarf der vorherigen schriftlichen Zustimmung.
-        </p>
-        <p>
-          Für kundenseitig bereitgestellte Inhalte räumen Sie uns ein einfaches, zeitlich und
-          geografisch unbeschränktes Nutzungsrecht ein, soweit dies zur Vertragserfüllung
-          erforderlich ist.
+          Preise und Zahlungsbedingungen ergeben sich aus dem jeweiligen Angebot. Sofern
+          nichts anderes vereinbart ist, erfolgt die Abrechnung monatlich im Voraus und
+          Rechnungen sind innerhalb von 14 Tagen faellig.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          7. Haftung und Gewährleistung
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">7. Nutzungsrechte</h2>
         <p>
-          Wesponde haftet bei Vorsatz und grober Fahrlässigkeit unbegrenzt. Bei einfacher
-          Fahrlässigkeit haften wir nur bei Verletzung wesentlicher Vertragspflichten, begrenzt
-          auf den vertragstypischen, vorhersehbaren Schaden. Eine Haftung für entgangenen Gewinn
-          oder mittelbare Schäden ist ausgeschlossen.
-        </p>
-        <p>
-          Die gesetzliche Haftung für Schäden aus der Verletzung des Lebens, des Körpers oder
-          der Gesundheit bleibt unberührt.
+          Alle Rechte an der Plattform, Software und Inhalten verbleiben bei Wesponde. Der
+          Kunde erhaelt ein nicht uebertragbares Nutzungsrecht fuer die Vertragslaufzeit.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          8. Verfügbarkeit und Wartung
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">8. Verfuegbarkeit</h2>
         <p>
-          Wir streben eine hohe Verfügbarkeit unserer Dienste an, können jedoch keine
-          unterbrechungsfreie Nutzung garantieren. Wartungsarbeiten und Updates können zu
-          kurzfristigen Einschränkungen führen. Soweit möglich, informieren wir vorab über
-          geplante Wartungsfenster.
+          Wir bemuehen uns um eine hohe Verfuegbarkeit, koennen aber keine durchgaengige
+          Fehlerfreiheit garantieren. Wartungsfenster koennen zu kurzen Unterbrechungen
+          fuehren.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          9. Laufzeit und Kündigung
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">9. Haftung</h2>
         <p>
-          Bei laufzeitgebundenen Verträgen beträgt die Kündigungsfrist, sofern nicht anders
-          vereinbart, vier Wochen zum Ende der jeweiligen Vertragslaufzeit. Das Recht zur
-          außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.
+          Wir haften unbeschraenkt bei Vorsatz und grober Fahrlaessigkeit. Bei einfacher
+          Fahrlaessigkeit haften wir nur bei Verletzung wesentlicher Vertragspflichten und
+          begrenzt auf den vertragstypischen, vorhersehbaren Schaden.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          10. Änderungen dieser AGB
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">10. Laufzeit und Kuendigung</h2>
         <p>
-          Wir behalten uns vor, diese AGB mit Wirkung für die Zukunft anzupassen. Über
-          wesentliche Änderungen informieren wir Sie rechtzeitig. Widersprechen Sie den
-          Änderungen nicht innerhalb von 30 Tagen nach Mitteilung, gelten sie als akzeptiert.
+          Der Vertrag laeuft auf unbestimmte Zeit. Sofern im Angebot nichts anderes
+          vereinbart ist, kann er mit einer Frist von 14 Tagen zum Monatsende gekuendigt
+          werden. Das Recht zur ausserordentlichen Kuendigung aus wichtigem Grund bleibt
+          unberuehrt. Testphasen gelten nur, wenn sie schriftlich vereinbart wurden.
         </p>
       </section>
 
-      <section className="space-y-4 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-semibold text-slate-900">
-          11. Schlussbestimmungen
-        </h2>
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">11. Datenschutz</h2>
         <p>
-          Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts.
-          Ausschließlicher Gerichtsstand ist – soweit zulässig – Berlin. Sollten einzelne
-          Bestimmungen dieser AGB unwirksam sein oder werden, bleibt die Wirksamkeit der
-          übrigen Regelungen unberührt.
+          Informationen zur Datenverarbeitung findest du in der Datenschutzerklaerung:{" "}
+          <a href="/privacy">https://wesponde.com/privacy</a>
         </p>
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-          <p className="font-medium text-slate-800">
-            Haben Sie Fragen zu diesen AGB?
-          </p>
-          <p className="mt-2 text-sm text-slate-600">
-            Kontaktieren Sie uns unter{" "}
-            <a
-              className="font-semibold text-brand-dark hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-              href="mailto:legal@wesponde.com"
-            >
-              legal@wesponde.com
-            </a>{" "}
-            oder telefonisch unter +49 (0) 30 1234567. Wir helfen Ihnen gerne weiter.
-          </p>
-        </div>
+      </section>
+
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">12. Schlussbestimmungen</h2>
+        <p>
+          Es gilt deutsches Recht unter Ausschluss des UN-Kaufrechts. Gerichtsstand ist der
+          Sitz des Unternehmens, soweit gesetzlich zulaessig. Sollten einzelne Regelungen
+          unwirksam sein, bleibt die Wirksamkeit der uebrigen Regelungen unberuehrt.
+        </p>
       </section>
     </LegalLayout>
   );

@@ -1,8 +1,8 @@
 import LegalLayout from "../../components/LegalLayout";
 
 export const metadata = {
-  title: "Data Deletion - Wesponde",
-  description: "Information about data deletion requests for Wesponde users.",
+  title: "Datenloeschung - Wesponde",
+  description: "Anleitung zur Datenloeschung fuer Wesponde-Nutzer.",
 };
 
 export default function DataDeletionPage({
@@ -14,16 +14,16 @@ export default function DataDeletionPage({
 
   return (
     <LegalLayout
-      title="Data Deletion"
-      description="Informationen zur Loeschung von Daten fuer Wesponde."
-      lastUpdated="08. Februar 2026"
+      title="Datenloeschung"
+      description="So kannst du die Loeschung deiner Daten bei Wesponde anfragen."
+      lastUpdated="05.02.2026"
     >
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-white">Was passiert hier?</h2>
+        <h2 className="text-xl font-semibold text-white">Automatische Anfrage ueber Meta</h2>
         <p>
-          Wenn du eine Datenloeschung ueber Facebook/Instagram angefragt hast, kannst du
-          diese Seite als Bestaetigung verwenden. Die Anfrage wird verarbeitet und wir
-          loeschen die zugehoerigen Daten gemaess unseren Richtlinien.
+          Wenn du eine Datenloeschung ueber Facebook oder Instagram anfragst, erhalten wir
+          eine automatisierte Anfrage. Wir bestaetigen dir diese mit einem Code und verlinken
+          dich auf diese Seite.
         </p>
       </section>
 
@@ -41,11 +41,30 @@ export default function DataDeletionPage({
       ) : null}
 
       <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Welche Daten werden geloescht?</h2>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>Account- und Zugangsdaten</li>
+          <li>Integrationen (z. B. Instagram-Verbindungen)</li>
+          <li>Konversationen und Nachrichteninhalte</li>
+          <li>Reservierungen und Kontaktdaten</li>
+          <li>Review-Anfragen und System-Logs</li>
+        </ul>
+      </section>
+
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <h2 className="text-xl font-semibold text-white">Bearbeitungsdauer</h2>
+        <p>
+          Wir bearbeiten Datenloeschungen so schnell wie moeglich. Gesetzliche
+          Aufbewahrungsfristen koennen einzelne Daten laenger erfordern.
+        </p>
+      </section>
+
+      <section className="space-y-4 border-t border-white/10 pt-8">
         <h2 className="text-xl font-semibold text-white">Manuelle Anfrage</h2>
         <p>
           Falls du keine automatische Anfrage gestellt hast, kannst du uns jederzeit
           direkt kontaktieren. Schreibe eine E-Mail an{" "}
-          <a href="mailto:privacy@wesponde.com">privacy@wesponde.com</a> mit dem Betreff
+          <a href="mailto:wesponde@gmail.com">wesponde@gmail.com</a> mit dem Betreff
           &quot;Datenloeschung&quot;.
         </p>
       </section>
