@@ -46,7 +46,7 @@ export default function DataDeletionPage({
           Falls du keine automatische Anfrage gestellt hast, kannst du uns jederzeit
           direkt kontaktieren. Schreibe eine E-Mail an{" "}
           <a href="mailto:privacy@wesponde.com">privacy@wesponde.com</a> mit dem Betreff
-          "Datenloeschung".
+          &quot;Datenloeschung&quot;.
         </p>
       </section>
     </LegalLayout>
