@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "../lib/supabaseBrowserClient";
-import { Loader2 } from "lucide-react";
+import { Loader2, MailCheck } from "lucide-react";
 
 type AuthView = "login" | "signup";
 
@@ -343,48 +343,61 @@ export default function PartnerLoginForm() {
         {/* Status Message */}
         {message && (
           <div
-            className={`rounded-lg p-3 text-center text-sm ${
+            className={`relative overflow-hidden rounded-xl border px-4 py-4 text-sm ${
               status === "error"
-                ? "border border-red-500/20 bg-red-500/10 text-red-400"
-                : "border border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                ? "border-red-500/30 bg-red-500/10 text-red-300"
+                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-100 shadow-lg shadow-emerald-500/10"
             }`}
           >
-            <p>{message}</p>
-            {status === "success" && signupEmail && (
-              <button
-                type="button"
-                className="mt-2 text-xs font-medium underline underline-offset-2 transition-colors hover:text-emerald-300"
-                onClick={async () => {
-                  try {
-                    const supabase = createSupabaseBrowserClient();
-                    const callbackUrl = `${window.location.origin}/auth/callback`;
-                    const { error } = await supabase.auth.resend({
-                      type: "signup",
-                      email: signupEmail,
-                      options: { emailRedirectTo: callbackUrl },
-                    });
-                    if (error) throw error;
-                    setMessage(`Neue Bestaetigungsmail an ${signupEmail} gesendet.`);
-                  } catch (err: any) {
-                    setStatus("error");
-                    setMessage(translateAuthError(err?.message || ""));
-                  }
-                }}
-              >
-                E-Mail erneut senden
-              </button>
-            )}
-            {status === "success" && signupEmail && (
-              <button
-                type="button"
-                className="ml-3 mt-2 text-xs font-medium text-zinc-400 underline underline-offset-2 transition-colors hover:text-white"
-                onClick={() => {
-                  updateView("login");
-                  setSignupEmail("");
-                }}
-              >
-                Zum Login
-              </button>
+            {status === "success" && signupEmail ? (
+              <div className="flex gap-3">
+                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-200">
+                  <MailCheck className="h-4 w-4" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-emerald-100">Bestaetigungsmail gesendet</p>
+                  <p className="mt-1 text-xs text-emerald-100/80">
+                    Wir haben eine Bestaetigungsmail an{" "}
+                    <span className="font-semibold text-emerald-100">{signupEmail}</span> gesendet. Bitte auch im Spam-Ordner pruefen.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="rounded-full border border-emerald-400/30 px-3 py-1 text-xs font-semibold text-emerald-100 transition-colors hover:border-emerald-300/60 hover:text-white"
+                      onClick={async () => {
+                        try {
+                          const supabase = createSupabaseBrowserClient();
+                          const callbackUrl = `${window.location.origin}/auth/callback`;
+                          const { error } = await supabase.auth.resend({
+                            type: "signup",
+                            email: signupEmail,
+                            options: { emailRedirectTo: callbackUrl },
+                          });
+                          if (error) throw error;
+                          setMessage(`Neue Bestaetigungsmail an ${signupEmail} gesendet.`);
+                        } catch (err: any) {
+                          setStatus("error");
+                          setMessage(translateAuthError(err?.message || ""));
+                        }
+                      }}
+                    >
+                      E-Mail erneut senden
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white"
+                      onClick={() => {
+                        updateView("login");
+                        setSignupEmail("");
+                      }}
+                    >
+                      Zum Login
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-center">{message}</p>
             )}
           </div>
         )}
