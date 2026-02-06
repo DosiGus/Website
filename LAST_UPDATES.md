@@ -1,7 +1,42 @@
 # Wesponde - Letzte Updates
 
-**Letzte Session:** 5. Februar 2026
-**Status:** Multi-Tenant DB-Restructuring abgeschlossen (Phase 1 + 2)
+**Letzte Session:** 6. Februar 2026
+**Status:** Registrierungsflow Security + UX Overhaul abgeschlossen
+
+---
+
+## Was wurde gemacht (6. Februar 2026)
+
+### Registrierungs-Flow: Security + UX Overhaul
+
+**Security (P0):**
+- `AppAuthGate.tsx`: `getSession()` → `getUser()` (serverseitige Token-Validierung statt localStorage)
+- `middleware.ts` (NEU): Server-Side Middleware schuetzt `/app/*` Routen, refresht Auth-Tokens
+- `@supabase/ssr` installiert fuer cookie-basierte Sessions
+
+**Zuverlaessigkeit (P1):**
+- `app/auth/callback/route.ts` (NEU): Dedizierter Callback fuer Email-Bestaetigung (token_hash) + PKCE (code)
+- `lib/supabaseBrowserClient.ts`: Migriert auf `createBrowserClient` aus `@supabase/ssr` (Singleton-Pattern)
+- `lib/supabaseSSRClient.ts` (NEU): Cookie-basierter Server-Client fuer SSR
+- `PartnerLoginForm.tsx`: emailRedirectTo + OAuth redirectTo zeigen auf `/auth/callback`
+- Deutsche Fehlermeldungen statt roher englischer Supabase-Strings
+
+**UX (P2):**
+- Passwort-Bestaetigung + 5-Stufen Staerke-Indikator beim Signup
+- "E-Mail erneut senden" Button + "Zum Login" Link nach Signup-Erfolg
+- Firmenname-Feld beim Signup (geht in user_metadata.full_name → Account-Name)
+- AGB/Datenschutz-Checkbox (required) beim Signup
+
+**DB-Migration:**
+- `create_account_for_user()`: `vertical` nicht mehr hardcoded 'restaurant', sondern NULL
+
+**Copy-Fixes (P3):**
+- Login-Seite: "Success-Team schaltet frei" → korrekter Self-Service Text
+- Auth-Timeout von 4s auf 10s erhoeht
+
+**Dashboard-Aenderungen (manuell noetig):**
+- Supabase → Authentication → URL Configuration: `https://wesponde.com/auth/callback` als Redirect URL
+- Supabase → Authentication → Email Templates: Confirmation Link → `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email`
 
 ---
 

@@ -126,8 +126,8 @@ begin
       'Mein Betrieb'
     );
 
-    insert into public.accounts (name, slug, vertical)
-    values (account_name, account_slug, 'restaurant')
+    insert into public.accounts (name, slug)
+    values (account_name, account_slug)
     returning id into existing_account_id;
   end if;
 

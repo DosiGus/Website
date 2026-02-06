@@ -7,6 +7,37 @@ import { Loader2 } from "lucide-react";
 
 type AuthView = "login" | "signup";
 
+const authErrorMessages: Record<string, string> = {
+  "Invalid login credentials": "E-Mail oder Passwort ist falsch.",
+  "Email not confirmed": "Bitte bestaetige zuerst deine E-Mail-Adresse.",
+  "User already registered": "Diese E-Mail ist bereits registriert.",
+  "Signup requires a valid password": "Bitte gib ein gueltiges Passwort ein.",
+  "Password should be at least 6 characters": "Das Passwort muss mindestens 6 Zeichen lang sein.",
+  "Unable to validate email address: invalid format": "Bitte gib eine gueltige E-Mail-Adresse ein.",
+  "Email rate limit exceeded": "Zu viele Versuche. Bitte warte einen Moment.",
+  "For security purposes, you can only request this once every 60 seconds": "Bitte warte 60 Sekunden bevor du es erneut versuchst.",
+};
+
+function translateAuthError(message: string): string {
+  for (const [key, translation] of Object.entries(authErrorMessages)) {
+    if (message.includes(key)) return translation;
+  }
+  return "Etwas ist schiefgelaufen. Bitte versuche es erneut.";
+}
+
+function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
+  let score = 0;
+  if (pw.length >= 6) score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (score <= 1) return { score, label: "Schwach", color: "bg-red-500" };
+  if (score <= 2) return { score, label: "Mittel", color: "bg-yellow-500" };
+  if (score <= 3) return { score, label: "Gut", color: "bg-blue-500" };
+  return { score, label: "Stark", color: "bg-emerald-500" };
+}
+
 export default function PartnerLoginForm() {
   const searchParams = useSearchParams();
   const viewParam = searchParams.get("view");
@@ -14,6 +45,9 @@ export default function PartnerLoginForm() {
   const [view, setView] = useState<AuthView>(defaultView);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string>("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
   const router = useRouter();
   const redirectParam = searchParams.get("redirect");
   const fallbackRedirect =
@@ -23,6 +57,10 @@ export default function PartnerLoginForm() {
   const updateView = useCallback(
     (nextView: AuthView) => {
       setView(nextView);
+      setPassword("");
+      setPasswordConfirm("");
+      setMessage("");
+      setStatus("idle");
       const params = new URLSearchParams(searchParams.toString());
       params.set("view", nextView);
       router.replace(`/login?${params.toString()}`);
@@ -41,8 +79,14 @@ export default function PartnerLoginForm() {
     const formData = new FormData(event.currentTarget);
     const email = (formData.get("email") as string) || "";
     const password = (formData.get("password") as string) || "";
+    const businessName = (formData.get("businessName") as string) || "";
     setStatus("loading");
     setMessage("");
+    if (view === "signup" && password !== passwordConfirm) {
+      setStatus("error");
+      setMessage("Die Passwoerter stimmen nicht ueberein.");
+      return;
+    }
     try {
       const supabase = createSupabaseBrowserClient();
       if (view === "login") {
@@ -52,23 +96,32 @@ export default function PartnerLoginForm() {
         setMessage("Login erfolgreich! Du wirst gleich weitergeleitet.");
         router.replace(redirectTarget);
       } else {
+        const callbackUrl =
+          typeof window !== "undefined"
+            ? `${window.location.origin}/auth/callback`
+            : "https://wesponde.com/auth/callback";
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo:
-              process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || fallbackRedirect,
+            emailRedirectTo: callbackUrl,
+            data: {
+              full_name: businessName || undefined,
+            },
           },
         });
         if (error) throw error;
+        setSignupEmail(email);
         setStatus("success");
-        setMessage("Check deine Inbox für den Bestätigungslink.");
+        setMessage(`Wir haben eine Bestaetigungsmail an ${email} gesendet. Pruefe dein Postfach.`);
+        setPassword("");
+        setPasswordConfirm("");
         form.reset();
       }
     } catch (error: any) {
       console.error(error);
       setStatus("error");
-      setMessage(error?.message || "Etwas ist schiefgelaufen.");
+      setMessage(translateAuthError(error?.message || ""));
     }
   }
 
@@ -108,6 +161,21 @@ export default function PartnerLoginForm() {
           </button>
         </div>
 
+        {/* Business Name (signup only) */}
+        {view === "signup" && (
+          <div>
+            <label className="block text-sm font-medium text-zinc-300">
+              Firmenname
+            </label>
+            <input
+              name="businessName"
+              type="text"
+              className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              placeholder="z.B. Ristorante Milano"
+            />
+          </div>
+        )}
+
         {/* Email Input */}
         <div>
           <label className="block text-sm font-medium text-zinc-300">
@@ -131,10 +199,80 @@ export default function PartnerLoginForm() {
             required
             name="password"
             type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             placeholder="••••••••"
           />
+          {view === "signup" && password.length > 0 && (
+            <div className="mt-2 space-y-1.5">
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div
+                    key={i}
+                    className={`h-1 flex-1 rounded-full transition-colors ${
+                      i <= getPasswordStrength(password).score
+                        ? getPasswordStrength(password).color
+                        : "bg-white/10"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-zinc-500">
+                Staerke: {getPasswordStrength(password).label}
+              </p>
+            </div>
+          )}
         </div>
+
+        {/* Password Confirmation (signup only) */}
+        {view === "signup" && (
+          <div>
+            <label className="block text-sm font-medium text-zinc-300">
+              Passwort bestaetigen
+            </label>
+            <input
+              required
+              name="passwordConfirm"
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              className={`mt-2 w-full rounded-xl border bg-white/5 px-4 py-3 text-white placeholder-zinc-500 transition-colors focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${
+                passwordConfirm.length > 0 && password !== passwordConfirm
+                  ? "border-red-500/50 focus:border-red-500"
+                  : "border-white/10 focus:border-indigo-500"
+              }`}
+              placeholder="••••••••"
+            />
+            {passwordConfirm.length > 0 && password !== passwordConfirm && (
+              <p className="mt-1.5 text-xs text-red-400">
+                Passwoerter stimmen nicht ueberein
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Terms Checkbox (signup only) */}
+        {view === "signup" && (
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              required
+              name="terms"
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 text-indigo-500 focus:ring-indigo-500/20"
+            />
+            <span className="text-xs leading-relaxed text-zinc-400">
+              Ich akzeptiere die{" "}
+              <a href="/terms" target="_blank" className="text-zinc-300 underline underline-offset-2 hover:text-white">
+                AGB
+              </a>{" "}
+              und{" "}
+              <a href="/privacy" target="_blank" className="text-zinc-300 underline underline-offset-2 hover:text-white">
+                Datenschutzerklaerung
+              </a>.
+            </span>
+          </label>
+        )}
 
         {/* Submit Button */}
         <button
@@ -175,16 +313,16 @@ export default function PartnerLoginForm() {
             const supabase = createSupabaseBrowserClient();
             setStatus("loading");
             setMessage("");
+            const oauthCallback = `${window.location.origin}/auth/callback`;
             const { data, error } = await supabase.auth.signInWithOAuth({
               provider: "facebook",
               options: {
-                redirectTo:
-                  process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || fallbackRedirect,
+                redirectTo: oauthCallback,
               },
             });
             if (error) {
               setStatus("error");
-              setMessage(error.message);
+              setMessage(translateAuthError(error.message));
             } else {
               setStatus("success");
               setMessage("Weiterleitung zu Meta gestartet…");
@@ -204,15 +342,51 @@ export default function PartnerLoginForm() {
 
         {/* Status Message */}
         {message && (
-          <p
+          <div
             className={`rounded-lg p-3 text-center text-sm ${
               status === "error"
                 ? "border border-red-500/20 bg-red-500/10 text-red-400"
                 : "border border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
             }`}
           >
-            {message}
-          </p>
+            <p>{message}</p>
+            {status === "success" && signupEmail && (
+              <button
+                type="button"
+                className="mt-2 text-xs font-medium underline underline-offset-2 transition-colors hover:text-emerald-300"
+                onClick={async () => {
+                  try {
+                    const supabase = createSupabaseBrowserClient();
+                    const callbackUrl = `${window.location.origin}/auth/callback`;
+                    const { error } = await supabase.auth.resend({
+                      type: "signup",
+                      email: signupEmail,
+                      options: { emailRedirectTo: callbackUrl },
+                    });
+                    if (error) throw error;
+                    setMessage(`Neue Bestaetigungsmail an ${signupEmail} gesendet.`);
+                  } catch (err: any) {
+                    setStatus("error");
+                    setMessage(translateAuthError(err?.message || ""));
+                  }
+                }}
+              >
+                E-Mail erneut senden
+              </button>
+            )}
+            {status === "success" && signupEmail && (
+              <button
+                type="button"
+                className="ml-3 mt-2 text-xs font-medium text-zinc-400 underline underline-offset-2 transition-colors hover:text-white"
+                onClick={() => {
+                  updateView("login");
+                  setSignupEmail("");
+                }}
+              >
+                Zum Login
+              </button>
+            )}
+          </div>
         )}
 
         {/* Support Link */}

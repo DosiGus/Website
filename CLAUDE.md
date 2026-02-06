@@ -24,9 +24,13 @@ Wesponde is a B2B SaaS platform for automating customer conversations (Instagram
 
 ### Authentication & API
 
-- Browser auth: Supabase client (`lib/supabaseBrowserClient.ts`) with email/password + Meta OAuth
+- Browser auth: `createBrowserClient` from `@supabase/ssr` (`lib/supabaseBrowserClient.ts`) — singleton, cookie-based sessions
+- Server-side middleware (`middleware.ts`) refreshes auth tokens on every request and protects `/app/*` routes
+- SSR server client (`lib/supabaseSSRClient.ts`) for cookie-based auth in Server Components/Route Handlers
+- Auth callback route (`app/auth/callback/route.ts`) handles email confirmation (token_hash) and PKCE code exchange
 - API routes: Bearer token auth via `lib/apiAuth.ts` → `requireAccountMember()` resolves user + account membership. Legacy `requireUser()` still available.
-- Server-side operations use a service-role client (`lib/supabaseServerClient.ts`) for admin access
+- Server-side operations use a service-role client (`lib/supabaseServerClient.ts`) for admin access (bypasses RLS)
+- Client-side auth gate (`components/AppAuthGate.tsx`) as secondary protection using `getUser()` (server-validated)
 
 ### Database (Supabase PostgreSQL)
 
@@ -248,7 +252,11 @@ Auto-deployment: Push to `main` triggers Vercel build.
 ## File Structure
 
 ```
+middleware.ts                # Server-side auth (session refresh + /app/* protection)
+
 app/
+  auth/
+    callback/route.ts       # Email confirmation + PKCE code exchange
   api/
     flows/
       route.ts              # List/create flows
@@ -290,6 +298,9 @@ lib/
     reviewSender.ts         # Send Google review requests after reservations
   contacts.ts               # findOrCreateContact(), updateContactDisplayName()
   apiAuth.ts                # requireUser() + requireAccountMember() -> { user, accountId, role }
+  supabaseBrowserClient.ts  # Browser Supabase client (singleton via @supabase/ssr)
+  supabaseServerClient.ts   # Service-role client for admin/webhook operations
+  supabaseSSRClient.ts      # Cookie-based SSR client for Server Components
   flowTypes.ts              # Flow type definitions
   flowLint.ts               # Flow validation
   flowTemplates.ts          # Template definitions

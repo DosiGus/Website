@@ -24,12 +24,12 @@ export default function AppAuthGate({ children }: { children: ReactNode }) {
 
     const timeout = window.setTimeout(() => {
       setStatus((current) => (current === "checking" ? "unauthenticated" : current));
-    }, 4000);
+    }, 10000);
 
     async function loadSession() {
       try {
-        const { data } = await supabase!.auth.getSession();
-        if (!data.session) {
+        const { data, error } = await supabase!.auth.getUser();
+        if (error || !data.user) {
           setStatus("unauthenticated");
           router.replace("/login?redirect=" + encodeURIComponent(pathname));
           return;

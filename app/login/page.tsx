@@ -120,13 +120,13 @@ export default function LoginPage({ searchParams }: { searchParams: { view?: str
                 <div className="mt-10 rounded-xl border border-white/10 bg-zinc-900/50 p-6">
                   <h3 className="font-semibold text-white">Noch kein Zugang?</h3>
                   <p className="mt-2 text-sm text-zinc-400">
-                    Unser Success‑Team schaltet dich nach einem kurzen Onboarding frei.
+                    Erstelle kostenlos einen Account und starte in wenigen Minuten.
                   </p>
                   <Link
-                    href="/contact"
+                    href="/login?view=signup"
                     className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-indigo-400 transition-colors hover:text-indigo-300"
                   >
-                    Kontakt aufnehmen
+                    Jetzt registrieren
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
