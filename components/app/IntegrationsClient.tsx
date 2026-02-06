@@ -354,6 +354,19 @@ export default function IntegrationsClient() {
             </button>
           )}
         </div>
+
+        {!metaConnected && (
+          <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-xs text-zinc-500">
+            <p className="font-medium text-zinc-400">Voraussetzungen:</p>
+            <ul className="mt-1.5 list-inside list-disc space-y-0.5">
+              <li>Instagram <span className="text-zinc-400">Business</span>- oder <span className="text-zinc-400">Creator</span>-Account (kein privates Profil)</li>
+              <li>Eine <span className="text-zinc-400">Facebook-Seite</span>, die mit dem Instagram-Account verknüpft ist</li>
+            </ul>
+            <p className="mt-2 text-zinc-600">
+              Du kannst dein Profil kostenlos umstellen: Instagram → Einstellungen → Konto → Zu professionellem Konto wechseln.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Google Reviews */}
