@@ -9,6 +9,7 @@ export const META_PERMISSIONS = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_manage_metadata",
+  "pages_messaging",
   "business_management",
 ] as const;
 
