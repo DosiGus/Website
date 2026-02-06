@@ -442,6 +442,50 @@ export async function GET(request: Request) {
       );
     }
 
+    // Subscribe the page to webhook events so Meta forwards DMs to our webhook
+    try {
+      const subscribeResponse = await fetch(
+        `${META_GRAPH_BASE}/${firstPage.id}/subscribed_apps`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subscribed_fields: ["messages", "messaging_postbacks"],
+            access_token: firstPage.access_token,
+          }),
+        },
+      );
+
+      const subscribeBody = await subscribeResponse.json();
+
+      if (!subscribeResponse.ok) {
+        await log.warn("oauth", "Page webhook subscription failed (non-blocking)", {
+          requestId,
+          userId: stateRow.user_id,
+          metadata: {
+            pageId: firstPage.id,
+            httpStatus: subscribeResponse.status,
+            metaError: subscribeBody?.error ?? subscribeBody,
+          },
+        });
+      } else {
+        await log.info("oauth", "Page subscribed to webhook events", {
+          requestId,
+          userId: stateRow.user_id,
+          metadata: {
+            pageId: firstPage.id,
+            success: subscribeBody?.success,
+          },
+        });
+      }
+    } catch (subscribeError) {
+      await log.warn("oauth", "Page webhook subscription error (non-blocking)", {
+        requestId,
+        userId: stateRow.user_id,
+        metadata: { pageId: firstPage.id, error: String(subscribeError) },
+      });
+    }
+
     await log.info("oauth", "OAuth flow completed successfully", {
       requestId,
       userId: stateRow.user_id,
