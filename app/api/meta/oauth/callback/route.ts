@@ -286,6 +286,24 @@ export async function GET(request: Request) {
     },
   });
 
+  // Fetch Facebook user ID for data deletion callback mapping
+  let facebookUserId: string | null = null;
+  try {
+    const meResponse = await fetch(
+      `${META_GRAPH_BASE}/me?fields=id&access_token=${encodeURIComponent(longLivedToken.access_token)}`,
+    );
+    if (meResponse.ok) {
+      const meData = (await meResponse.json()) as { id?: string };
+      facebookUserId = meData.id ?? null;
+    }
+  } catch {
+    // Non-blocking — log but continue
+    await log.warn("oauth", "Failed to fetch Facebook user ID (non-blocking)", {
+      requestId,
+      userId: stateRow.user_id,
+    });
+  }
+
   // Fetch user's Facebook pages
   const pagesResponse = await fetch(
     `${META_GRAPH_BASE}/me/accounts?` +
@@ -424,6 +442,7 @@ export async function GET(request: Request) {
           instagram_id: instagramId,
           instagram_username: instagramUsername,
           account_name: firstPage.name,
+          facebook_user_id: facebookUserId,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,provider" },
