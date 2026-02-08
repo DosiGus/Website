@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import AppAuthGate from "../../components/AppAuthGate";
 import AppSidebar from "../../components/app/AppSidebar";
 import AppTopbar from "../../components/app/AppTopbar";
+import OnboardingGuide from "../../components/app/OnboardingGuide";
 
 export default function ProtectedAppLayout({ children }: { children: ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export default function ProtectedAppLayout({ children }: { children: ReactNode }
           <div className="flex flex-col">
             <AppTopbar />
             <main className="flex-1 space-y-8 bg-zinc-950 px-8 py-8">{children}</main>
+            <OnboardingGuide />
           </div>
         </div>
       </div>
