@@ -337,6 +337,7 @@ export async function GET(request: Request) {
     userId: stateRow.user_id,
     metadata: {
       pageCount: pagesData.data?.length ?? 0,
+      pageNames: pagesData.data?.map((p) => p.name) ?? [],
     },
   });
   const firstPage = pagesData.data?.[0];
@@ -348,7 +349,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.redirect(
       new URL(
-        `/app/integrations?error=${encodeURIComponent("Keine Facebook-Seite verfügbar.")}`,
+        `/app/integrations?error=${encodeURIComponent("Keine Facebook-Seite gefunden. Bitte stelle sicher, dass du bei der Autorisierung mindestens eine Facebook-Seite auswählst, die mit deinem Instagram-Konto verknüpft ist.")}`,
         request.url,
       ),
     );
@@ -366,18 +367,31 @@ export async function GET(request: Request) {
   const igBody = await igResponse.json();
 
   if (!igResponse.ok) {
+    const metaErrorObj = igBody?.error;
+    const metaErrorMsg = typeof metaErrorObj === "object" && metaErrorObj?.message
+      ? String(metaErrorObj.message)
+      : "";
+    const isPermissionError = metaErrorMsg.includes("missing permission") || metaErrorMsg.includes("pages_read_engagement");
+
     await log.warn("oauth", "Instagram business account not found", {
       requestId,
       userId: stateRow.user_id,
       metadata: {
         pageId: firstPage.id,
+        pageName: firstPage.name,
         httpStatus: igResponse.status,
-        metaError: igBody?.error ?? igBody,
+        metaError: metaErrorObj ?? igBody,
+        isPermissionError,
       },
     });
+
+    const userMessage = isPermissionError
+      ? `Berechtigung fehlt: Dein Facebook-Konto hat nicht die nötigen Berechtigungen für die Seite "${firstPage.name}". Bitte erteile bei der Autorisierung alle angeforderten Berechtigungen (insbesondere Seitenzugriff).`
+      : `Instagram-Konto nicht gefunden für die Seite "${firstPage.name}". Stelle sicher, dass ein Instagram Business- oder Creator-Konto mit dieser Facebook-Seite verknüpft ist.`;
+
     return NextResponse.redirect(
       new URL(
-        `/app/integrations?error=${encodeURIComponent("Instagram Account nicht gefunden.")}`,
+        `/app/integrations?error=${encodeURIComponent(userMessage)}`,
         request.url,
       ),
     );
@@ -385,6 +399,24 @@ export async function GET(request: Request) {
 
   const igData = igBody as MetaInstagramBusinessAccountResponse;
   const instagramId = igData.instagram_business_account?.id ?? null;
+
+  if (!instagramId) {
+    await log.warn("oauth", "Facebook page has no linked Instagram business account", {
+      requestId,
+      userId: stateRow.user_id,
+      metadata: {
+        pageId: firstPage.id,
+        pageName: firstPage.name,
+        igResponseBody: igBody,
+      },
+    });
+    return NextResponse.redirect(
+      new URL(
+        `/app/integrations?error=${encodeURIComponent(`Die Facebook-Seite "${firstPage.name}" hat kein verknüpftes Instagram Business- oder Creator-Konto. Bitte verbinde dein Instagram-Konto zuerst in den Instagram-Einstellungen unter "Verknüpfte Konten" mit deiner Facebook-Seite.`)}`,
+        request.url,
+      ),
+    );
+  }
 
   // Lookup Instagram username if we have the IG business account ID
   let instagramUsername: string | null = null;
