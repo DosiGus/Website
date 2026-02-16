@@ -17,16 +17,24 @@ export async function GET(request: Request) {
   const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI;
 
   if (!googleClientId || !googleClientSecret || !googleRedirectUri) {
+    const missing: string[] = [];
+    if (!googleClientId) missing.push("GOOGLE_CLIENT_ID");
+    if (!googleClientSecret) missing.push("GOOGLE_CLIENT_SECRET");
+    if (!googleRedirectUri) missing.push("GOOGLE_REDIRECT_URI");
     await log.error("oauth", "Missing Google OAuth environment variables", {
       requestId,
       metadata: {
         hasClientId: Boolean(googleClientId),
         hasClientSecret: Boolean(googleClientSecret),
         hasRedirectUri: Boolean(googleRedirectUri),
+        missing,
       },
     });
     return NextResponse.redirect(
-      new URL("/app/integrations?error=google_config&provider=google", request.url),
+      new URL(
+        `/app/integrations?error=${encodeURIComponent(`google_config: ${missing.join(", ")}`)}&provider=google`,
+        request.url,
+      ),
     );
   }
 

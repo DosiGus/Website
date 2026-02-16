@@ -15,16 +15,20 @@ export async function POST(request: Request) {
     const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI;
 
     if (!googleClientId || !googleRedirectUri) {
+      const missing: string[] = [];
+      if (!googleClientId) missing.push("GOOGLE_CLIENT_ID");
+      if (!googleRedirectUri) missing.push("GOOGLE_REDIRECT_URI");
       await log.error("oauth", "Missing Google OAuth environment variables", {
         requestId,
         userId: user.id,
         metadata: {
           hasClientId: Boolean(googleClientId),
           hasRedirectUri: Boolean(googleRedirectUri),
+          missing,
         },
       });
       return NextResponse.json(
-        { error: "GOOGLE_CLIENT_ID oder GOOGLE_REDIRECT_URI fehlt." },
+        { error: `Fehlende Google-ENV: ${missing.join(", ")}` },
         { status: 500 },
       );
     }
