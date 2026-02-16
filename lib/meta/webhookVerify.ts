@@ -2,19 +2,15 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 /**
  * Verifies the X-Hub-Signature-256 header from Meta webhooks.
- * Uses HMAC-SHA256 with the META_APP_SECRET as key.
+ * Tries META_APP_SECRET first, then META_INSTAGRAM_APP_SECRET.
+ * Instagram product webhooks may be signed with the Instagram App Secret
+ * instead of the main Meta App Secret.
  */
 export function verifyWebhookSignature(
   payload: string,
   signature: string | null
 ): boolean {
   if (!signature) {
-    return false;
-  }
-
-  const appSecret = process.env.META_APP_SECRET;
-  if (!appSecret) {
-    console.error("META_APP_SECRET is not configured");
     return false;
   }
 
@@ -26,24 +22,35 @@ export function verifyWebhookSignature(
 
   const providedHash = signature.slice(expectedPrefix.length);
 
-  // Calculate expected hash
-  const hmac = createHmac("sha256", appSecret);
-  hmac.update(payload, "utf8");
-  const expectedHash = hmac.digest("hex");
+  // Try both secrets: Meta App Secret and Instagram App Secret
+  const secrets = [
+    process.env.META_APP_SECRET,
+    process.env.META_INSTAGRAM_APP_SECRET,
+  ].filter((s): s is string => Boolean(s));
 
-  // Use timing-safe comparison to prevent timing attacks
-  try {
-    const providedBuffer = Buffer.from(providedHash, "hex");
-    const expectedBuffer = Buffer.from(expectedHash, "hex");
-
-    if (providedBuffer.length !== expectedBuffer.length) {
-      return false;
-    }
-
-    return timingSafeEqual(providedBuffer, expectedBuffer);
-  } catch {
+  if (secrets.length === 0) {
+    console.error("Neither META_APP_SECRET nor META_INSTAGRAM_APP_SECRET is configured");
     return false;
   }
+
+  return secrets.some((secret) => {
+    try {
+      const hmac = createHmac("sha256", secret);
+      hmac.update(payload, "utf8");
+      const expectedHash = hmac.digest("hex");
+
+      const providedBuffer = Buffer.from(providedHash, "hex");
+      const expectedBuffer = Buffer.from(expectedHash, "hex");
+
+      if (providedBuffer.length !== expectedBuffer.length) {
+        return false;
+      }
+
+      return timingSafeEqual(providedBuffer, expectedBuffer);
+    } catch {
+      return false;
+    }
+  });
 }
 
 /**
