@@ -342,6 +342,7 @@ alter table public.integrations
 create index if not exists integrations_user_id_idx on public.integrations(user_id);
 create index if not exists integrations_account_id_idx on public.integrations(account_id);
 create index if not exists integrations_facebook_user_id_idx on public.integrations(facebook_user_id);
+create index if not exists integrations_instagram_id_idx on public.integrations(instagram_id);
 create unique index if not exists integrations_user_provider_idx
   on public.integrations(user_id, provider);
 

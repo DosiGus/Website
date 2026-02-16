@@ -6,6 +6,7 @@ export const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}
 export const META_PERMISSIONS = [
   "instagram_basic",
   "instagram_manage_messages",
+  "instagram_business_manage_messages",
   "pages_show_list",
   "pages_read_engagement",
   "pages_manage_metadata",

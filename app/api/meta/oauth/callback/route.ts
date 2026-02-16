@@ -413,6 +413,7 @@ export async function GET(request: Request) {
   // 3. If still nothing: try embedded accounts query
 
   let firstPage: { id: string; name: string; access_token: string } | null = null;
+  let pageSource = "unknown"; // Track how the page was resolved for debugging
 
   // Approach 1: Standard /me/accounts
   const pagesResponse = await fetch(
@@ -433,6 +434,7 @@ export async function GET(request: Request) {
 
   if (pagesResponse.ok && pagesBody?.data?.length > 0) {
     firstPage = pagesBody.data[0];
+    pageSource = "me_accounts";
   }
 
   // Approach 2: If /me/accounts is empty, check if user IS a Page (FLB / New Pages Experience)
@@ -460,6 +462,7 @@ export async function GET(request: Request) {
           // For FLB tokens, the user token acts as the page token
           access_token: pageCheckData.access_token ?? longLivedToken.access_token,
         };
+        pageSource = "user_is_page";
         await log.info("oauth", "User ID is a Page - using directly", {
           requestId,
           userId: stateRow.user_id,
@@ -498,6 +501,7 @@ export async function GET(request: Request) {
 
       if (embeddedResponse.ok && embeddedData?.accounts?.data?.length > 0) {
         firstPage = embeddedData.accounts.data[0];
+        pageSource = "embedded_accounts";
       }
     } catch (embeddedError) {
       await log.warn("oauth", "Fallback embedded accounts failed", {
@@ -531,12 +535,14 @@ export async function GET(request: Request) {
         });
 
         if (directPageResponse.ok && directPageData?.id) {
+          const usesUserTokenFallback = !directPageData.access_token;
           firstPage = {
             id: directPageData.id,
             name: directPageData.name ?? `Page ${pageId}`,
             // Use page access token if returned, otherwise fall back to user token
             access_token: directPageData.access_token ?? longLivedToken.access_token,
           };
+          pageSource = usesUserTokenFallback ? "debug_token_target_ids_USER_TOKEN" : "debug_token_target_ids";
           await log.info("oauth", "Found page via debug_token target_ids", {
             requestId,
             userId: stateRow.user_id,
@@ -766,13 +772,29 @@ export async function GET(request: Request) {
 
     // Subscribe the page to webhook events so Meta forwards DMs to our webhook
     try {
+      const subscribeFields = ["messages", "messaging_postbacks"];
+      const hasPageAccessToken = Boolean(firstPage.access_token);
+      const tokenPrefix = firstPage.access_token?.substring(0, 10) ?? "MISSING";
+
+      await log.info("oauth", "Subscribing page to webhook events", {
+        requestId,
+        userId: stateRow.user_id,
+        metadata: {
+          pageId: firstPage.id,
+          subscribedFields: subscribeFields,
+          hasPageAccessToken,
+          tokenPrefix,
+          pageSource,
+        },
+      });
+
       const subscribeResponse = await fetch(
         `${META_GRAPH_BASE}/${firstPage.id}/subscribed_apps`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            subscribed_fields: ["messages", "messaging_postbacks"],
+            subscribed_fields: subscribeFields,
             access_token: firstPage.access_token,
           }),
         },
@@ -788,15 +810,31 @@ export async function GET(request: Request) {
             pageId: firstPage.id,
             httpStatus: subscribeResponse.status,
             metaError: subscribeBody?.error ?? subscribeBody,
+            tokenPrefix,
           },
         });
       } else {
+        // Verify subscription by reading back current subscriptions
+        let currentSubscriptions: unknown = null;
+        try {
+          const verifyResponse = await fetch(
+            `${META_GRAPH_BASE}/${firstPage.id}/subscribed_apps?access_token=${firstPage.access_token}`,
+          );
+          if (verifyResponse.ok) {
+            currentSubscriptions = await verifyResponse.json();
+          }
+        } catch {
+          // Non-blocking verification
+        }
+
         await log.info("oauth", "Page subscribed to webhook events", {
           requestId,
           userId: stateRow.user_id,
           metadata: {
             pageId: firstPage.id,
             success: subscribeBody?.success,
+            responseBody: subscribeBody,
+            currentSubscriptions,
           },
         });
       }

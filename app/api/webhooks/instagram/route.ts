@@ -311,6 +311,12 @@ async function processMessagingEvent(
     return;
   }
 
+  // Ignore read receipts, delivery receipts, and other non-message events early
+  // These have neither message nor postback and should not enter the pipeline
+  if (!event.message && !event.postback) {
+    return;
+  }
+
   await reqLogger.info("webhook", "Processing messaging event", {
     metadata: {
       senderId,
