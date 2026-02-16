@@ -353,17 +353,42 @@ export async function GET(request: Request) {
     });
   }
 
-  // Fetch user's Facebook pages
-  const pagesResponse = await fetch(
-    `${META_GRAPH_BASE}/me/accounts?` +
-      new URLSearchParams({
-        access_token: longLivedToken.access_token,
-      }),
-  );
+  // Debug token to understand what type we're working with
+  if (metaAppSecret) {
+    try {
+      const appAccessToken = `${metaAppId}|${metaAppSecret}`;
+      const debugResponse = await fetch(
+        `${META_GRAPH_BASE}/debug_token?input_token=${encodeURIComponent(longLivedToken.access_token)}&access_token=${encodeURIComponent(appAccessToken)}`,
+      );
+      const debugData = await debugResponse.json();
+      await log.info("oauth", "Token debug info", {
+        requestId,
+        userId: stateRow.user_id,
+        metadata: {
+          debugToken: debugData?.data ?? debugData,
+        },
+      });
+    } catch (debugError) {
+      await log.warn("oauth", "debug_token failed", {
+        requestId,
+        metadata: { error: String(debugError) },
+      });
+    }
+  }
 
+  // Strategy: Try multiple approaches to find the user's Facebook Page
+  // 1. Standard /me/accounts (works for normal Facebook Login)
+  // 2. If empty: check if user ID is itself a Page (New Pages Experience / FLB tokens)
+  // 3. If still nothing: try embedded accounts query
+
+  let firstPage: { id: string; name: string; access_token: string } | null = null;
+
+  // Approach 1: Standard /me/accounts
+  const pagesResponse = await fetch(
+    `${META_GRAPH_BASE}/me/accounts?fields=id,name,access_token&limit=100&access_token=${encodeURIComponent(longLivedToken.access_token)}`,
+  );
   const pagesBody = await pagesResponse.json();
 
-  // Log the FULL raw response from /me/accounts for debugging
   await log.info("oauth", "Raw /me/accounts response", {
     requestId,
     userId: stateRow.user_id,
@@ -375,106 +400,91 @@ export async function GET(request: Request) {
     },
   });
 
-  if (!pagesResponse.ok) {
-    await log.warn("oauth", "No Facebook pages returned", {
-      requestId,
-      userId: stateRow.user_id,
-      metadata: {
-        httpStatus: pagesResponse.status,
-        metaError: pagesBody?.error ?? pagesBody,
-      },
-    });
-    return NextResponse.redirect(
-      new URL(
-        `/app/integrations?error=${encodeURIComponent("Keine Facebook-Seiten gefunden.")}`,
-        request.url,
-      ),
-    );
+  if (pagesResponse.ok && pagesBody?.data?.length > 0) {
+    firstPage = pagesBody.data[0];
   }
 
-  const pagesData = pagesBody as MetaAccountsResponse;
-  await log.info("oauth", "Fetched Facebook pages", {
-    requestId,
-    userId: stateRow.user_id,
-    metadata: {
-      pageCount: pagesData.data?.length ?? 0,
-      pageNames: pagesData.data?.map((p) => p.name) ?? [],
-    },
-  });
-  const firstPage = pagesData.data?.[0];
+  // Approach 2: If /me/accounts is empty, check if user IS a Page (FLB / New Pages Experience)
+  // With FLB tokens, /me may return a Page ID directly. Try fetching it as a Page.
+  if (!firstPage && facebookUserId) {
+    try {
+      const pageCheckResponse = await fetch(
+        `${META_GRAPH_BASE}/${facebookUserId}?fields=id,name,access_token,instagram_business_account,category&access_token=${encodeURIComponent(longLivedToken.access_token)}`,
+      );
+      const pageCheckData = await pageCheckResponse.json();
+      await log.info("oauth", "Fallback: checking if user IS a page", {
+        requestId,
+        userId: stateRow.user_id,
+        metadata: {
+          httpStatus: pageCheckResponse.status,
+          responseBody: pageCheckData,
+        },
+      });
 
-  if (!firstPage) {
-    // Check if this is already a retry to prevent infinite loops
-    // State format: user_id.random or user_id.random.retry
-    const isRetry = state ? state.split(".").length > 2 && state.endsWith(".retry") : false;
-
-    if (!isRetry && facebookUserId && metaAppSecret) {
-      // Revoke all permissions so next OAuth shows fresh dialog with page selection
-      const appAccessToken = `${metaAppId}|${metaAppSecret}`;
-      try {
-        const revokeResponse = await fetch(
-          `${META_GRAPH_BASE}/${facebookUserId}/permissions?access_token=${encodeURIComponent(appAccessToken)}`,
-          { method: "DELETE" },
-        );
-        const revokeBody = await revokeResponse.json();
-        await log.info("oauth", "Revoked permissions due to empty /me/accounts, retrying", {
+      // If the response has a category or instagram_business_account, it's a Page
+      if (pageCheckResponse.ok && (pageCheckData.category || pageCheckData.instagram_business_account)) {
+        firstPage = {
+          id: pageCheckData.id,
+          name: pageCheckData.name ?? facebookUserName ?? "Unknown Page",
+          // For FLB tokens, the user token acts as the page token
+          access_token: pageCheckData.access_token ?? longLivedToken.access_token,
+        };
+        await log.info("oauth", "User ID is a Page - using directly", {
           requestId,
           userId: stateRow.user_id,
           metadata: {
-            facebookUserId,
-            revokeSuccess: revokeBody?.success,
-            revokeStatus: revokeResponse.status,
+            pageId: firstPage.id,
+            pageName: firstPage.name,
+            hasPageAccessToken: Boolean(pageCheckData.access_token),
+            category: pageCheckData.category,
           },
         });
-
-        if (revokeBody?.success) {
-          // Create a new OAuth state for the retry (marked with .retry suffix)
-          const retryState = `${stateRow.user_id}.${randomUUID()}.retry`;
-          const retryExpiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-          await supabase.from("oauth_states").insert({
-            user_id: stateRow.user_id,
-            account_id: accountId,
-            state: retryState,
-            expires_at: retryExpiresAt,
-          });
-
-          const scope = [
-            "instagram_basic",
-            "instagram_manage_messages",
-            "pages_show_list",
-            "pages_read_engagement",
-            "pages_manage_metadata",
-            "pages_messaging",
-          ].join(",");
-
-          const retryParams = new URLSearchParams({
-            client_id: metaAppId,
-            redirect_uri: metaRedirectUri,
-            response_type: "code",
-            state: retryState,
-            scope,
-          });
-
-          const retryUrl = `https://www.facebook.com/v21.0/dialog/oauth?${retryParams.toString()}`;
-          return NextResponse.redirect(retryUrl);
-        }
-      } catch (revokeError) {
-        await log.warn("oauth", "Failed to revoke permissions for retry", {
-          requestId,
-          userId: stateRow.user_id,
-          metadata: { error: String(revokeError) },
-        });
       }
+    } catch (pageCheckError) {
+      await log.warn("oauth", "Fallback page check failed", {
+        requestId,
+        userId: stateRow.user_id,
+        metadata: { error: String(pageCheckError) },
+      });
     }
+  }
 
-    await log.warn("oauth", "No Facebook page available", {
+  // Approach 3: Try embedded accounts query (sometimes works differently than /me/accounts)
+  if (!firstPage) {
+    try {
+      const embeddedResponse = await fetch(
+        `${META_GRAPH_BASE}/me?fields=accounts{id,name,access_token,instagram_business_account}&access_token=${encodeURIComponent(longLivedToken.access_token)}`,
+      );
+      const embeddedData = await embeddedResponse.json();
+      await log.info("oauth", "Fallback: embedded accounts query", {
+        requestId,
+        userId: stateRow.user_id,
+        metadata: {
+          httpStatus: embeddedResponse.status,
+          responseBody: embeddedData,
+        },
+      });
+
+      if (embeddedResponse.ok && embeddedData?.accounts?.data?.length > 0) {
+        firstPage = embeddedData.accounts.data[0];
+      }
+    } catch (embeddedError) {
+      await log.warn("oauth", "Fallback embedded accounts failed", {
+        requestId,
+        metadata: { error: String(embeddedError) },
+      });
+    }
+  }
+
+  if (!firstPage) {
+    await log.warn("oauth", "No Facebook page found via any method", {
       requestId,
       userId: stateRow.user_id,
-      metadata: { isRetry, facebookUserId },
+      metadata: { facebookUserId },
     });
     return NextResponse.redirect(
       new URL(
-        `/app/integrations?error=${encodeURIComponent("Keine Facebook-Seite gefunden. Bitte stelle sicher, dass du bei der Autorisierung mindestens eine Facebook-Seite auswählst, die mit deinem Instagram-Konto verknüpft ist.")}`,
+        `/app/integrations?error=${encodeURIComponent("Keine Facebook-Seite gefunden. Bitte entferne die App \"TableDm\" in deinen Facebook-Einstellungen (Einstellungen → Apps und Websites → TableDm entfernen) und versuche es erneut.")}`,
         request.url,
       ),
     );
