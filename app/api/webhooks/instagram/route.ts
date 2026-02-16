@@ -201,6 +201,16 @@ async function changeToMessagingEvent(
   fallbackInstagramAccountId: string,
   reqLogger: ReturnType<typeof createRequestLogger>
 ): Promise<{ event: InstagramMessagingEvent; instagramAccountId: string } | null> {
+  const supportedFields = new Set(["messages", "messaging_postbacks"]);
+  if (!supportedFields.has(change.field)) {
+    await reqLogger.info("webhook", "Ignoring unsupported webhook change field", {
+      metadata: {
+        changeField: change.field,
+      },
+    });
+    return null;
+  }
+
   const value = change.value as Record<string, unknown> | undefined;
   if (!value || typeof value !== "object") {
     return null;
@@ -220,7 +230,6 @@ async function changeToMessagingEvent(
   const recipientId =
     (value as { to?: { id?: string } }).to?.id ??
     (value as { recipient?: { id?: string } }).recipient?.id ??
-    (value as { id?: string }).id ??
     fallbackInstagramAccountId;
   const timestamp =
     (value as { timestamp?: number }).timestamp ?? Date.now();
