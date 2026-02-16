@@ -22,7 +22,6 @@ export async function POST(request: Request) {
     });
     const metaAppId = process.env.META_APP_ID;
     const metaRedirectUri = process.env.META_REDIRECT_URI;
-    const metaLoginConfigId = process.env.META_LOGIN_CONFIG_ID;
 
     if (!metaAppId || !metaRedirectUri) {
       await log.error("oauth", "Missing Meta OAuth environment variables", {
@@ -31,7 +30,6 @@ export async function POST(request: Request) {
         metadata: {
           hasAppId: Boolean(metaAppId),
           hasRedirectUri: Boolean(metaRedirectUri),
-          hasConfigId: Boolean(metaLoginConfigId),
         },
       });
       return NextResponse.json(
@@ -68,23 +66,15 @@ export async function POST(request: Request) {
       redirect_uri: metaRedirectUri,
       response_type: "code",
       state,
+      scope,
     });
-
-    // Facebook Login for Business: use config_id instead of scope
-    // The configuration defines the permissions, so scope must be omitted
-    if (metaLoginConfigId) {
-      params.set("config_id", metaLoginConfigId);
-    } else {
-      params.set("scope", scope);
-    }
 
     await log.info("oauth", "Redirecting to Meta OAuth", {
       requestId,
       userId: user.id,
       metadata: {
         redirectUri: metaRedirectUri,
-        scope: metaLoginConfigId ? undefined : scope,
-        configId: metaLoginConfigId ?? undefined,
+        scope,
       },
     });
 
