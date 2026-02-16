@@ -54,4 +54,18 @@ set metadata = jsonb_set(
   jsonb_build_object('type', 'custom'),
   true
 )
-where f.id in (select id from custom_flows);
+where f.id in (
+  with flow_collects as (
+    select
+      f.id,
+      array_remove(array_agg(distinct (n->'data'->>'collects')), null) as collects
+    from public.flows f
+    left join lateral jsonb_array_elements(f.nodes) n on true
+    where (f.metadata->'output_config') is null
+    group by f.id
+  )
+  select id
+  from flow_collects
+  where array_position(collects, 'date') is null
+     or array_position(collects, 'time') is null
+);
