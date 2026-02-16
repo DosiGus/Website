@@ -62,9 +62,12 @@ function resolveOutputConfig(metadata?: FlowMetadata | null): ResolvedOutputConf
   const hasOutputConfig = Boolean(outputConfig?.type);
   const type = outputConfig?.type ?? "reservation";
   const isLegacy = !hasOutputConfig;
-  const defaults =
-    outputConfig?.defaults ??
-    (type === "reservation" && !isLegacy ? { guestCount: 1 } : {});
+  const defaults = {
+    ...(outputConfig?.defaults ?? {}),
+  };
+  if (type === "reservation" && defaults.guestCount === undefined) {
+    defaults.guestCount = 1;
+  }
   const requiredFields =
     type === "reservation"
       ? outputConfig?.requiredFields ??
