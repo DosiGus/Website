@@ -244,6 +244,20 @@ export async function GET(request: Request) {
 
   const shortLivedToken = tokenResponseBody as MetaTokenResponse;
 
+  // Log full token response for debugging (access_token redacted)
+  await log.info("oauth", "Short-lived token obtained", {
+    requestId,
+    userId: stateRow.user_id,
+    metadata: {
+      hasAccessToken: Boolean(shortLivedToken.access_token),
+      tokenType: shortLivedToken.token_type,
+      expiresIn: shortLivedToken.expires_in,
+      // Log any extra fields Meta returns (e.g. granted_scopes)
+      extraFields: Object.keys(tokenResponseBody).filter(k => k !== "access_token"),
+      grantedScopes: (tokenResponseBody as Record<string, unknown>).granted_scopes ?? null,
+    },
+  });
+
   // Exchange short-lived token for long-lived token (60 days)
   const longLivedResponse = await fetch(
     `${META_GRAPH_BASE}/oauth/access_token?` +
@@ -286,21 +300,34 @@ export async function GET(request: Request) {
     },
   });
 
-  // Fetch Facebook user ID for data deletion callback mapping
+  // Fetch Facebook user ID and name for debugging + data deletion mapping
   let facebookUserId: string | null = null;
+  let facebookUserName: string | null = null;
   try {
     const meResponse = await fetch(
-      `${META_GRAPH_BASE}/me?fields=id&access_token=${encodeURIComponent(longLivedToken.access_token)}`,
+      `${META_GRAPH_BASE}/me?fields=id,name,email&access_token=${encodeURIComponent(longLivedToken.access_token)}`,
     );
+    const meData = await meResponse.json();
     if (meResponse.ok) {
-      const meData = (await meResponse.json()) as { id?: string };
-      facebookUserId = meData.id ?? null;
+      facebookUserId = (meData as { id?: string }).id ?? null;
+      facebookUserName = (meData as { name?: string }).name ?? null;
     }
-  } catch {
-    // Non-blocking — log but continue
-    await log.warn("oauth", "Failed to fetch Facebook user ID (non-blocking)", {
+    await log.info("oauth", "Facebook user identity", {
       requestId,
       userId: stateRow.user_id,
+      metadata: {
+        facebookUserId,
+        facebookUserName,
+        meResponseOk: meResponse.ok,
+        meResponseStatus: meResponse.status,
+        meResponseBody: meData,
+      },
+    });
+  } catch (meError) {
+    await log.warn("oauth", "Failed to fetch Facebook user ID", {
+      requestId,
+      userId: stateRow.user_id,
+      metadata: { error: String(meError) },
     });
   }
 
@@ -313,6 +340,18 @@ export async function GET(request: Request) {
   );
 
   const pagesBody = await pagesResponse.json();
+
+  // Log the FULL raw response from /me/accounts for debugging
+  await log.info("oauth", "Raw /me/accounts response", {
+    requestId,
+    userId: stateRow.user_id,
+    metadata: {
+      httpStatus: pagesResponse.status,
+      responseBody: pagesBody,
+      facebookUserId,
+      facebookUserName,
+    },
+  });
 
   if (!pagesResponse.ok) {
     await log.warn("oauth", "No Facebook pages returned", {
