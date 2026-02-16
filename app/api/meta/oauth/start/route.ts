@@ -67,6 +67,7 @@ export async function POST(request: Request) {
       response_type: "code",
       state,
       scope,
+      auth_type: "rerequest",
     });
 
     await log.info("oauth", "Redirecting to Meta OAuth", {
