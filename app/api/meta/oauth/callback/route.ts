@@ -354,6 +354,9 @@ export async function GET(request: Request) {
   }
 
   // Debug token to understand what type we're working with
+  // Also extract target_ids from granular_scopes for direct page lookup
+  let debugTokenPageIds: string[] = [];
+  let debugTokenInstagramIds: string[] = [];
   if (metaAppSecret) {
     try {
       const appAccessToken = `${metaAppId}|${metaAppSecret}`;
@@ -368,6 +371,34 @@ export async function GET(request: Request) {
           debugToken: debugData?.data ?? debugData,
         },
       });
+
+      // Extract page and instagram IDs from granular_scopes target_ids
+      const granularScopes = debugData?.data?.granular_scopes as Array<{ scope: string; target_ids?: string[] }> | undefined;
+      if (Array.isArray(granularScopes)) {
+        const pageScopes = ["pages_show_list", "pages_messaging", "pages_read_engagement", "pages_manage_metadata"];
+        const igScopes = ["instagram_basic", "instagram_manage_messages"];
+        for (const gs of granularScopes) {
+          if (Array.isArray(gs.target_ids)) {
+            if (pageScopes.includes(gs.scope)) {
+              for (const id of gs.target_ids) {
+                if (!debugTokenPageIds.includes(id)) debugTokenPageIds.push(id);
+              }
+            }
+            if (igScopes.includes(gs.scope)) {
+              for (const id of gs.target_ids) {
+                if (!debugTokenInstagramIds.includes(id)) debugTokenInstagramIds.push(id);
+              }
+            }
+          }
+        }
+      }
+      if (debugTokenPageIds.length > 0 || debugTokenInstagramIds.length > 0) {
+        await log.info("oauth", "Extracted target_ids from debug_token", {
+          requestId,
+          userId: stateRow.user_id,
+          metadata: { debugTokenPageIds, debugTokenInstagramIds },
+        });
+      }
     } catch (debugError) {
       await log.warn("oauth", "debug_token failed", {
         requestId,
@@ -476,9 +507,60 @@ export async function GET(request: Request) {
     }
   }
 
+  // Approach 4: Use page IDs from debug_token granular_scopes target_ids
+  // This handles the case where /me/accounts is empty but the token has page permissions
+  // (common with Facebook Login for Business where user isn't a direct page admin)
+  if (!firstPage && debugTokenPageIds.length > 0) {
+    for (const pageId of debugTokenPageIds) {
+      try {
+        const directPageResponse = await fetch(
+          `${META_GRAPH_BASE}/${pageId}?fields=id,name,access_token,instagram_business_account&access_token=${encodeURIComponent(longLivedToken.access_token)}`,
+        );
+        const directPageData = await directPageResponse.json();
+        await log.info("oauth", "Approach 4: direct page query from debug_token target_ids", {
+          requestId,
+          userId: stateRow.user_id,
+          metadata: {
+            pageId,
+            httpStatus: directPageResponse.status,
+            hasAccessToken: Boolean(directPageData?.access_token),
+            hasName: Boolean(directPageData?.name),
+            hasIgBusiness: Boolean(directPageData?.instagram_business_account),
+            responseKeys: Object.keys(directPageData ?? {}),
+          },
+        });
+
+        if (directPageResponse.ok && directPageData?.id) {
+          firstPage = {
+            id: directPageData.id,
+            name: directPageData.name ?? `Page ${pageId}`,
+            // Use page access token if returned, otherwise fall back to user token
+            access_token: directPageData.access_token ?? longLivedToken.access_token,
+          };
+          await log.info("oauth", "Found page via debug_token target_ids", {
+            requestId,
+            userId: stateRow.user_id,
+            metadata: {
+              pageId: firstPage.id,
+              pageName: firstPage.name,
+              hasPageAccessToken: Boolean(directPageData.access_token),
+              igBusinessAccount: directPageData.instagram_business_account?.id ?? null,
+            },
+          });
+          break;
+        }
+      } catch (directPageError) {
+        await log.warn("oauth", "Direct page query failed for target_id", {
+          requestId,
+          userId: stateRow.user_id,
+          metadata: { pageId, error: String(directPageError) },
+        });
+      }
+    }
+  }
+
   if (!firstPage) {
-    // FLB token has permissions without page targets (granular_scopes missing target_ids).
-    // Revoke using the USER's own token, then redirect to fresh OAuth with scope parameter.
+    // All approaches exhausted. Token may have permissions but we can't access any page.
     // This forces Facebook to show the full permission dialog with page selection next time.
     const isRetry = state ? state.endsWith(".retry") : false;
 
@@ -576,7 +658,17 @@ export async function GET(request: Request) {
   }
 
   const igData = igBody as MetaInstagramBusinessAccountResponse;
-  const instagramId = igData.instagram_business_account?.id ?? null;
+  let instagramId = igData.instagram_business_account?.id ?? null;
+
+  // Fallback: use Instagram ID from debug_token granular_scopes if page query didn't return it
+  if (!instagramId && debugTokenInstagramIds.length > 0) {
+    instagramId = debugTokenInstagramIds[0];
+    await log.info("oauth", "Using Instagram ID from debug_token target_ids as fallback", {
+      requestId,
+      userId: stateRow.user_id,
+      metadata: { instagramId, debugTokenInstagramIds },
+    });
+  }
 
   if (!instagramId) {
     await log.warn("oauth", "Facebook page has no linked Instagram business account", {
@@ -586,6 +678,7 @@ export async function GET(request: Request) {
         pageId: firstPage.id,
         pageName: firstPage.name,
         igResponseBody: igBody,
+        debugTokenInstagramIds,
       },
     });
     return NextResponse.redirect(
