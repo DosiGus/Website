@@ -2,7 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle, AlertTriangle, Clock, Link as LinkIcon, Wifi, WifiOff, Star, ExternalLink } from "lucide-react";
+import {
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  Link as LinkIcon,
+  Wifi,
+  WifiOff,
+  Star,
+  ExternalLink,
+  CalendarDays,
+} from "lucide-react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import type { IntegrationStatus } from "../../lib/meta/types";
 
@@ -13,16 +23,21 @@ type IntegrationsResponse = {
 export default function IntegrationsClient() {
   const searchParams = useSearchParams();
   const [metaIntegration, setMetaIntegration] = useState<IntegrationStatus | null>(null);
+  const [googleIntegration, setGoogleIntegration] = useState<IntegrationStatus | null>(null);
   const [status, setStatus] = useState<"loading" | "ready">("loading");
   const [error, setError] = useState<string | null>(null);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [googleConnecting, setGoogleConnecting] = useState(false);
+  const [googleDisconnecting, setGoogleDisconnecting] = useState(false);
   const [reviewUrl, setReviewUrl] = useState("");
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewSaved, setReviewSaved] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
 
   const successParam = useMemo(() => searchParams?.get("success"), [searchParams]);
+  const providerParam = useMemo(() => searchParams?.get("provider"), [searchParams]);
   const accountParam = useMemo(() => searchParams?.get("account"), [searchParams]);
   const errorParam = useMemo(() => searchParams?.get("error"), [searchParams]);
   const autoRetryParam = useMemo(() => searchParams?.get("auto_retry"), [searchParams]);
@@ -34,10 +49,15 @@ export default function IntegrationsClient() {
   }, []);
 
   const metaConnected = metaIntegration?.status === "connected";
+  const googleConnected = googleIntegration?.status === "connected";
+  const showMetaSuccess = successParam === "true" && (providerParam === "meta" || !providerParam);
+  const showGoogleSuccess = successParam === "true" && providerParam === "google";
+  const showMetaError = Boolean(errorParam) && (providerParam === "meta" || !providerParam);
+  const showGoogleError = Boolean(errorParam) && providerParam === "google";
 
   const [oauthResolved, setOauthResolved] = useState(false);
   useEffect(() => {
-    if (!errorParam || oauthResolved || metaConnected) return;
+    if (!errorParam || oauthResolved || metaConnected || providerParam === "google") return;
 
     let cancelled = false;
     let attempts = 0;
@@ -82,6 +102,7 @@ export default function IntegrationsClient() {
     try {
       setStatus("loading");
       setError(null);
+      setGoogleError(null);
       const token = await getAccessToken();
       if (!token) {
         setError("Bitte erneut anmelden, um Integrationen zu laden.");
@@ -98,10 +119,16 @@ export default function IntegrationsClient() {
       }
       const payload = (await response.json()) as IntegrationsResponse;
       const meta = payload.integrations.find((i) => i.provider === "meta") ?? null;
+      const google = payload.integrations.find((i) => i.provider === "google_calendar") ?? null;
       if (meta && meta.status !== "connected") {
         setMetaIntegration({ ...meta, status: "disconnected" });
       } else {
         setMetaIntegration(meta);
+      }
+      if (google && google.status !== "connected") {
+        setGoogleIntegration({ ...google, status: "disconnected" });
+      } else {
+        setGoogleIntegration(google);
       }
     } catch {
       setError("Status konnte nicht geladen werden.");
@@ -207,6 +234,61 @@ export default function IntegrationsClient() {
     }
   }, [getAccessToken, loadStatus]);
 
+  const handleGoogleConnect = useCallback(async () => {
+    try {
+      setGoogleConnecting(true);
+      setGoogleError(null);
+      const token = await getAccessToken();
+      if (!token) {
+        setGoogleError("Bitte erneut anmelden, um fortzufahren.");
+        return;
+      }
+      const response = await fetch("/api/google/oauth/start", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !payload.url) {
+        setGoogleError(payload.error ?? "OAuth konnte nicht gestartet werden.");
+        return;
+      }
+      window.location.href = payload.url;
+    } catch {
+      setGoogleError("OAuth konnte nicht gestartet werden.");
+    } finally {
+      setGoogleConnecting(false);
+    }
+  }, [getAccessToken]);
+
+  const handleGoogleDisconnect = useCallback(async () => {
+    try {
+      setGoogleDisconnecting(true);
+      setGoogleError(null);
+      const token = await getAccessToken();
+      if (!token) {
+        setGoogleError("Bitte erneut anmelden, um fortzufahren.");
+        return;
+      }
+      const response = await fetch("/api/integrations", {
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ provider: "google_calendar" }),
+      });
+      if (!response.ok) {
+        setGoogleError("Trennen fehlgeschlagen.");
+        return;
+      }
+      await loadStatus();
+    } catch {
+      setGoogleError("Trennen fehlgeschlagen.");
+    } finally {
+      setGoogleDisconnecting(false);
+    }
+  }, [getAccessToken, loadStatus]);
+
   const handleSaveReviewUrl = useCallback(async () => {
     try {
       setReviewSaving(true);
@@ -254,10 +336,10 @@ export default function IntegrationsClient() {
     }
   }, [getAccessToken, metaConnected, reviewUrl]);
 
-  const getTokenExpiryInfo = () => {
-    if (!metaIntegration?.expires_at) return null;
+  const getTokenExpiryInfo = (integration: IntegrationStatus | null) => {
+    if (!integration?.expires_at) return null;
 
-    const expiresAt = new Date(metaIntegration.expires_at);
+    const expiresAt = new Date(integration.expires_at);
     const now = new Date();
     const diffMs = expiresAt.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
@@ -270,7 +352,8 @@ export default function IntegrationsClient() {
     };
   };
 
-  const tokenExpiryInfo = getTokenExpiryInfo();
+  const tokenExpiryInfo = getTokenExpiryInfo(metaIntegration);
+  const googleTokenExpiryInfo = getTokenExpiryInfo(googleIntegration);
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -302,7 +385,7 @@ export default function IntegrationsClient() {
           </span>
         </div>
 
-        {successParam === "true" && (
+        {showMetaSuccess && (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
             <CheckCircle className="h-4 w-4" />
             {accountParam
@@ -311,7 +394,7 @@ export default function IntegrationsClient() {
           </div>
         )}
 
-        {errorParam && !metaConnected && !oauthResolved && (
+        {showMetaError && !metaConnected && !oauthResolved && (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
             <AlertTriangle className="h-4 w-4" />
             Verbindung fehlgeschlagen: {errorParam}
@@ -397,6 +480,126 @@ export default function IntegrationsClient() {
             </ul>
             <p className="mt-2 text-zinc-400/80">
               Du kannst dein Profil kostenlos umstellen: Instagram → Einstellungen → Konto → Zu professionellem Konto wechseln.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Google Calendar */}
+      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
+              <CalendarDays className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Google Kalender</h3>
+              <p className="text-sm text-zinc-400">Termine automatisch eintragen</p>
+            </div>
+          </div>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+              googleConnected
+                ? "bg-emerald-500/10 text-emerald-400"
+                : "bg-zinc-500/10 text-zinc-400"
+            }`}
+          >
+            {googleConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+            {status === "loading" ? "Lädt…" : googleConnected ? "Verbunden" : "Nicht verbunden"}
+          </span>
+        </div>
+
+        {showGoogleSuccess && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+            <CheckCircle className="h-4 w-4" />
+            {accountParam
+              ? `Erfolgreich verbunden: ${accountParam}`
+              : "Google Kalender wurde erfolgreich verbunden."}
+          </div>
+        )}
+
+        {showGoogleError && !googleConnected && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+            <AlertTriangle className="h-4 w-4" />
+            Verbindung fehlgeschlagen: {errorParam}
+          </div>
+        )}
+
+        {googleConnected && (
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">Verbundenes Konto</div>
+            <div className="mt-1 font-medium text-white">{googleIntegration?.account_name ?? "Google Kalender"}</div>
+          </div>
+        )}
+
+        {googleConnected && googleTokenExpiryInfo?.isExpired && (
+          <div className="mt-4 flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 text-rose-400" />
+            <div>
+              <div className="font-semibold text-rose-400">Token abgelaufen!</div>
+              <div className="text-rose-400/80">
+                Bitte verbinde deinen Account erneut.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {googleConnected &&
+          googleTokenExpiryInfo?.isExpiringSoon &&
+          !googleTokenExpiryInfo?.isExpired && (
+            <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm">
+              <Clock className="mt-0.5 h-4 w-4 text-amber-400" />
+              <div>
+                <div className="font-semibold text-amber-400">
+                  Token läuft in {googleTokenExpiryInfo.daysUntilExpiry}{" "}
+                  {googleTokenExpiryInfo.daysUntilExpiry === 1 ? "Tag" : "Tagen"} ab
+                </div>
+                <div className="text-amber-400/80">
+                  Bitte verbinde deinen Account erneut.
+                </div>
+              </div>
+            </div>
+          )}
+
+        {googleError && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+            <AlertTriangle className="h-4 w-4" />
+            {googleError}
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button
+            className="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 disabled:opacity-50"
+            onClick={handleGoogleConnect}
+            disabled={googleConnecting}
+          >
+            {googleConnecting
+              ? "Verbinden..."
+              : googleConnected
+                ? "Erneut verbinden"
+                : "Google Kalender verbinden"}
+          </button>
+          {googleConnected && (
+            <button
+              className="rounded-lg border border-rose-500/20 px-4 py-2.5 text-sm font-medium text-rose-400 transition-all hover:bg-rose-500/10"
+              onClick={handleGoogleDisconnect}
+              disabled={googleDisconnecting}
+            >
+              {googleDisconnecting ? "Trennen..." : "Trennen"}
+            </button>
+          )}
+        </div>
+
+        {!googleConnected && (
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+            <p className="font-medium text-zinc-200">Voraussetzungen:</p>
+            <ul className="mt-1.5 list-inside list-disc space-y-1 text-zinc-300">
+              <li>Google Kalender ist aktiv</li>
+              <li>Du hast Zugriff auf den Kalender (Owner oder Editor)</li>
+            </ul>
+            <p className="mt-2 text-zinc-400/80">
+              Wir nutzen den Primary Kalender, solange keine weiteren Kalender zugeordnet sind.
             </p>
           </div>
         )}

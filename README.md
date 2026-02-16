@@ -60,8 +60,19 @@ META_APP_SECRET=your_app_secret
 META_REDIRECT_URI=https://your-domain.com/api/meta/oauth/callback
 NEXT_PUBLIC_META_APP_ID=your_app_id
 
+# Facebook Login for Business (FLB)
+META_LOGIN_CONFIG_ID=your_config_id
+
+# Instagram Webhook Signature (second secret for instagram object)
+META_INSTAGRAM_APP_SECRET=your_instagram_app_secret
+
 # Webhooks
 META_WEBHOOK_VERIFY_TOKEN=your_random_string
+
+# Google Calendar OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URI=https://your-domain.com/api/google/oauth/callback
 ```
 
 ### Database Setup
@@ -96,7 +107,7 @@ app/
   api/
     webhooks/instagram/     # Instagram webhook (main logic)
     flows/                  # Flow CRUD
-    meta/oauth/             # OAuth flow
+    meta/oauth/             # OAuth flow (FLB with config_id)
 
 lib/
   webhook/                  # Message processing
@@ -104,6 +115,10 @@ lib/
     flowMatcher.ts          # Match triggers
     variableExtractor.ts    # Extract user data
     reservationCreator.ts   # Create bookings
+  meta/                     # Meta/Instagram API
+    instagramApi.ts         # Send messages (POST /me/messages)
+    webhookVerify.ts        # HMAC-SHA256 signature verification
+    types.ts                # Meta API types + permissions
   reviews/                  # Review flow sending
     reviewSender.ts         # Send Google review follow-ups
 
@@ -116,40 +131,23 @@ components/
 
 ## How It Works
 
-### Flow Builder
-1. Create a flow in the visual editor
-2. Add nodes with messages and quick replies
-3. Set up triggers (keywords like "reservieren", "buchen")
-4. Publish the flow (set status to "Aktiv")
+### Instagram OAuth (Facebook Login for Business)
+1. User clicks "Connect Instagram"
+2. Redirects to Facebook Login Dialog with `config_id` (FLB)
+3. User authorizes permissions including Instagram-specific step
+4. Callback exchanges code for long-lived token (60 days)
+5. Page discovery via `debug_token` `target_ids` (Approach 4)
+6. Page-level webhook subscription activated
+7. Integration saved to database
 
 ### Message Processing
 1. User sends DM to your Instagram
-2. Webhook receives the message
-3. System matches against active flow triggers
-4. Executes flow, extracts variables (date, time, name, etc.)
-5. Sends response with quick replies
-6. At confirmation: creates reservation in database
-
-### Reservation Flow
-```
-User: "Reservieren"
-Bot:  "Für welches Datum?" [Heute] [Morgen] [Anderes]
-User: [Morgen]
-Bot:  "Um welche Uhrzeit?" [19:00] [20:00]
-User: [19:00]
-Bot:  "Für wie viele Personen?" [2] [3] [4]
-User: [3]
-Bot:  "Auf welchen Namen?"
-User: "Max"
-Bot:  "Telefonnummer?"
-User: "0176123456"
-Bot:  "Besondere Wünsche?"
-User: "Tisch am Fenster"
-Bot:  "Zusammenfassung: Max, 3 Personen, morgen 19:00. Bestätigen?"
-User: [Ja, bestätigen]
-Bot:  "Reservierung bestätigt!"
-→ Reservation saved to database
-```
+2. Webhook receives the message (signature verified)
+3. Echo and read receipt events filtered out
+4. System matches against active flow triggers
+5. Executes flow, extracts variables (date, time, name, etc.)
+6. Sends response via `POST /me/messages` with page access token
+7. At confirmation: creates reservation in database
 
 ## Scripts
 
@@ -171,6 +169,8 @@ The app is deployed on Vercel with automatic deployments from the `main` branch.
 
 - `CLAUDE.md` - Technical documentation for Claude Code
 - `LAST_UPDATES.md` - Changelog and session notes
+- `ROADMAP.md` - Feature roadmap and timeline
+- `DEBUG_OAUTH_PAGES_EMPTY.md` - Instagram OAuth/Webhook debugging reference
 
 ## License
 
