@@ -59,10 +59,16 @@ export type IntegrationStatus = {
 };
 
 // Instagram Webhook Types
+export type InstagramWebhookChange = {
+  field: string;
+  value: Record<string, unknown>;
+};
+
 export type InstagramWebhookEntry = {
   id: string;
   time: number;
-  messaging: InstagramMessagingEvent[];
+  messaging?: InstagramMessagingEvent[];
+  changes?: InstagramWebhookChange[];
 };
 
 export type InstagramWebhookPayload = {

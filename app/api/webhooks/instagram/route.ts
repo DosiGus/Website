@@ -7,6 +7,7 @@ import {
 import {
   InstagramWebhookPayload,
   InstagramMessagingEvent,
+  InstagramWebhookChange,
 } from "../../../../lib/meta/types";
 import {
   sendInstagramMessage,
@@ -136,19 +137,30 @@ export async function POST(request: Request) {
       ? payload.entry.slice(0, 3).map((entry) => {
           const messaging = (entry as { messaging?: unknown }).messaging;
           const changes = (entry as { changes?: unknown }).changes;
+          const changeFields = Array.isArray(changes)
+            ? changes
+                .map((change) =>
+                  (change as { field?: string }).field
+                )
+                .filter(Boolean)
+            : [];
           return {
             id: entry.id,
             keys: Object.keys(entry ?? {}),
             messagingCount: Array.isArray(messaging) ? messaging.length : 0,
             changesCount: Array.isArray(changes) ? changes.length : 0,
+            changeFields,
           };
         })
       : [];
     const hasMessagingEvents = entrySummaries.some(
       (summary) => summary.messagingCount > 0,
     );
-    if (!hasMessagingEvents) {
-      await reqLogger.warn("webhook", "Webhook payload has no messaging events", {
+    const hasChangeEvents = entrySummaries.some(
+      (summary) => summary.changesCount > 0,
+    );
+    if (!hasMessagingEvents && !hasChangeEvents) {
+      await reqLogger.warn("webhook", "Webhook payload has no messaging or change events", {
         metadata: {
           object: payload?.object,
           entryCount: Array.isArray(payload?.entry) ? payload.entry.length : 0,
@@ -168,6 +180,12 @@ export async function POST(request: Request) {
       for (const event of entry.messaging || []) {
         await processMessagingEvent(event, entry.id, reqLogger);
       }
+      const changeEvents = entry.changes || [];
+      for (const change of changeEvents) {
+        const event = changeToMessagingEvent(change, entry.id);
+        if (!event) continue;
+        await processMessagingEvent(event, entry.id, reqLogger);
+      }
     }
 
     return NextResponse.json({ received: true });
@@ -176,6 +194,55 @@ export async function POST(request: Request) {
     // Always return 200 to Meta to prevent retries
     return NextResponse.json({ received: true });
   }
+}
+
+function changeToMessagingEvent(
+  change: InstagramWebhookChange,
+  instagramAccountId: string
+): InstagramMessagingEvent | null {
+  const value = change.value as Record<string, unknown> | undefined;
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const message = (value as { message?: InstagramMessagingEvent["message"] }).message;
+  const postback = (value as { postback?: InstagramMessagingEvent["postback"] }).postback;
+  const text = (value as { text?: string }).text;
+
+  if (!message && !postback && !text) {
+    return null;
+  }
+
+  const senderId =
+    (value as { from?: { id?: string } }).from?.id ??
+    (value as { sender?: { id?: string } }).sender?.id;
+  const recipientId =
+    (value as { to?: { id?: string } }).to?.id ??
+    (value as { recipient?: { id?: string } }).recipient?.id ??
+    instagramAccountId;
+  const timestamp =
+    (value as { timestamp?: number }).timestamp ?? Date.now();
+
+  if (!senderId) {
+    return null;
+  }
+
+  const normalizedMessage =
+    message ??
+    (text
+      ? {
+          mid: (value as { mid?: string }).mid ?? `${timestamp}-${senderId}`,
+          text,
+        }
+      : undefined);
+
+  return {
+    sender: { id: senderId },
+    recipient: { id: recipientId },
+    timestamp,
+    message: normalizedMessage,
+    postback,
+  };
 }
 
 /**
