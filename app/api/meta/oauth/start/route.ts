@@ -22,7 +22,6 @@ export async function POST(request: Request) {
     });
     const metaAppId = process.env.META_APP_ID;
     const metaRedirectUri = process.env.META_REDIRECT_URI;
-    const metaLoginConfigId = process.env.META_LOGIN_CONFIG_ID;
 
     if (!metaAppId || !metaRedirectUri) {
       await log.error("oauth", "Missing Meta OAuth environment variables", {
@@ -61,32 +60,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Use Facebook Login for Business (config_id) when available.
-    // FLB shows both Facebook Page AND Instagram account selection steps.
-    // Without config_id, the dialog only shows Facebook — Instagram is skipped,
-    // which means Meta won't deliver Instagram DM webhooks.
+    // Always use standard scope-based OAuth (NOT Facebook Login for Business).
+    // FLB (config_id) does NOT properly register the app at the Instagram account
+    // level — it won't appear in Instagram Settings > Apps und Websites, and Meta
+    // will NOT deliver Instagram DM webhooks without that registration.
+    // Standard OAuth with instagram_manage_messages scope properly registers the
+    // app and enables webhook delivery.
     const params = new URLSearchParams({
       client_id: metaAppId,
       redirect_uri: metaRedirectUri,
       response_type: "code",
       state,
+      scope: META_PERMISSIONS.join(","),
     });
 
-    if (metaLoginConfigId) {
-      params.set("config_id", metaLoginConfigId);
-    } else {
-      // Fallback: scope-based OAuth (no Instagram account selection step)
-      params.set("scope", META_PERMISSIONS.join(","));
-    }
-
-    await log.info("oauth", "Redirecting to Meta OAuth", {
+    await log.info("oauth", "Redirecting to Meta OAuth (scope-based)", {
       requestId,
       userId: user.id,
       metadata: {
         redirectUri: metaRedirectUri,
-        useConfigId: Boolean(metaLoginConfigId),
-        configId: metaLoginConfigId ?? undefined,
-        scope: metaLoginConfigId ? undefined : META_PERMISSIONS.join(","),
+        scope: META_PERMISSIONS.join(","),
       },
     });
 
