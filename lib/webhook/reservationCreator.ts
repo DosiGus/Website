@@ -5,6 +5,8 @@
 import { createSupabaseServerClient } from "../supabaseServerClient";
 import { ExtractedVariables } from "./variableExtractor";
 import { CreateReservationInput } from "../reservationTypes";
+import { createGoogleCalendarEvent } from "../google/calendar";
+import { logger } from "../logger";
 
 export type ReservationCreationResult =
   | { success: true; reservationId: string }
@@ -97,6 +99,45 @@ export async function createReservationFromVariables(
     if (error) {
       console.error("Failed to create reservation:", error);
       return { success: false, missingFields: [], error: error.message };
+    }
+
+    try {
+      const descriptionParts = [
+        `Name: ${input.guest_name}`,
+        input.phone_number ? `Telefon: ${input.phone_number}` : null,
+        input.email ? `Email: ${input.email}` : null,
+        input.special_requests ? `Notizen: ${input.special_requests}` : null,
+        `Reservierungs-ID: ${data.id}`,
+      ].filter(Boolean);
+
+      const event = await createGoogleCalendarEvent({
+        accountId,
+        summary: `Termin mit ${input.guest_name}`,
+        description: descriptionParts.join("\n"),
+        startDate: input.reservation_date,
+        startTime: input.reservation_time,
+        durationMinutes: 60,
+        timeZone: "Europe/Berlin",
+        calendarId: "primary",
+      });
+
+      await logger.info("integration", "Google calendar event created", {
+        userId,
+        metadata: {
+          reservationId: data.id,
+          eventId: event.id,
+        },
+      });
+    } catch (calendarError) {
+      const errorMessage =
+        calendarError instanceof Error ? calendarError.message : "Unknown error";
+      await logger.warn("integration", "Google calendar event failed", {
+        userId,
+        metadata: {
+          reservationId: data.id,
+          error: errorMessage,
+        },
+      });
     }
 
     return { success: true, reservationId: data.id };

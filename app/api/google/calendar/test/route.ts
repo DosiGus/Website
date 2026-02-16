@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAccountMember } from "../../../../../lib/apiAuth";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../../lib/rateLimit";
-import { getGoogleAccessToken } from "../../../../../lib/google/calendar";
-import { GOOGLE_CALENDAR_BASE } from "../../../../../lib/google/types";
+import { createGoogleCalendarEvent } from "../../../../../lib/google/calendar";
 import { createRequestLogger } from "../../../../../lib/logger";
 import crypto from "crypto";
 
@@ -20,51 +19,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const { accessToken } = await getGoogleAccessToken(accountId);
-
     const start = new Date(Date.now() + 60 * 60 * 1000);
-    const end = new Date(Date.now() + 2 * 60 * 60 * 1000);
-
-    const createResponse = await fetch(
-      `${GOOGLE_CALENDAR_BASE}/calendars/primary/events`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          summary: "Wesponde Testtermin",
-          description: "Automatisch erstellt zum Test der Google-Kalender-Integration.",
-          start: { dateTime: start.toISOString() },
-          end: { dateTime: end.toISOString() },
-        }),
-      },
-    );
-
-    const createBody = await createResponse.json();
-    if (!createResponse.ok) {
-      await log.warn("integration", "Google test event creation failed", {
-        requestId,
-        metadata: {
-          httpStatus: createResponse.status,
-          error: createBody?.error ?? createBody,
-        },
-      });
-      return NextResponse.json(
-        { error: "Testtermin konnte nicht erstellt werden." },
-        { status: 500 },
-      );
-    }
+    const date = start.toISOString().split("T")[0];
+    const time = start.toISOString().split("T")[1]?.slice(0, 5) ?? "10:00";
+    const event = await createGoogleCalendarEvent({
+      accountId,
+      summary: "Wesponde Testtermin",
+      description: "Automatisch erstellt zum Test der Google-Kalender-Integration.",
+      startDate: date,
+      startTime: time,
+      durationMinutes: 60,
+      timeZone: "Europe/Berlin",
+      calendarId: "primary",
+    });
 
     return NextResponse.json({
       success: true,
-      event: {
-        id: createBody?.id ?? null,
-        htmlLink: createBody?.htmlLink ?? null,
-        start: createBody?.start?.dateTime ?? null,
-        end: createBody?.end?.dateTime ?? null,
-      },
+      event,
     });
   } catch (error) {
     await log.logError("integration", error, "Google test event failed", { requestId });

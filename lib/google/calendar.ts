@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "../supabaseServerClient";
-import { GOOGLE_TOKEN_URL } from "./types";
+import { GOOGLE_CALENDAR_BASE, GOOGLE_TOKEN_URL } from "./types";
 import { logger } from "../logger";
 
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -108,4 +108,108 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
     accessToken: refreshBody.access_token,
     integrationId: integration.id,
   };
+}
+
+type CalendarEventInput = {
+  accountId: string;
+  summary: string;
+  description?: string;
+  startDate: string;
+  startTime: string;
+  durationMinutes?: number;
+  timeZone?: string;
+  calendarId?: string;
+};
+
+type CalendarEventResult = {
+  id: string | null;
+  htmlLink: string | null;
+};
+
+export async function createGoogleCalendarEvent(
+  params: CalendarEventInput,
+): Promise<CalendarEventResult> {
+  const {
+    accountId,
+    summary,
+    description,
+    startDate,
+    startTime,
+    durationMinutes = 60,
+    timeZone = "Europe/Berlin",
+    calendarId = "primary",
+  } = params;
+
+  const { accessToken } = await getGoogleAccessToken(accountId);
+  const startDateTime = formatDateTime(startDate, startTime);
+  const endDateTime = addMinutes(startDate, startTime, durationMinutes);
+
+  const createResponse = await fetch(
+    `${GOOGLE_CALENDAR_BASE}/calendars/${encodeURIComponent(calendarId)}/events`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        summary,
+        description,
+        start: { dateTime: startDateTime, timeZone },
+        end: { dateTime: endDateTime, timeZone },
+      }),
+    },
+  );
+
+  const createBody = await createResponse.json();
+  if (!createResponse.ok) {
+    await logger.warn("integration", "Google event creation failed", {
+      metadata: {
+        httpStatus: createResponse.status,
+        error: createBody?.error ?? createBody,
+      },
+    });
+    throw new Error("Google-Event konnte nicht erstellt werden.");
+  }
+
+  return {
+    id: createBody?.id ?? null,
+    htmlLink: createBody?.htmlLink ?? null,
+  };
+}
+
+function formatDateTime(dateStr: string, timeStr: string): string {
+  const normalizedTime = normalizeTime(timeStr);
+  return `${dateStr}T${normalizedTime}`;
+}
+
+function addMinutes(dateStr: string, timeStr: string, minutesToAdd: number): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hour, minute, second] = normalizeTime(timeStr).split(":").map(Number);
+
+  const startUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  const endUtc = new Date(startUtc + minutesToAdd * 60 * 1000);
+
+  const endYear = endUtc.getUTCFullYear();
+  const endMonth = String(endUtc.getUTCMonth() + 1).padStart(2, "0");
+  const endDay = String(endUtc.getUTCDate()).padStart(2, "0");
+  const endHour = String(endUtc.getUTCHours()).padStart(2, "0");
+  const endMinute = String(endUtc.getUTCMinutes()).padStart(2, "0");
+  const endSecond = String(endUtc.getUTCSeconds()).padStart(2, "0");
+
+  return `${endYear}-${endMonth}-${endDay}T${endHour}:${endMinute}:${endSecond}`;
+}
+
+function normalizeTime(timeStr: string): string {
+  if (/^\d{2}:\d{2}:\d{2}$/.test(timeStr)) {
+    return timeStr;
+  }
+  if (/^\d{2}:\d{2}$/.test(timeStr)) {
+    return `${timeStr}:00`;
+  }
+  const parts = timeStr.split(":");
+  const hour = parts[0]?.padStart(2, "0") ?? "00";
+  const minute = parts[1]?.padStart(2, "0") ?? "00";
+  const second = parts[2]?.padStart(2, "0") ?? "00";
+  return `${hour}:${minute}:${second}`;
 }
