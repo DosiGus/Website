@@ -182,7 +182,7 @@ export async function POST(request: Request) {
       }
       const changeEvents = entry.changes || [];
       for (const change of changeEvents) {
-        const mapped = changeToMessagingEvent(change, entry.id, reqLogger);
+        const mapped = await changeToMessagingEvent(change, entry.id, reqLogger);
         if (!mapped) continue;
         await processMessagingEvent(mapped.event, mapped.instagramAccountId, reqLogger);
       }
@@ -196,7 +196,7 @@ export async function POST(request: Request) {
   }
 }
 
-function changeToMessagingEvent(
+async function changeToMessagingEvent(
   change: InstagramWebhookChange,
   fallbackInstagramAccountId: string,
   reqLogger: ReturnType<typeof createRequestLogger>
