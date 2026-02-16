@@ -182,9 +182,9 @@ export async function POST(request: Request) {
       }
       const changeEvents = entry.changes || [];
       for (const change of changeEvents) {
-        const event = changeToMessagingEvent(change, entry.id);
-        if (!event) continue;
-        await processMessagingEvent(event, entry.id, reqLogger);
+        const mapped = changeToMessagingEvent(change, entry.id, reqLogger);
+        if (!mapped) continue;
+        await processMessagingEvent(mapped.event, mapped.instagramAccountId, reqLogger);
       }
     }
 
@@ -198,18 +198,19 @@ export async function POST(request: Request) {
 
 function changeToMessagingEvent(
   change: InstagramWebhookChange,
-  instagramAccountId: string
-): InstagramMessagingEvent | null {
+  fallbackInstagramAccountId: string,
+  reqLogger: ReturnType<typeof createRequestLogger>
+): { event: InstagramMessagingEvent; instagramAccountId: string } | null {
   const value = change.value as Record<string, unknown> | undefined;
   if (!value || typeof value !== "object") {
     return null;
   }
 
-  const message = (value as { message?: InstagramMessagingEvent["message"] }).message;
+  const messageValue = (value as { message?: unknown }).message;
   const postback = (value as { postback?: InstagramMessagingEvent["postback"] }).postback;
   const text = (value as { text?: string }).text;
 
-  if (!message && !postback && !text) {
+  if (!messageValue && !postback && !text) {
     return null;
   }
 
@@ -219,29 +220,68 @@ function changeToMessagingEvent(
   const recipientId =
     (value as { to?: { id?: string } }).to?.id ??
     (value as { recipient?: { id?: string } }).recipient?.id ??
-    instagramAccountId;
+    (value as { id?: string }).id ??
+    fallbackInstagramAccountId;
   const timestamp =
     (value as { timestamp?: number }).timestamp ?? Date.now();
 
   if (!senderId) {
+    await reqLogger.warn("webhook", "Webhook change missing sender id", {
+      metadata: {
+        changeField: change.field,
+        valueKeys: Object.keys(value ?? {}),
+      },
+    });
     return null;
   }
 
-  const normalizedMessage =
-    message ??
-    (text
-      ? {
-          mid: (value as { mid?: string }).mid ?? `${timestamp}-${senderId}`,
-          text,
-        }
+  const messageId =
+    (value as { message_id?: string }).message_id ??
+    (value as { mid?: string }).mid ??
+    (typeof messageValue === "object"
+      ? (messageValue as { mid?: string }).mid
       : undefined);
 
+  let normalizedMessage: InstagramMessagingEvent["message"] | undefined;
+  if (messageValue && typeof messageValue === "object") {
+    const messageText =
+      (messageValue as { text?: string }).text ??
+      (typeof text === "string" ? text : undefined);
+    normalizedMessage = {
+      mid: messageId ?? `${timestamp}-${senderId}`,
+      text: messageText,
+    };
+  } else if (typeof messageValue === "string") {
+    normalizedMessage = {
+      mid: messageId ?? `${timestamp}-${senderId}`,
+      text: messageValue,
+    };
+  } else if (typeof text === "string") {
+    normalizedMessage = {
+      mid: messageId ?? `${timestamp}-${senderId}`,
+      text,
+    };
+  }
+
+  if (!normalizedMessage && !postback) {
+    await reqLogger.warn("webhook", "Webhook change has no message content", {
+      metadata: {
+        changeField: change.field,
+        valueKeys: Object.keys(value ?? {}),
+      },
+    });
+    return null;
+  }
+
   return {
-    sender: { id: senderId },
-    recipient: { id: recipientId },
-    timestamp,
-    message: normalizedMessage,
-    postback,
+    event: {
+      sender: { id: senderId },
+      recipient: { id: recipientId },
+      timestamp,
+      message: normalizedMessage,
+      postback,
+    },
+    instagramAccountId: recipientId,
   };
 }
 
