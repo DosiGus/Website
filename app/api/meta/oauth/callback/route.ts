@@ -501,30 +501,15 @@ export async function GET(request: Request) {
         });
 
         if (revokeBody?.success) {
-          // Create new state for retry (marked with .retry suffix to prevent loops)
-          const retryState = `${stateRow.user_id}.${randomUUID()}.retry`;
-          await supabase.from("oauth_states").insert({
-            user_id: stateRow.user_id,
-            account_id: accountId,
-            state: retryState,
-            expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-          });
-
-          const retryParams = new URLSearchParams({
-            client_id: metaAppId,
-            redirect_uri: metaRedirectUri,
-            response_type: "code",
-            state: retryState,
-            scope: "instagram_basic,instagram_manage_messages,pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging",
-          });
-
-          await log.info("oauth", "Redirecting to fresh OAuth after revoke", {
+          await log.info("oauth", "Revoke succeeded, redirecting to retry", {
             requestId,
             userId: stateRow.user_id,
           });
 
+          // Redirect back to integrations with auto_retry flag
+          // The client will automatically trigger a new clean OAuth start
           return NextResponse.redirect(
-            `https://www.facebook.com/v21.0/dialog/oauth?${retryParams.toString()}`,
+            new URL("/app/integrations?auto_retry=true", request.url),
           );
         }
       } catch (revokeError) {

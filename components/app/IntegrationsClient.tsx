@@ -25,6 +25,7 @@ export default function IntegrationsClient() {
   const successParam = useMemo(() => searchParams?.get("success"), [searchParams]);
   const accountParam = useMemo(() => searchParams?.get("account"), [searchParams]);
   const errorParam = useMemo(() => searchParams?.get("error"), [searchParams]);
+  const autoRetryParam = useMemo(() => searchParams?.get("auto_retry"), [searchParams]);
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -118,6 +119,38 @@ export default function IntegrationsClient() {
     setReviewSaved(false);
     setReviewError(null);
   }, [metaIntegration?.google_review_url]);
+
+  // Auto-retry: after FLB permissions were revoked, automatically start fresh OAuth
+  const [autoRetryDone, setAutoRetryDone] = useState(false);
+  useEffect(() => {
+    if (autoRetryParam !== "true" || autoRetryDone || status !== "ready") return;
+    setAutoRetryDone(true);
+    // Small delay to let the page render, then auto-start OAuth
+    const timer = setTimeout(() => {
+      // Trigger the connect flow programmatically
+      (async () => {
+        try {
+          setConnecting(true);
+          setError(null);
+          const token = await getAccessToken();
+          if (!token) return;
+          const response = await fetch("/api/meta/oauth/start", {
+            method: "POST",
+            headers: { authorization: `Bearer ${token}` },
+          });
+          const payload = (await response.json()) as { url?: string; error?: string };
+          if (response.ok && payload.url) {
+            window.location.href = payload.url;
+          }
+        } catch {
+          // Ignore - user can manually retry
+        } finally {
+          setConnecting(false);
+        }
+      })();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [autoRetryParam, autoRetryDone, status, getAccessToken]);
 
   const handleConnect = useCallback(async () => {
     try {
