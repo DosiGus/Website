@@ -35,6 +35,8 @@ export default function IntegrationsClient() {
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewSaved, setReviewSaved] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [googleTestStatus, setGoogleTestStatus] = useState<"idle" | "running" | "success" | "error">("idle");
+  const [googleTestMessage, setGoogleTestMessage] = useState<string | null>(null);
 
   const successParam = useMemo(() => searchParams?.get("success"), [searchParams]);
   const providerParam = useMemo(() => searchParams?.get("provider"), [searchParams]);
@@ -289,6 +291,38 @@ export default function IntegrationsClient() {
     }
   }, [getAccessToken, loadStatus]);
 
+  const handleGoogleTest = useCallback(async () => {
+    try {
+      setGoogleTestStatus("running");
+      setGoogleTestMessage(null);
+      const token = await getAccessToken();
+      if (!token) {
+        setGoogleTestStatus("error");
+        setGoogleTestMessage("Bitte erneut anmelden, um fortzufahren.");
+        return;
+      }
+      const response = await fetch("/api/google/calendar/test", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json()) as {
+        success?: boolean;
+        event?: { htmlLink?: string | null };
+        error?: string;
+      };
+      if (!response.ok || !payload.success) {
+        setGoogleTestStatus("error");
+        setGoogleTestMessage(payload.error ?? "Testtermin konnte nicht erstellt werden.");
+        return;
+      }
+      setGoogleTestStatus("success");
+      setGoogleTestMessage(payload.event?.htmlLink ?? "Testtermin erstellt.");
+    } catch {
+      setGoogleTestStatus("error");
+      setGoogleTestMessage("Testtermin konnte nicht erstellt werden.");
+    }
+  }, [getAccessToken]);
+
   const handleSaveReviewUrl = useCallback(async () => {
     try {
       setReviewSaving(true);
@@ -353,7 +387,6 @@ export default function IntegrationsClient() {
   };
 
   const tokenExpiryInfo = getTokenExpiryInfo(metaIntegration);
-  const googleTokenExpiryInfo = getTokenExpiryInfo(googleIntegration);
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -532,34 +565,11 @@ export default function IntegrationsClient() {
           </div>
         )}
 
-        {googleConnected && googleTokenExpiryInfo?.isExpired && (
-          <div className="mt-4 flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm">
-            <AlertTriangle className="mt-0.5 h-4 w-4 text-rose-400" />
-            <div>
-              <div className="font-semibold text-rose-400">Token abgelaufen!</div>
-              <div className="text-rose-400/80">
-                Bitte verbinde deinen Account erneut.
-              </div>
-            </div>
+        {googleConnected && (
+          <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            Token wird automatisch erneuert.
           </div>
         )}
-
-        {googleConnected &&
-          googleTokenExpiryInfo?.isExpiringSoon &&
-          !googleTokenExpiryInfo?.isExpired && (
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm">
-              <Clock className="mt-0.5 h-4 w-4 text-amber-400" />
-              <div>
-                <div className="font-semibold text-amber-400">
-                  Token läuft in {googleTokenExpiryInfo.daysUntilExpiry}{" "}
-                  {googleTokenExpiryInfo.daysUntilExpiry === 1 ? "Tag" : "Tagen"} ab
-                </div>
-                <div className="text-amber-400/80">
-                  Bitte verbinde deinen Account erneut.
-                </div>
-              </div>
-            </div>
-          )}
 
         {googleError && (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
@@ -589,7 +599,40 @@ export default function IntegrationsClient() {
               {googleDisconnecting ? "Trennen..." : "Trennen"}
             </button>
           )}
+          {googleConnected && (
+            <button
+              className="rounded-lg border border-emerald-500/20 px-4 py-2.5 text-sm font-medium text-emerald-300 transition-all hover:bg-emerald-500/10 disabled:opacity-50"
+              onClick={handleGoogleTest}
+              disabled={googleTestStatus === "running"}
+            >
+              {googleTestStatus === "running" ? "Testtermin..." : "Testtermin erstellen"}
+            </button>
+          )}
         </div>
+
+        {googleTestStatus !== "idle" && googleTestMessage && (
+          <div
+            className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+              googleTestStatus === "success"
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                : "border-rose-500/20 bg-rose-500/10 text-rose-300"
+            }`}
+          >
+            {googleTestStatus === "success" && googleTestMessage.startsWith("http") ? (
+              <a
+                className="inline-flex items-center gap-2 text-emerald-200 underline-offset-4 hover:underline"
+                href={googleTestMessage}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Testtermin ansehen
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            ) : (
+              googleTestMessage
+            )}
+          </div>
+        )}
 
         {!googleConnected && (
           <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">

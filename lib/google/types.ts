@@ -1,6 +1,7 @@
 export const GOOGLE_OAUTH_BASE = "https://accounts.google.com/o/oauth2/v2/auth";
 export const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 export const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+export const GOOGLE_CALENDAR_BASE = "https://www.googleapis.com/calendar/v3";
 
 export const GOOGLE_OAUTH_SCOPES = [
   "openid",
