@@ -300,6 +300,28 @@ export async function GET(request: Request) {
     },
   });
 
+  // Check which permissions the token actually has
+  try {
+    const permResponse = await fetch(
+      `${META_GRAPH_BASE}/me/permissions?access_token=${encodeURIComponent(longLivedToken.access_token)}`,
+    );
+    const permData = await permResponse.json();
+    await log.info("oauth", "Token permissions (GET /me/permissions)", {
+      requestId,
+      userId: stateRow.user_id,
+      metadata: {
+        httpStatus: permResponse.status,
+        permissions: permData,
+      },
+    });
+  } catch (permError) {
+    await log.warn("oauth", "Failed to check token permissions", {
+      requestId,
+      userId: stateRow.user_id,
+      metadata: { error: String(permError) },
+    });
+  }
+
   // Fetch Facebook user ID and name for debugging + data deletion mapping
   let facebookUserId: string | null = null;
   let facebookUserName: string | null = null;
