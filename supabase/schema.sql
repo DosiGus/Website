@@ -540,6 +540,57 @@ create policy "Account-Mitglieder erstellen Reservations" on public.reservations
   for insert with check (account_id in (select public.user_account_ids()));
 
 -- =============================================================================
+-- 9. FLOW SUBMISSIONS (universal flow outputs)
+-- =============================================================================
+
+create table if not exists public.flow_submissions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  account_id uuid not null references public.accounts(id) on delete cascade,
+  flow_id uuid references public.flows(id) on delete set null,
+  conversation_id uuid references public.conversations(id) on delete set null,
+  contact_id uuid references public.contacts(id) on delete set null,
+  integration_id uuid references public.integrations(id) on delete set null,
+
+  status text not null default 'completed'
+    check (status in ('pending', 'completed', 'incomplete')),
+  data jsonb not null default '{}'::jsonb,
+  missing_fields text[] default '{}'::text[],
+
+  source text default 'instagram_dm',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  completed_at timestamptz
+);
+
+create index if not exists flow_submissions_user_id_idx on public.flow_submissions(user_id);
+create index if not exists flow_submissions_account_id_idx on public.flow_submissions(account_id);
+create index if not exists flow_submissions_flow_id_idx on public.flow_submissions(flow_id);
+create index if not exists flow_submissions_conversation_id_idx on public.flow_submissions(conversation_id);
+create index if not exists flow_submissions_contact_id_idx on public.flow_submissions(contact_id);
+
+alter table public.flow_submissions enable row level security;
+
+-- Legacy user_id policies
+create policy "Flow Submissions sind nur fuer Besitzer sichtbar"
+  on public.flow_submissions for select using (auth.uid() = user_id);
+create policy "Besitzer duerfen Flow Submissions bearbeiten"
+  on public.flow_submissions for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+create policy "Besitzer duerfen Flow Submissions erstellen"
+  on public.flow_submissions for insert with check (auth.uid() = user_id);
+create policy "Besitzer duerfen Flow Submissions loeschen"
+  on public.flow_submissions for delete using (auth.uid() = user_id);
+
+-- Account-based policies
+create policy "Account-Mitglieder sehen Flow Submissions" on public.flow_submissions
+  for select using (account_id in (select public.user_account_ids()));
+create policy "Account-Mitglieder bearbeiten Flow Submissions" on public.flow_submissions
+  for update using (account_id in (select public.user_account_ids()));
+create policy "Account-Mitglieder erstellen Flow Submissions" on public.flow_submissions
+  for insert with check (account_id in (select public.user_account_ids()));
+
+-- =============================================================================
 -- 10. REVIEW REQUESTS
 -- =============================================================================
 

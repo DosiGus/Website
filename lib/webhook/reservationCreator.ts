@@ -14,12 +14,16 @@ export type ReservationCreationResult =
  * Required fields for creating a reservation
  */
 const REQUIRED_FIELDS = ["name", "date", "time", "guestCount"] as const;
+type RequiredField = (typeof REQUIRED_FIELDS)[number];
 
 /**
  * Checks if all required fields are present to create a reservation.
  */
-export function canCreateReservation(variables: ExtractedVariables): boolean {
-  return REQUIRED_FIELDS.every(
+export function canCreateReservation(
+  variables: ExtractedVariables,
+  requiredFields: ReadonlyArray<string> = REQUIRED_FIELDS
+): boolean {
+  return requiredFields.every(
     (field) => variables[field] !== undefined && variables[field] !== ""
   );
 }
@@ -28,9 +32,10 @@ export function canCreateReservation(variables: ExtractedVariables): boolean {
  * Returns the list of missing required fields.
  */
 export function getMissingReservationFields(
-  variables: ExtractedVariables
+  variables: ExtractedVariables,
+  requiredFields: ReadonlyArray<string> = REQUIRED_FIELDS
 ): string[] {
-  return REQUIRED_FIELDS.filter(
+  return requiredFields.filter(
     (field) => variables[field] === undefined || variables[field] === ""
   );
 }
@@ -45,9 +50,10 @@ export async function createReservationFromVariables(
   flowId: string | null,
   variables: ExtractedVariables,
   instagramSenderId?: string,
-  contactId?: string
+  contactId?: string,
+  requiredFields?: ReadonlyArray<string>
 ): Promise<ReservationCreationResult> {
-  const missing = getMissingReservationFields(variables);
+  const missing = getMissingReservationFields(variables, requiredFields);
 
   if (missing.length > 0) {
     return { success: false, missingFields: missing };

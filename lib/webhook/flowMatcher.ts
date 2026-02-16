@@ -8,6 +8,7 @@ export type MatchedFlow = {
   startNodeId: string;
   nodes: any[];
   edges: any[];
+  metadata?: Record<string, unknown> | null;
 };
 
 /**
@@ -23,7 +24,7 @@ export async function findMatchingFlow(
   // Load all active flows for this account
   const { data: flows, error } = await supabase
     .from("flows")
-    .select("id, name, triggers, nodes, edges")
+    .select("id, name, triggers, nodes, edges, metadata")
     .eq("account_id", accountId)
     .eq("status", "Aktiv");
 
@@ -64,6 +65,7 @@ export async function findMatchingFlow(
           startNodeId: trigger.startNodeId,
           nodes: flow.nodes,
           edges: flow.edges,
+          metadata: flow.metadata ?? null,
         };
       }
     }

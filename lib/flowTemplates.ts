@@ -360,7 +360,13 @@ export const fallbackTemplates: FlowTemplate[] = [
         startNodeId: "info-hours",
       },
     ],
-    metadata: { version: "2.0" },
+    metadata: {
+      version: "2.0",
+      output_config: {
+        type: "reservation",
+        requiredFields: ["name", "date", "time", "guestCount"],
+      },
+    },
   },
   {
     id: "template-salon",
@@ -746,7 +752,14 @@ export const fallbackTemplates: FlowTemplate[] = [
         startNodeId: "info-prices",
       },
     ],
-    metadata: { version: "2.0" },
+    metadata: {
+      version: "2.0",
+      output_config: {
+        type: "reservation",
+        requiredFields: ["name", "date", "time", "phone"],
+        defaults: { guestCount: 1 },
+      },
+    },
   },
   {
     id: "template-medical",
@@ -1178,7 +1191,12 @@ export const fallbackTemplates: FlowTemplate[] = [
         startNodeId: "emergency-info",
       },
     ],
-    metadata: { version: "2.0" },
+    metadata: {
+      version: "2.0",
+      output_config: {
+        type: "custom",
+      },
+    },
   },
   {
     id: "template-google-review",
@@ -1234,6 +1252,14 @@ export const fallbackTemplates: FlowTemplate[] = [
       { id: "e-review-feedback-link", source: "review-feedback", target: "review-link", data: { condition: "Feedback erhalten", tone: "neutral" } },
     ],
     triggers: [],
-    metadata: { version: "1.0", reviewFlow: true, startNodeId: "review-rating", systemTemplate: true },
+    metadata: {
+      version: "1.0",
+      reviewFlow: true,
+      startNodeId: "review-rating",
+      systemTemplate: true,
+      output_config: {
+        type: "custom",
+      },
+    },
   },
 ];

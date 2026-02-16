@@ -25,7 +25,7 @@ import {
   mergeVariables,
   ExtractedVariables,
 } from "../../../../lib/webhook/variableExtractor";
-import { ConversationMetadata } from "../../../../lib/flowTypes";
+import { ConversationMetadata, FlowMetadata, FlowOutputConfig } from "../../../../lib/flowTypes";
 import {
   canCreateReservation,
   createReservationFromVariables,
@@ -48,6 +48,44 @@ function extractReviewRating(text: string): number | null {
     return starMatches.length;
   }
   return null;
+}
+
+type ResolvedOutputConfig = {
+  type: "reservation" | "custom";
+  requiredFields: string[];
+  defaults: Record<string, string | number>;
+  isLegacy: boolean;
+};
+
+function resolveOutputConfig(metadata?: FlowMetadata | null): ResolvedOutputConfig {
+  const outputConfig = metadata?.output_config as FlowOutputConfig | undefined;
+  const hasOutputConfig = Boolean(outputConfig?.type);
+  const type = outputConfig?.type ?? "reservation";
+  const isLegacy = !hasOutputConfig;
+  const defaults =
+    outputConfig?.defaults ??
+    (type === "reservation" && !isLegacy ? { guestCount: 1 } : {});
+  const requiredFields =
+    type === "reservation"
+      ? outputConfig?.requiredFields ??
+        (isLegacy ? ["name", "date", "time", "guestCount"] : ["name", "date", "time"])
+      : outputConfig?.requiredFields ?? [];
+
+  return { type, requiredFields, defaults, isLegacy };
+}
+
+function applyDefaults(
+  variables: ExtractedVariables,
+  defaults: Record<string, string | number>
+): ExtractedVariables {
+  const next = { ...variables };
+  for (const [key, value] of Object.entries(defaults)) {
+    const current = next[key];
+    if (current === undefined || current === "") {
+      next[key] = value;
+    }
+  }
+  return next;
 }
 
 async function updateReviewRequestFromMessage(params: {
@@ -680,6 +718,7 @@ async function processMessagingEvent(
   let flowResponse = null;
   let matchedFlowId: string | null = conversation.current_flow_id;
   let matchedNodeId: string | null = null;
+  let matchedFlowMetadata: FlowMetadata | null = null;
 
   // Handle quick reply continuation
   if (quickReplyPayload && conversation.current_flow_id) {
@@ -689,7 +728,7 @@ async function processMessagingEvent(
       // Load the flow
       const { data: flow } = await supabase
         .from("flows")
-        .select("nodes, edges")
+        .select("nodes, edges, metadata")
         .eq("id", parsed.flowId)
         .single();
 
@@ -703,6 +742,7 @@ async function processMessagingEvent(
         );
         matchedFlowId = parsed.flowId;
         matchedNodeId = parsed.nodeId;
+        matchedFlowMetadata = (flow.metadata as FlowMetadata) ?? null;
       }
     }
   }
@@ -712,7 +752,7 @@ async function processMessagingEvent(
     // Load the current flow
     const { data: currentFlow } = await supabase
       .from("flows")
-      .select("nodes, edges")
+      .select("nodes, edges, metadata")
       .eq("id", conversation.current_flow_id)
       .single();
 
@@ -744,6 +784,7 @@ async function processMessagingEvent(
         flowResponse = freeTextResult.response;
         matchedFlowId = conversation.current_flow_id;
         matchedNodeId = freeTextResult.executedNodeId;
+        matchedFlowMetadata = (currentFlow.metadata as FlowMetadata) ?? null;
 
         await reqLogger.info("webhook", "Free text input processed, continuing flow", {
           metadata: {
@@ -939,6 +980,7 @@ async function processMessagingEvent(
       );
       matchedFlowId = matchedFlow.flowId;
       matchedNodeId = matchedFlow.startNodeId;
+      matchedFlowMetadata = (matchedFlow.metadata as FlowMetadata) ?? null;
 
       await reqLogger.info("webhook", "Flow matched", {
         metadata: {
@@ -1118,26 +1160,19 @@ async function processMessagingEvent(
             )
           : false;
 
-        // Normalize reservation variables (some flows don't collect guest count)
-        let reservationVariables = mergedVariables;
-        let missingReservationFields = getMissingReservationFields(reservationVariables);
-        if (
-          missingReservationFields.length === 1 &&
-          missingReservationFields[0] === "guestCount"
-        ) {
-          reservationVariables = { ...reservationVariables, guestCount: 1 };
-          missingReservationFields = getMissingReservationFields(reservationVariables);
-          await reqLogger.info("webhook", "Defaulted guest count to 1", {
-            metadata: {
-              matchedFlowId,
-              matchedNodeId,
-              variables: reservationVariables,
-            },
-          });
-        }
+        const outputConfig = resolveOutputConfig(matchedFlowMetadata);
+        const outputType = outputConfig.type;
+        const reservationVariables = applyDefaults(mergedVariables, outputConfig.defaults);
+        const missingReservationFields = getMissingReservationFields(
+          reservationVariables,
+          outputConfig.requiredFields
+        );
 
         // Check if all required reservation data is present and this looks like a final step
-        const hasAllReservationData = canCreateReservation(reservationVariables);
+        const hasAllReservationData = canCreateReservation(
+          reservationVariables,
+          outputConfig.requiredFields
+        );
 
         // List of nodes that are still collecting data - don't create reservation here
         const dataCollectionNodes = [
@@ -1161,13 +1196,17 @@ async function processMessagingEvent(
               flowResponse.text.toLowerCase().includes("vielen dank") ||
               flowResponse.text.toLowerCase().includes("erfolgreich")));
 
+        const shouldStoreSubmission =
+          flowResponse.isEndOfFlow ||
+          isConfirmationNode ||
+          isConfirmationPayload ||
+          looksLikeFinalStep;
+
         const shouldCreateReservation =
+          outputType === "reservation" &&
           !reservationAlreadyExists &&
           !isDataCollectionNode &&
-          (flowResponse.isEndOfFlow ||
-            isConfirmationNode ||
-            isConfirmationPayload ||
-            looksLikeFinalStep);
+          shouldStoreSubmission;
 
         // Log reservation check details for debugging
         await reqLogger.info("webhook", "Reservation check", {
@@ -1182,13 +1221,50 @@ async function processMessagingEvent(
             quickReplyPayload,
             responseText: flowResponse.text?.slice(0, 100),
             shouldCreateReservation,
-            canCreate: canCreateReservation(reservationVariables),
+            outputType,
+            outputRequiredFields: outputConfig.requiredFields,
+            outputDefaults: outputConfig.defaults,
+            canCreate: canCreateReservation(reservationVariables, outputConfig.requiredFields),
             missingFields: missingReservationFields,
             variables: reservationVariables,
           },
         });
 
-        if (shouldCreateReservation && canCreateReservation(reservationVariables)) {
+        if (shouldStoreSubmission && matchedFlowId) {
+          const submissionStatus =
+            missingReservationFields.length > 0 ? "incomplete" : "completed";
+          const { error: submissionError } = await supabase
+            .from("flow_submissions")
+            .insert({
+              user_id: userId,
+              account_id: accountId,
+              flow_id: matchedFlowId,
+              conversation_id: conversation.id,
+              contact_id: contactId ?? null,
+              integration_id: integration.id,
+              status: submissionStatus,
+              missing_fields: missingReservationFields,
+              data: {
+                variables: reservationVariables,
+                outputType,
+                flowId: matchedFlowId,
+                nodeId: matchedNodeId,
+              },
+              source: "instagram_dm",
+              completed_at: submissionStatus === "completed" ? new Date().toISOString() : null,
+            });
+
+          if (submissionError) {
+            await reqLogger.warn("webhook", "Failed to store flow submission", {
+              metadata: {
+                flowId: matchedFlowId,
+                error: submissionError.message,
+              },
+            });
+          }
+        }
+
+        if (shouldCreateReservation && canCreateReservation(reservationVariables, outputConfig.requiredFields)) {
           const reservationResult = await createReservationFromVariables(
             userId,
             accountId,
@@ -1196,7 +1272,8 @@ async function processMessagingEvent(
             matchedFlowId,
             reservationVariables,
             senderId,
-            contactId ?? undefined
+            contactId ?? undefined,
+            outputConfig.requiredFields
           );
 
           if (reservationResult.success) {

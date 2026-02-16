@@ -32,7 +32,16 @@ export type FlowNodeData = {
 
 export type FlowMetadata = {
   version: string;
+  output_config?: FlowOutputConfig;
   [key: string]: unknown;
+};
+
+export type FlowOutputType = "reservation" | "custom";
+
+export type FlowOutputConfig = {
+  type: FlowOutputType;
+  requiredFields?: string[];
+  defaults?: Record<string, string | number>;
 };
 
 export type FlowExport = {
