@@ -200,7 +200,7 @@ async function changeToMessagingEvent(
   change: InstagramWebhookChange,
   fallbackInstagramAccountId: string,
   reqLogger: ReturnType<typeof createRequestLogger>
-): { event: InstagramMessagingEvent; instagramAccountId: string } | null {
+): Promise<{ event: InstagramMessagingEvent; instagramAccountId: string } | null> {
   const value = change.value as Record<string, unknown> | undefined;
   if (!value || typeof value !== "object") {
     return null;
