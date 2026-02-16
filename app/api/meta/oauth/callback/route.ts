@@ -477,14 +477,72 @@ export async function GET(request: Request) {
   }
 
   if (!firstPage) {
+    // FLB token has permissions without page targets (granular_scopes missing target_ids).
+    // Revoke using the USER's own token, then redirect to fresh OAuth with scope parameter.
+    // This forces Facebook to show the full permission dialog with page selection next time.
+    const isRetry = state ? state.endsWith(".retry") : false;
+
+    if (!isRetry) {
+      try {
+        // Revoke with USER token (not app token - app token returned 400 before)
+        const revokeResponse = await fetch(
+          `${META_GRAPH_BASE}/me/permissions?access_token=${encodeURIComponent(longLivedToken.access_token)}`,
+          { method: "DELETE" },
+        );
+        const revokeBody = await revokeResponse.json();
+        await log.info("oauth", "Revoked FLB permissions with user token", {
+          requestId,
+          userId: stateRow.user_id,
+          metadata: {
+            success: revokeBody?.success,
+            httpStatus: revokeResponse.status,
+            responseBody: revokeBody,
+          },
+        });
+
+        if (revokeBody?.success) {
+          // Create new state for retry (marked with .retry suffix to prevent loops)
+          const retryState = `${stateRow.user_id}.${randomUUID()}.retry`;
+          await supabase.from("oauth_states").insert({
+            user_id: stateRow.user_id,
+            account_id: accountId,
+            state: retryState,
+            expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+          });
+
+          const retryParams = new URLSearchParams({
+            client_id: metaAppId,
+            redirect_uri: metaRedirectUri,
+            response_type: "code",
+            state: retryState,
+            scope: "instagram_basic,instagram_manage_messages,pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging",
+          });
+
+          await log.info("oauth", "Redirecting to fresh OAuth after revoke", {
+            requestId,
+            userId: stateRow.user_id,
+          });
+
+          return NextResponse.redirect(
+            `https://www.facebook.com/v21.0/dialog/oauth?${retryParams.toString()}`,
+          );
+        }
+      } catch (revokeError) {
+        await log.warn("oauth", "User token revoke failed", {
+          requestId,
+          metadata: { error: String(revokeError) },
+        });
+      }
+    }
+
     await log.warn("oauth", "No Facebook page found via any method", {
       requestId,
       userId: stateRow.user_id,
-      metadata: { facebookUserId },
+      metadata: { facebookUserId, isRetry },
     });
     return NextResponse.redirect(
       new URL(
-        `/app/integrations?error=${encodeURIComponent("Keine Facebook-Seite gefunden. Bitte entferne die App \"TableDm\" in deinen Facebook-Einstellungen (Einstellungen → Apps und Websites → TableDm entfernen) und versuche es erneut.")}`,
+        `/app/integrations?error=${encodeURIComponent("Keine Facebook-Seite gefunden. Bitte entferne die App \"TableDm\" in deinen Facebook-Einstellungen (Einstellungen → Apps und Websites → TableDm entfernen) und versuche es dann erneut.")}`,
         request.url,
       ),
     );
