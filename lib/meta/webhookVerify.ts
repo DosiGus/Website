@@ -54,9 +54,9 @@ export function verifySubscriptionToken(token: string | null): boolean {
     return false;
   }
 
-  const expectedToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
+  const expectedToken = process.env.META_WEBHOOK_VERIFY_TOKEN ?? process.env.META_APP_SECRET;
   if (!expectedToken) {
-    console.error("META_WEBHOOK_VERIFY_TOKEN is not configured");
+    console.error("META_WEBHOOK_VERIFY_TOKEN (and META_APP_SECRET fallback) is not configured");
     return false;
   }
 
