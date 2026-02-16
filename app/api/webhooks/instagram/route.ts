@@ -1118,8 +1118,26 @@ async function processMessagingEvent(
             )
           : false;
 
+        // Normalize reservation variables (some flows don't collect guest count)
+        let reservationVariables = mergedVariables;
+        let missingReservationFields = getMissingReservationFields(reservationVariables);
+        if (
+          missingReservationFields.length === 1 &&
+          missingReservationFields[0] === "guestCount"
+        ) {
+          reservationVariables = { ...reservationVariables, guestCount: 1 };
+          missingReservationFields = getMissingReservationFields(reservationVariables);
+          await reqLogger.info("webhook", "Defaulted guest count to 1", {
+            metadata: {
+              matchedFlowId,
+              matchedNodeId,
+              variables: reservationVariables,
+            },
+          });
+        }
+
         // Check if all required reservation data is present and this looks like a final step
-        const hasAllReservationData = canCreateReservation(mergedVariables);
+        const hasAllReservationData = canCreateReservation(reservationVariables);
 
         // List of nodes that are still collecting data - don't create reservation here
         const dataCollectionNodes = [
@@ -1164,19 +1182,19 @@ async function processMessagingEvent(
             quickReplyPayload,
             responseText: flowResponse.text?.slice(0, 100),
             shouldCreateReservation,
-            canCreate: canCreateReservation(mergedVariables),
-            missingFields: getMissingReservationFields(mergedVariables),
-            variables: mergedVariables,
+            canCreate: canCreateReservation(reservationVariables),
+            missingFields: missingReservationFields,
+            variables: reservationVariables,
           },
         });
 
-        if (shouldCreateReservation && canCreateReservation(mergedVariables)) {
+        if (shouldCreateReservation && canCreateReservation(reservationVariables)) {
           const reservationResult = await createReservationFromVariables(
             userId,
             accountId,
             conversation.id,
             matchedFlowId,
-            mergedVariables,
+            reservationVariables,
             senderId,
             contactId ?? undefined
           );
@@ -1202,7 +1220,7 @@ async function processMessagingEvent(
             await reqLogger.info("webhook", "Reservation created from flow", {
               metadata: {
                 reservationId: reservationResult.reservationId,
-                variables: mergedVariables,
+                variables: reservationVariables,
               },
             });
           } else {
@@ -1216,8 +1234,8 @@ async function processMessagingEvent(
         } else if (shouldCreateReservation) {
           await reqLogger.warn("webhook", "Reservation data incomplete on confirmation", {
             metadata: {
-              missingFields: getMissingReservationFields(mergedVariables),
-              variables: mergedVariables,
+              missingFields: missingReservationFields,
+              variables: reservationVariables,
             },
           });
         }
