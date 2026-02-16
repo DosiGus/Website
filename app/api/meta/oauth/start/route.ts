@@ -38,12 +38,13 @@ export async function POST(request: Request) {
       );
     }
 
+    const supabase = createSupabaseServerClient();
+
     // Encode user_id in state for duplicate callback detection
     // Format: user_id.random (user_id can be extracted even if state is deleted)
     const state = `${user.id}.${crypto.randomUUID()}`;
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    const supabase = createSupabaseServerClient();
     const { error } = await supabase.from("oauth_states").insert({
       user_id: user.id,
       account_id: accountId,
@@ -67,7 +68,6 @@ export async function POST(request: Request) {
       response_type: "code",
       state,
       scope,
-      auth_type: "rerequest",
     });
 
     await log.info("oauth", "Redirecting to Meta OAuth", {

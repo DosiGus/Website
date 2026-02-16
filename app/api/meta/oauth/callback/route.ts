@@ -404,9 +404,73 @@ export async function GET(request: Request) {
   const firstPage = pagesData.data?.[0];
 
   if (!firstPage) {
+    // Check if this is already a retry to prevent infinite loops
+    // State format: user_id.random or user_id.random.retry
+    const isRetry = state ? state.split(".").length > 2 && state.endsWith(".retry") : false;
+
+    if (!isRetry && facebookUserId && metaAppSecret) {
+      // Revoke all permissions so next OAuth shows fresh dialog with page selection
+      const appAccessToken = `${metaAppId}|${metaAppSecret}`;
+      try {
+        const revokeResponse = await fetch(
+          `${META_GRAPH_BASE}/${facebookUserId}/permissions?access_token=${encodeURIComponent(appAccessToken)}`,
+          { method: "DELETE" },
+        );
+        const revokeBody = await revokeResponse.json();
+        await log.info("oauth", "Revoked permissions due to empty /me/accounts, retrying", {
+          requestId,
+          userId: stateRow.user_id,
+          metadata: {
+            facebookUserId,
+            revokeSuccess: revokeBody?.success,
+            revokeStatus: revokeResponse.status,
+          },
+        });
+
+        if (revokeBody?.success) {
+          // Create a new OAuth state for the retry (marked with .retry suffix)
+          const retryState = `${stateRow.user_id}.${randomUUID()}.retry`;
+          const retryExpiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+          await supabase.from("oauth_states").insert({
+            user_id: stateRow.user_id,
+            account_id: accountId,
+            state: retryState,
+            expires_at: retryExpiresAt,
+          });
+
+          const scope = [
+            "instagram_basic",
+            "instagram_manage_messages",
+            "pages_show_list",
+            "pages_read_engagement",
+            "pages_manage_metadata",
+            "pages_messaging",
+          ].join(",");
+
+          const retryParams = new URLSearchParams({
+            client_id: metaAppId,
+            redirect_uri: metaRedirectUri,
+            response_type: "code",
+            state: retryState,
+            scope,
+          });
+
+          const retryUrl = `https://www.facebook.com/v21.0/dialog/oauth?${retryParams.toString()}`;
+          return NextResponse.redirect(retryUrl);
+        }
+      } catch (revokeError) {
+        await log.warn("oauth", "Failed to revoke permissions for retry", {
+          requestId,
+          userId: stateRow.user_id,
+          metadata: { error: String(revokeError) },
+        });
+      }
+    }
+
     await log.warn("oauth", "No Facebook page available", {
       requestId,
       userId: stateRow.user_id,
+      metadata: { isRetry, facebookUserId },
     });
     return NextResponse.redirect(
       new URL(
