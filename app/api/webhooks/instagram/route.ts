@@ -132,6 +132,30 @@ export async function POST(request: Request) {
 
     // Parse payload
     const payload: InstagramWebhookPayload = JSON.parse(rawBody);
+    const entrySummaries = Array.isArray(payload?.entry)
+      ? payload.entry.slice(0, 3).map((entry) => {
+          const messaging = (entry as { messaging?: unknown }).messaging;
+          const changes = (entry as { changes?: unknown }).changes;
+          return {
+            id: entry.id,
+            keys: Object.keys(entry ?? {}),
+            messagingCount: Array.isArray(messaging) ? messaging.length : 0,
+            changesCount: Array.isArray(changes) ? changes.length : 0,
+          };
+        })
+      : [];
+    const hasMessagingEvents = entrySummaries.some(
+      (summary) => summary.messagingCount > 0,
+    );
+    if (!hasMessagingEvents) {
+      await reqLogger.warn("webhook", "Webhook payload has no messaging events", {
+        metadata: {
+          object: payload?.object,
+          entryCount: Array.isArray(payload?.entry) ? payload.entry.length : 0,
+          entrySummaries,
+        },
+      });
+    }
 
     // Only process Instagram events
     if (payload.object !== "instagram") {
