@@ -60,26 +60,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Always use standard scope-based OAuth (NOT Facebook Login for Business).
-    // FLB (config_id) does NOT properly register the app at the Instagram account
-    // level — it won't appear in Instagram Settings > Apps und Websites, and Meta
-    // will NOT deliver Instagram DM webhooks without that registration.
-    // Standard OAuth with instagram_manage_messages scope properly registers the
-    // app and enables webhook delivery.
+    // Use Facebook Login for Business (FLB) with config_id.
+    // FLB shows the full consent dialog including the Instagram-specific
+    // permissions step ("Allow access to messages"), which registers the app
+    // at the Instagram account level. Without this registration, the app
+    // won't appear in Instagram > Settings > Apps und Websites, and Meta
+    // will NOT deliver Instagram DM webhooks.
+    // Standard scope-based OAuth silently grants permissions at the Facebook
+    // level without the Instagram registration step.
+    // Note: /me/accounts may return empty with FLB tokens — this is handled
+    // by Approach 4 (debug_token target_ids) in the callback.
+    const configId = process.env.META_LOGIN_CONFIG_ID;
+
     const params = new URLSearchParams({
       client_id: metaAppId,
       redirect_uri: metaRedirectUri,
       response_type: "code",
       state,
-      scope: META_PERMISSIONS.join(","),
     });
 
-    await log.info("oauth", "Redirecting to Meta OAuth (scope-based)", {
+    if (configId) {
+      // FLB mode: config_id defines permissions, do NOT include scope
+      params.set("config_id", configId);
+    } else {
+      // Fallback: scope-based OAuth if no config_id is set
+      params.set("scope", META_PERMISSIONS.join(","));
+    }
+
+    await log.info("oauth", `Redirecting to Meta OAuth (${configId ? "FLB config_id" : "scope-based"})`, {
       requestId,
       userId: user.id,
       metadata: {
         redirectUri: metaRedirectUri,
-        scope: META_PERMISSIONS.join(","),
+        configId: configId ?? null,
+        scope: configId ? null : META_PERMISSIONS.join(","),
       },
     });
 
