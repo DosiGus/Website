@@ -328,6 +328,8 @@ create table if not exists public.integrations (
   instagram_username text,
   account_name text,
   google_review_url text,
+  calendar_id text,
+  calendar_time_zone text,
   facebook_user_id text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -495,6 +497,10 @@ create table if not exists public.reservations (
   phone_number text,
   email text,
   special_requests text,
+  google_calendar_id text,
+  google_event_id text,
+  google_event_link text,
+  google_time_zone text,
 
   -- Status management
   status text not null default 'pending'
@@ -542,6 +548,40 @@ create policy "Account-Mitglieder erstellen Reservations" on public.reservations
 -- =============================================================================
 -- 9. FLOW SUBMISSIONS (universal flow outputs)
 -- =============================================================================
+
+-- =============================================================================
+-- 8.1 CALENDAR AVAILABILITY CACHE
+-- =============================================================================
+
+create table if not exists public.calendar_availability_cache (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references public.accounts(id) on delete cascade,
+  calendar_id text not null,
+  time_min timestamptz not null,
+  time_max timestamptz not null,
+  time_zone text not null,
+  busy jsonb not null default '[]'::jsonb,
+  expires_at timestamptz not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create unique index if not exists calendar_availability_cache_unique_idx
+  on public.calendar_availability_cache(account_id, calendar_id, time_min, time_max, time_zone);
+create index if not exists calendar_availability_cache_account_idx
+  on public.calendar_availability_cache(account_id);
+create index if not exists calendar_availability_cache_expires_idx
+  on public.calendar_availability_cache(expires_at);
+
+alter table public.calendar_availability_cache enable row level security;
+
+create policy "Account-Mitglieder sehen Calendar Cache" on public.calendar_availability_cache
+  for select using (account_id in (select public.user_account_ids()));
+create policy "Account-Mitglieder bearbeiten Calendar Cache" on public.calendar_availability_cache
+  for update using (account_id in (select public.user_account_ids()));
+create policy "Account-Mitglieder erstellen Calendar Cache" on public.calendar_availability_cache
+  for insert with check (account_id in (select public.user_account_ids()));
+
 
 create table if not exists public.flow_submissions (
   id uuid primary key default gen_random_uuid(),

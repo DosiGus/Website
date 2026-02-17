@@ -57,6 +57,8 @@ export type IntegrationStatus = {
   expires_at: string | null;
   updated_at: string | null;
   google_review_url: string | null;
+  calendar_id?: string | null;
+  calendar_time_zone?: string | null;
 };
 
 // Instagram Webhook Types

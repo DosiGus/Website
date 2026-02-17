@@ -14,13 +14,15 @@ type GoogleIntegrationRow = {
 type AccessTokenResult = {
   accessToken: string;
   integrationId: string;
+  calendarId: string | null;
+  calendarTimeZone: string | null;
 };
 
 export async function getGoogleAccessToken(accountId: string): Promise<AccessTokenResult> {
   const supabase = createSupabaseServerClient();
   const { data: integration, error } = await supabase
     .from("integrations")
-    .select("id, access_token, refresh_token, expires_at")
+    .select("id, access_token, refresh_token, expires_at, calendar_id, calendar_time_zone")
     .eq("account_id", accountId)
     .eq("provider", "google_calendar")
     .maybeSingle();
@@ -40,6 +42,8 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
     return {
       accessToken: integration.access_token,
       integrationId: integration.id,
+      calendarId: integration.calendar_id ?? null,
+      calendarTimeZone: integration.calendar_time_zone ?? null,
     };
   }
 
@@ -107,6 +111,8 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
   return {
     accessToken: refreshBody.access_token,
     integrationId: integration.id,
+    calendarId: integration.calendar_id ?? null,
+    calendarTimeZone: integration.calendar_time_zone ?? null,
   };
 }
 
@@ -124,6 +130,8 @@ type CalendarEventInput = {
 type CalendarEventResult = {
   id: string | null;
   htmlLink: string | null;
+  calendarId?: string | null;
+  timeZone?: string | null;
 };
 
 export async function createGoogleCalendarEvent(
@@ -136,16 +144,22 @@ export async function createGoogleCalendarEvent(
     startDate,
     startTime,
     durationMinutes = 60,
-    timeZone = "Europe/Berlin",
-    calendarId = "primary",
+    timeZone,
+    calendarId,
   } = params;
 
-  const { accessToken } = await getGoogleAccessToken(accountId);
+  const {
+    accessToken,
+    calendarId: integrationCalendarId,
+    calendarTimeZone,
+  } = await getGoogleAccessToken(accountId);
+  const resolvedCalendarId = calendarId ?? integrationCalendarId ?? "primary";
+  const resolvedTimeZone = timeZone ?? calendarTimeZone ?? "Europe/Berlin";
   const startDateTime = formatDateTime(startDate, startTime);
   const endDateTime = addMinutes(startDate, startTime, durationMinutes);
 
   const createResponse = await fetch(
-    `${GOOGLE_CALENDAR_BASE}/calendars/${encodeURIComponent(calendarId)}/events`,
+    `${GOOGLE_CALENDAR_BASE}/calendars/${encodeURIComponent(resolvedCalendarId)}/events`,
     {
       method: "POST",
       headers: {
@@ -155,8 +169,8 @@ export async function createGoogleCalendarEvent(
       body: JSON.stringify({
         summary,
         description,
-        start: { dateTime: startDateTime, timeZone },
-        end: { dateTime: endDateTime, timeZone },
+        start: { dateTime: startDateTime, timeZone: resolvedTimeZone },
+        end: { dateTime: endDateTime, timeZone: resolvedTimeZone },
       }),
     },
   );
@@ -175,7 +189,154 @@ export async function createGoogleCalendarEvent(
   return {
     id: createBody?.id ?? null,
     htmlLink: createBody?.htmlLink ?? null,
+    calendarId: resolvedCalendarId,
+    timeZone: resolvedTimeZone,
   };
+}
+
+type CalendarEventUpdateInput = {
+  accountId: string;
+  eventId: string;
+  summary: string;
+  description?: string;
+  startDate: string;
+  startTime: string;
+  durationMinutes?: number;
+  timeZone?: string;
+  calendarId?: string;
+};
+
+export async function updateGoogleCalendarEvent(
+  params: CalendarEventUpdateInput,
+): Promise<CalendarEventResult> {
+  const {
+    accountId,
+    eventId,
+    summary,
+    description,
+    startDate,
+    startTime,
+    durationMinutes = 60,
+    timeZone,
+    calendarId,
+  } = params;
+
+  const {
+    accessToken,
+    calendarId: integrationCalendarId,
+    calendarTimeZone,
+  } = await getGoogleAccessToken(accountId);
+  const resolvedCalendarId = calendarId ?? integrationCalendarId ?? "primary";
+  const resolvedTimeZone = timeZone ?? calendarTimeZone ?? "Europe/Berlin";
+
+  const startDateTime = formatDateTime(startDate, startTime);
+  const endDateTime = addMinutes(startDate, startTime, durationMinutes);
+
+  const updateResponse = await fetch(
+    `${GOOGLE_CALENDAR_BASE}/calendars/${encodeURIComponent(resolvedCalendarId)}/events/${encodeURIComponent(eventId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        summary,
+        description,
+        start: { dateTime: startDateTime, timeZone: resolvedTimeZone },
+        end: { dateTime: endDateTime, timeZone: resolvedTimeZone },
+      }),
+    },
+  );
+
+  const updateBody = await updateResponse.json();
+  if (!updateResponse.ok) {
+    await logger.warn("integration", "Google event update failed", {
+      metadata: {
+        httpStatus: updateResponse.status,
+        error: updateBody?.error ?? updateBody,
+      },
+    });
+    throw new Error("Google-Event konnte nicht aktualisiert werden.");
+  }
+
+  return {
+    id: updateBody?.id ?? null,
+    htmlLink: updateBody?.htmlLink ?? null,
+    calendarId: resolvedCalendarId,
+    timeZone: resolvedTimeZone,
+  };
+}
+
+type CalendarEventCancelInput = {
+  accountId: string;
+  eventId: string;
+  calendarId?: string;
+};
+
+export async function cancelGoogleCalendarEvent(
+  params: CalendarEventCancelInput,
+): Promise<void> {
+  const { accountId, eventId, calendarId } = params;
+  const { accessToken, calendarId: integrationCalendarId } = await getGoogleAccessToken(accountId);
+  const resolvedCalendarId = calendarId ?? integrationCalendarId ?? "primary";
+
+  const cancelResponse = await fetch(
+    `${GOOGLE_CALENDAR_BASE}/calendars/${encodeURIComponent(resolvedCalendarId)}/events/${encodeURIComponent(eventId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: "cancelled" }),
+    },
+  );
+
+  if (!cancelResponse.ok) {
+    const cancelBody = await cancelResponse.json();
+    await logger.warn("integration", "Google event cancel failed", {
+      metadata: {
+        httpStatus: cancelResponse.status,
+        error: cancelBody?.error ?? cancelBody,
+      },
+    });
+  }
+}
+
+export type GoogleCalendarListItem = {
+  id: string;
+  summary: string;
+  timeZone: string | null;
+  accessRole: string | null;
+  primary: boolean;
+};
+
+export async function listGoogleCalendars(accountId: string): Promise<GoogleCalendarListItem[]> {
+  const { accessToken } = await getGoogleAccessToken(accountId);
+  const response = await fetch(`${GOOGLE_CALENDAR_BASE}/users/me/calendarList`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    await logger.warn("integration", "Google calendar list failed", {
+      metadata: {
+        httpStatus: response.status,
+        error: payload?.error ?? payload,
+      },
+    });
+    throw new Error("Kalender konnten nicht geladen werden.");
+  }
+
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  return items.map((item: any) => ({
+    id: String(item.id),
+    summary: String(item.summary ?? "Kalender"),
+    timeZone: item.timeZone ? String(item.timeZone) : null,
+    accessRole: item.accessRole ? String(item.accessRole) : null,
+    primary: Boolean(item.primary),
+  }));
 }
 
 function formatDateTime(dateStr: string, timeStr: string): string {

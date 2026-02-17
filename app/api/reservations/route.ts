@@ -13,6 +13,8 @@ import {
   formatZodErrors,
 } from "../../../lib/validation/reservationSchema";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
+import { cancelGoogleCalendarEvent, updateGoogleCalendarEvent } from "../../../lib/google/calendar";
+import { normalizeCalendarSettings } from "../../../lib/google/settings";
 import { sendReviewRequestForReservation } from "../../../lib/reviews/reviewSender";
 
 /**
@@ -216,6 +218,22 @@ export async function PATCH(request: Request) {
 
     const supabase = createSupabaseServerClient();
 
+    const { data: existingReservation, error: loadError } = await supabase
+      .from("reservations")
+      .select(
+        "id, guest_name, reservation_date, reservation_time, phone_number, email, special_requests, status, google_event_id, google_calendar_id, google_time_zone",
+      )
+      .eq("id", id)
+      .eq("account_id", accountId)
+      .single();
+
+    if (loadError || !existingReservation) {
+      return NextResponse.json(
+        { error: "Reservierung nicht gefunden" },
+        { status: 404 },
+      );
+    }
+
     // Build update object (only include defined values)
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -253,6 +271,62 @@ export async function PATCH(request: Request) {
         { error: "Reservierung nicht gefunden" },
         { status: 404 }
       );
+    }
+
+    const statusChanged = status && status !== existingReservation.status;
+    const isCancelled = statusChanged && (status === "cancelled" || status === "no_show");
+    const dateChanged = updateData.reservation_date !== undefined;
+    const timeChanged = updateData.reservation_time !== undefined;
+    const detailsChanged =
+      updateData.guest_name !== undefined ||
+      updateData.phone_number !== undefined ||
+      updateData.email !== undefined ||
+      updateData.special_requests !== undefined;
+
+    if (existingReservation.google_event_id) {
+      try {
+        if (isCancelled) {
+          await cancelGoogleCalendarEvent({
+            accountId,
+            eventId: existingReservation.google_event_id,
+            calendarId: existingReservation.google_calendar_id ?? undefined,
+          });
+        } else if (dateChanged || timeChanged || detailsChanged) {
+          const { data: account } = await supabase
+            .from("accounts")
+            .select("settings")
+            .eq("id", accountId)
+            .single();
+          const settings = normalizeCalendarSettings((account?.settings as any)?.calendar ?? null);
+
+          const nextReservation = {
+            ...existingReservation,
+            ...updates,
+            status: status ?? existingReservation.status,
+          };
+          const descriptionParts = [
+            `Name: ${nextReservation.guest_name}`,
+            nextReservation.phone_number ? `Telefon: ${nextReservation.phone_number}` : null,
+            nextReservation.email ? `Email: ${nextReservation.email}` : null,
+            nextReservation.special_requests ? `Notizen: ${nextReservation.special_requests}` : null,
+            `Reservierungs-ID: ${nextReservation.id}`,
+          ].filter(Boolean);
+
+          await updateGoogleCalendarEvent({
+            accountId,
+            eventId: existingReservation.google_event_id,
+            calendarId: existingReservation.google_calendar_id ?? undefined,
+            timeZone: existingReservation.google_time_zone ?? undefined,
+            summary: `Termin mit ${nextReservation.guest_name}`,
+            description: descriptionParts.join("\n"),
+            startDate: nextReservation.reservation_date,
+            startTime: nextReservation.reservation_time,
+            durationMinutes: settings.slotDurationMinutes,
+          });
+        }
+      } catch (calendarError) {
+        console.error("Google Calendar update failed:", calendarError);
+      }
     }
 
     let reviewResult = null;
@@ -316,6 +390,17 @@ export async function DELETE(request: Request) {
 
     const supabase = createSupabaseServerClient();
 
+    const { data: existingReservation, error: loadError } = await supabase
+      .from("reservations")
+      .select("id, google_event_id, google_calendar_id")
+      .eq("id", id)
+      .eq("account_id", accountId)
+      .single();
+
+    if (loadError || !existingReservation) {
+      return NextResponse.json({ error: "Reservierung nicht gefunden" }, { status: 404 });
+    }
+
     const { error } = await supabase
       .from("reservations")
       .delete()
@@ -325,6 +410,14 @@ export async function DELETE(request: Request) {
     if (error) {
       console.error("Reservation DELETE error:", error);
       return NextResponse.json({ error: "Fehler beim Löschen der Reservierung" }, { status: 500 });
+    }
+
+    if (existingReservation.google_event_id) {
+      await cancelGoogleCalendarEvent({
+        accountId,
+        eventId: existingReservation.google_event_id,
+        calendarId: existingReservation.google_calendar_id ?? undefined,
+      });
     }
 
     return NextResponse.json({ success: true });

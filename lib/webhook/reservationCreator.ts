@@ -7,10 +7,12 @@ import { ExtractedVariables } from "./variableExtractor";
 import { CreateReservationInput } from "../reservationTypes";
 import { createGoogleCalendarEvent } from "../google/calendar";
 import { logger } from "../logger";
+import { checkSlotAvailability, type SlotSuggestion } from "../google/availability";
+import { normalizeCalendarSettings } from "../google/settings";
 
 export type ReservationCreationResult =
   | { success: true; reservationId: string }
-  | { success: false; missingFields: string[]; error?: string };
+  | { success: false; missingFields: string[]; error?: string; suggestions?: SlotSuggestion[] };
 
 /**
  * Required fields for creating a reservation
@@ -61,7 +63,13 @@ export async function createReservationFromVariables(
     return { success: false, missingFields: missing };
   }
 
-  const supabase = createSupabaseServerClient();
+    const supabase = createSupabaseServerClient();
+    const { data: account } = await supabase
+      .from("accounts")
+      .select("settings")
+      .eq("id", accountId)
+      .single();
+    const calendarSettings = normalizeCalendarSettings((account?.settings as any)?.calendar ?? null);
 
   try {
     // Log the incoming variables for debugging
@@ -84,6 +92,20 @@ export async function createReservationFromVariables(
 
     // Log what we're actually inserting
     console.log("Reservation input:", JSON.stringify(input, null, 2));
+
+    const availability = await checkSlotAvailability(
+      accountId,
+      input.reservation_date,
+      input.reservation_time
+    );
+    if (!availability.available) {
+      return {
+        success: false,
+        missingFields: [],
+        error: "slot_unavailable",
+        suggestions: availability.suggestions,
+      };
+    }
 
     const { data, error } = await supabase
       .from("reservations")
@@ -116,9 +138,8 @@ export async function createReservationFromVariables(
         description: descriptionParts.join("\n"),
         startDate: input.reservation_date,
         startTime: input.reservation_time,
-        durationMinutes: 60,
-        timeZone: "Europe/Berlin",
-        calendarId: "primary",
+        durationMinutes: calendarSettings.slotDurationMinutes,
+        timeZone: calendarSettings.timeZone,
       });
 
       await logger.info("integration", "Google calendar event created", {
@@ -128,6 +149,16 @@ export async function createReservationFromVariables(
           eventId: event.id,
         },
       });
+
+      await supabase
+        .from("reservations")
+        .update({
+          google_event_id: event.id,
+          google_event_link: event.htmlLink,
+          google_calendar_id: event.calendarId ?? null,
+          google_time_zone: event.timeZone ?? null,
+        })
+        .eq("id", data.id);
     } catch (calendarError) {
       const errorMessage =
         calendarError instanceof Error ? calendarError.message : "Unknown error";

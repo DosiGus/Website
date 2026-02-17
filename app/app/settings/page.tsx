@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users } from "lucide-react";
+import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../lib/supabaseBrowserClient";
+import { getDefaultCalendarSettings, type CalendarSettings } from "../../../lib/google/settings";
 
 export default function SettingsPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -23,6 +24,11 @@ export default function SettingsPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
   const [canManageTeam, setCanManageTeam] = useState(false);
+  const [calendarLoading, setCalendarLoading] = useState(true);
+  const [calendarSaving, setCalendarSaving] = useState(false);
+  const [calendarNotice, setCalendarNotice] = useState<string | null>(null);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [calendarForm, setCalendarForm] = useState<CalendarSettings>(getDefaultCalendarSettings());
 
   type TeamRole = "owner" | "admin" | "member" | "viewer";
   type TeamMember = {
@@ -45,6 +51,16 @@ export default function SettingsPage() {
     { value: "admin", label: "Admin" },
     { value: "member", label: "Mitarbeiter" },
     { value: "viewer", label: "Viewer" },
+  ];
+
+  const CALENDAR_DAYS: { key: string; label: string }[] = [
+    { key: "mon", label: "Montag" },
+    { key: "tue", label: "Dienstag" },
+    { key: "wed", label: "Mittwoch" },
+    { key: "thu", label: "Donnerstag" },
+    { key: "fri", label: "Freitag" },
+    { key: "sat", label: "Samstag" },
+    { key: "sun", label: "Sonntag" },
   ];
 
   // Notification settings
@@ -108,6 +124,37 @@ export default function SettingsPage() {
     }
   }, [supabase]);
 
+  const loadCalendarSettings = useCallback(async () => {
+    setCalendarLoading(true);
+    setCalendarError(null);
+    setCalendarNotice(null);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setCalendarError("Bitte erneut anmelden.");
+      setCalendarLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/account/settings", {
+        headers: { authorization: `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) {
+        const payload = await response.json();
+        setCalendarError(payload?.error || "Kalender-Einstellungen konnten nicht geladen werden.");
+        setCalendarLoading(false);
+        return;
+      }
+      const payload = await response.json();
+      setCalendarForm(payload.calendar ?? getDefaultCalendarSettings());
+    } catch {
+      setCalendarError("Kalender-Einstellungen konnten nicht geladen werden.");
+    } finally {
+      setCalendarLoading(false);
+    }
+  }, [supabase]);
+
   const updateMemberRole = async (memberId: string, nextRole: TeamRole) => {
     if (!canManageTeam) return;
 
@@ -158,8 +205,9 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!loading) {
       loadTeam();
+      loadCalendarSettings();
     }
-  }, [loading, loadTeam]);
+  }, [loading, loadTeam, loadCalendarSettings]);
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -181,6 +229,83 @@ export default function SettingsPage() {
       setError("Fehler beim Speichern.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCalendarFieldChange = (field: keyof CalendarSettings, value: string) => {
+    setCalendarForm((prev) => {
+      if (field === "bookingWindowDays" || field === "slotDurationMinutes") {
+        const numeric = Number(value);
+        return {
+          ...prev,
+          [field]: Number.isFinite(numeric) ? numeric : prev[field],
+        };
+      }
+      if (field === "timeZone") {
+        return { ...prev, timeZone: value };
+      }
+      return prev;
+    });
+  };
+
+  const handleCalendarDayToggle = (day: string) => {
+    setCalendarForm((prev) => {
+      const isOpen = (prev.hours?.[day] ?? []).length > 0;
+      return {
+        ...prev,
+        hours: {
+          ...prev.hours,
+          [day]: isOpen ? [] : ["07:00-21:00"],
+        },
+      };
+    });
+  };
+
+  const handleCalendarDayRangeChange = (day: string, start: string, end: string) => {
+    if (!start || !end) return;
+    setCalendarForm((prev) => ({
+      ...prev,
+      hours: {
+        ...prev.hours,
+        [day]: [`${start}-${end}`],
+      },
+    }));
+  };
+
+  const handleSaveCalendarSettings = async () => {
+    setCalendarSaving(true);
+    setCalendarNotice(null);
+    setCalendarError(null);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setCalendarError("Bitte erneut anmelden.");
+      setCalendarSaving(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/account/settings", {
+        method: "PATCH",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ calendar: calendarForm }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        setCalendarError(payload?.error || "Kalender-Einstellungen konnten nicht gespeichert werden.");
+        setCalendarSaving(false);
+        return;
+      }
+      setCalendarForm(payload.calendar ?? calendarForm);
+      setCalendarNotice("Kalender-Einstellungen gespeichert.");
+    } catch {
+      setCalendarError("Kalender-Einstellungen konnten nicht gespeichert werden.");
+    } finally {
+      setCalendarSaving(false);
     }
   };
 
@@ -360,6 +485,131 @@ export default function SettingsPage() {
               />
             </label>
           </div>
+        </div>
+
+        {/* Calendar Section */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
+              <Clock className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Kalender & Verfügbarkeit</h2>
+              <p className="text-sm text-zinc-400">Arbeitszeiten, Slots und Buchungsfenster</p>
+            </div>
+          </div>
+
+          {calendarLoading ? (
+            <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+              Kalender-Einstellungen werden geladen...
+            </div>
+          ) : (
+            <div className="mt-6 space-y-5">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-300">Zeitzone</label>
+                  <input
+                    type="text"
+                    value={calendarForm.timeZone}
+                    onChange={(e) => handleCalendarFieldChange("timeZone", e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Europe/Berlin"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-300">Buchungsfenster (Tage)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={calendarForm.bookingWindowDays}
+                    onChange={(e) => handleCalendarFieldChange("bookingWindowDays", e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-300">Slot-Dauer (Min.)</label>
+                  <input
+                    type="number"
+                    min={15}
+                    max={240}
+                    value={calendarForm.slotDurationMinutes}
+                    onChange={(e) => handleCalendarFieldChange("slotDurationMinutes", e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm font-medium text-zinc-300">Arbeitszeiten</div>
+                <div className="mt-3 space-y-3">
+                  {CALENDAR_DAYS.map((day) => {
+                    const range = calendarForm.hours?.[day.key]?.[0] ?? "";
+                    const [start, end] = range.split("-");
+                    const isOpen = Boolean(range);
+                    return (
+                      <div
+                        key={day.key}
+                        className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="text-sm font-medium text-white">{day.label}</div>
+                        <div className="flex flex-1 flex-wrap items-center gap-3 sm:justify-end">
+                          <label className="flex items-center gap-2 text-xs text-zinc-400">
+                            <input
+                              type="checkbox"
+                              checked={isOpen}
+                              onChange={() => handleCalendarDayToggle(day.key)}
+                              className="h-4 w-4 rounded border-zinc-600 bg-zinc-700 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0"
+                            />
+                            Offen
+                          </label>
+                          <input
+                            type="time"
+                            value={start || "07:00"}
+                            disabled={!isOpen}
+                            onChange={(e) => handleCalendarDayRangeChange(day.key, e.target.value, end || "21:00")}
+                            className="rounded-lg border border-white/10 bg-zinc-950/40 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                          />
+                          <span className="text-xs text-zinc-500">bis</span>
+                          <input
+                            type="time"
+                            value={end || "21:00"}
+                            disabled={!isOpen}
+                            onChange={(e) => handleCalendarDayRangeChange(day.key, start || "07:00", e.target.value)}
+                            className="rounded-lg border border-white/10 bg-zinc-950/40 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {calendarError && (
+                <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+                  <AlertTriangle className="h-4 w-4" />
+                  {calendarError}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSaveCalendarSettings}
+                  disabled={calendarSaving}
+                  className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 disabled:opacity-50"
+                >
+                  <Save className="h-4 w-4" />
+                  {calendarSaving ? "Speichern..." : "Kalender speichern"}
+                </button>
+                {calendarNotice && (
+                  <span className="flex items-center gap-1 text-sm font-medium text-emerald-400">
+                    <CheckCircle className="h-4 w-4" />
+                    {calendarNotice}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Team Section */}

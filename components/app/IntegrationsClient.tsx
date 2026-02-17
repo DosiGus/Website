@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CheckCircle,
@@ -20,6 +21,13 @@ type IntegrationsResponse = {
   integrations: IntegrationStatus[];
 };
 
+type GoogleCalendarOption = {
+  id: string;
+  summary: string;
+  timeZone: string | null;
+  primary: boolean;
+};
+
 export default function IntegrationsClient() {
   const searchParams = useSearchParams();
   const [metaIntegration, setMetaIntegration] = useState<IntegrationStatus | null>(null);
@@ -31,6 +39,11 @@ export default function IntegrationsClient() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [googleConnecting, setGoogleConnecting] = useState(false);
   const [googleDisconnecting, setGoogleDisconnecting] = useState(false);
+  const [googleCalendars, setGoogleCalendars] = useState<GoogleCalendarOption[]>([]);
+  const [googleCalendarId, setGoogleCalendarId] = useState<string | null>(null);
+  const [googleCalendarTimeZone, setGoogleCalendarTimeZone] = useState<string | null>(null);
+  const [googleCalendarSaving, setGoogleCalendarSaving] = useState(false);
+  const [googleCalendarNotice, setGoogleCalendarNotice] = useState<string | null>(null);
   const [reviewUrl, setReviewUrl] = useState("");
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewSaved, setReviewSaved] = useState(false);
@@ -148,6 +161,11 @@ export default function IntegrationsClient() {
     setReviewSaved(false);
     setReviewError(null);
   }, [metaIntegration?.google_review_url]);
+
+  useEffect(() => {
+    setGoogleCalendarId(googleIntegration?.calendar_id ?? null);
+    setGoogleCalendarTimeZone(googleIntegration?.calendar_time_zone ?? null);
+  }, [googleIntegration?.calendar_id, googleIntegration?.calendar_time_zone]);
 
   // Auto-retry: after FLB permissions were revoked, automatically start fresh OAuth
   const [autoRetryDone, setAutoRetryDone] = useState(false);
@@ -290,6 +308,83 @@ export default function IntegrationsClient() {
       setGoogleDisconnecting(false);
     }
   }, [getAccessToken, loadStatus]);
+
+  const loadGoogleCalendars = useCallback(async () => {
+    try {
+      setGoogleError(null);
+      const token = await getAccessToken();
+      if (!token) return;
+      const response = await fetch("/api/google/calendars", {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json()) as { calendars?: GoogleCalendarOption[]; error?: string };
+      if (!response.ok) {
+        setGoogleError(payload.error ?? "Kalender konnten nicht geladen werden.");
+        return;
+      }
+      const calendars = payload.calendars ?? [];
+      setGoogleCalendars(calendars);
+
+      const primary = calendars.find((cal) => cal.primary);
+      const resolvedId = googleIntegration?.calendar_id ?? primary?.id ?? calendars[0]?.id ?? null;
+      const resolvedCalendar = calendars.find((cal) => cal.id === resolvedId) ?? primary ?? calendars[0] ?? null;
+      setGoogleCalendarId(resolvedId);
+      setGoogleCalendarTimeZone(resolvedCalendar?.timeZone ?? null);
+    } catch {
+      setGoogleError("Kalender konnten nicht geladen werden.");
+    }
+  }, [getAccessToken, googleIntegration?.calendar_id]);
+
+  useEffect(() => {
+    if (!googleConnected) return;
+    loadGoogleCalendars();
+  }, [googleConnected, loadGoogleCalendars]);
+
+  const handleGoogleCalendarSave = useCallback(async () => {
+    try {
+      setGoogleCalendarSaving(true);
+      setGoogleCalendarNotice(null);
+      setGoogleError(null);
+      const token = await getAccessToken();
+      if (!token) {
+        setGoogleError("Bitte erneut anmelden, um fortzufahren.");
+        return;
+      }
+      const response = await fetch("/api/integrations", {
+        method: "PATCH",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          provider: "google_calendar",
+          calendar_id: googleCalendarId,
+          calendar_time_zone: googleCalendarTimeZone,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setGoogleError(payload.error ?? "Kalender konnte nicht gespeichert werden.");
+        return;
+      }
+      if (payload.integration) {
+        setGoogleIntegration(payload.integration);
+      }
+      setGoogleCalendarNotice("Kalender gespeichert.");
+    } catch {
+      setGoogleError("Kalender konnte nicht gespeichert werden.");
+    } finally {
+      setGoogleCalendarSaving(false);
+    }
+  }, [getAccessToken, googleCalendarId, googleCalendarTimeZone]);
+
+  const handleGoogleCalendarSelect = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextId = event.target.value;
+    setGoogleCalendarId(nextId);
+    const selected = googleCalendars.find((cal) => cal.id === nextId) ?? null;
+    setGoogleCalendarTimeZone(selected?.timeZone ?? null);
+    setGoogleCalendarNotice(null);
+  };
 
   const handleGoogleTest = useCallback(async () => {
     try {
@@ -609,6 +704,42 @@ export default function IntegrationsClient() {
             </button>
           )}
         </div>
+
+        {googleConnected && googleCalendars.length > 0 && (
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-4">
+            <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              Kalenderauswahl
+            </div>
+            <div className="mt-3 flex flex-col gap-3">
+              <select
+                className="w-full rounded-lg border border-white/10 bg-zinc-950/40 px-3 py-2 text-sm text-white"
+                value={googleCalendarId ?? ""}
+                onChange={handleGoogleCalendarSelect}
+              >
+                {googleCalendars.map((calendar) => (
+                  <option key={calendar.id} value={calendar.id}>
+                    {calendar.summary}{calendar.primary ? " (Primary)" : ""}
+                  </option>
+                ))}
+              </select>
+              <div className="text-xs text-zinc-400">
+                Zeitzone: {googleCalendarTimeZone ?? "Unbekannt"}
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  className="rounded-lg bg-emerald-500/90 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50"
+                  onClick={handleGoogleCalendarSave}
+                  disabled={googleCalendarSaving}
+                >
+                  {googleCalendarSaving ? "Speichern..." : "Kalender speichern"}
+                </button>
+                {googleCalendarNotice && (
+                  <span className="text-sm text-emerald-300">{googleCalendarNotice}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {googleTestStatus !== "idle" && googleTestMessage && (
           <div

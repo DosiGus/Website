@@ -31,6 +31,8 @@ import {
   createReservationFromVariables,
   getMissingReservationFields,
 } from "../../../../lib/webhook/reservationCreator";
+import { cancelGoogleCalendarEvent } from "../../../../lib/google/calendar";
+import { checkSlotAvailability } from "../../../../lib/google/availability";
 import {
   findOrCreateContact,
   updateContactDisplayName,
@@ -89,6 +91,46 @@ function applyDefaults(
     }
   }
   return next;
+}
+
+type SlotSuggestion = {
+  date: string;
+  time: string;
+};
+
+function formatSlotSuggestions(suggestions: SlotSuggestion[]): string {
+  if (suggestions.length === 0) {
+    return "Bitte nenne eine andere Uhrzeit oder ein anderes Datum.";
+  }
+  const lines = suggestions.map((slot) => `• ${formatDate(slot.date)} ${slot.time}`);
+  return `Hier sind die nächsten freien Zeiten:\n${lines.join("\n")}\n\nBitte antworte mit einer Uhrzeit oder einem neuen Datum.`;
+}
+
+async function findTimeNodeId(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  flowId: string
+): Promise<string | null> {
+  const { data: flow } = await supabase
+    .from("flows")
+    .select("nodes")
+    .eq("id", flowId)
+    .single();
+
+  const nodes = Array.isArray(flow?.nodes) ? flow.nodes : [];
+  const timeNode = nodes.find((node: any) => {
+    const id = String(node?.id ?? "").toLowerCase();
+    const label = String(node?.data?.label ?? "").toLowerCase();
+    const text = String(node?.data?.text ?? "").toLowerCase();
+    const collects = String(node?.data?.collects ?? "").toLowerCase();
+    return (
+      collects === "time" ||
+      id.includes("time") ||
+      label.includes("uhrzeit") ||
+      text.includes("uhrzeit")
+    );
+  });
+
+  return timeNode?.id ?? null;
 }
 
 async function updateReviewRequestFromMessage(params: {
@@ -818,7 +860,7 @@ async function processMessagingEvent(
       // User wants to cancel their existing reservation
       const { data: existingRes } = await supabase
         .from("reservations")
-        .select("id, guest_name, reservation_date, reservation_time")
+        .select("id, guest_name, reservation_date, reservation_time, google_event_id, google_calendar_id")
         .eq("instagram_sender_id", senderId)
         .eq("account_id", accountId)
         .in("status", ["pending", "confirmed"])
@@ -834,6 +876,14 @@ async function processMessagingEvent(
 
         if (cancelError) {
           await reqLogger.error("webhook", `Failed to cancel reservation: ${cancelError.message}`);
+        }
+
+        if (existingRes.google_event_id) {
+          await cancelGoogleCalendarEvent({
+            accountId,
+            eventId: existingRes.google_event_id,
+            calendarId: existingRes.google_calendar_id ?? undefined,
+          });
         }
 
         const cancelText = `✅ Deine Reservierung wurde storniert.\n\nFalls du eine neue Reservierung machen möchtest, schreib einfach "Reservieren" oder "Tisch buchen".`;
@@ -996,6 +1046,114 @@ async function processMessagingEvent(
     }
   }
 
+  let availabilityOverride: { message: string; timeNodeId: string | null; suggestions: SlotSuggestion[] } | null = null;
+
+  if (flowResponse && matchedFlowId) {
+    const outputConfig = resolveOutputConfig(matchedFlowMetadata);
+    const outputType = outputConfig.type;
+    const reservationVariables = applyDefaults(mergedVariables, outputConfig.defaults);
+    const hasAllReservationData = canCreateReservation(
+      reservationVariables,
+      outputConfig.requiredFields
+    );
+
+    const dataCollectionNodes = [
+      "ask-name", "ask-phone", "ask-special", "ask-date", "ask-time", "ask-guests",
+      "ask-date-custom", "ask-time-custom", "ask-guests-large",
+      "special-allergy", "special-occasion"
+    ];
+    const isDataCollectionNode = matchedNodeId
+      ? dataCollectionNodes.some(n => matchedNodeId.toLowerCase().includes(n.toLowerCase().replace("ask-", "")))
+      : false;
+
+    const confirmationNodeIds = [
+      "confirmed",
+      "confirmation",
+      "bestätigung",
+      "bestaetigung",
+      "bestaetigt",
+      "bestätigt",
+      "abschluss",
+      "fertig",
+      "done",
+      "complete",
+      "end",
+      "ende",
+      "danke",
+      "thanks",
+      "thank",
+      "success",
+      "erfolgreich",
+    ];
+    const isConfirmationNode = matchedNodeId
+      ? confirmationNodeIds.some(id =>
+          matchedNodeId.toLowerCase().includes(id.toLowerCase())
+        )
+      : false;
+
+    const confirmationPayloads = [
+      "confirm",
+      "bestätigen",
+      "bestaetigen",
+      "ja",
+      "yes",
+      "ok",
+      "buchen",
+      "reservieren",
+      "absenden",
+      "senden",
+    ];
+    const isConfirmationPayload = quickReplyPayload
+      ? confirmationPayloads.some(p =>
+          quickReplyPayload.toLowerCase().includes(p.toLowerCase())
+        )
+      : false;
+
+    const shouldCheckAvailability =
+      outputType === "reservation" &&
+      hasAllReservationData &&
+      !isDataCollectionNode &&
+      (flowResponse.isEndOfFlow || isConfirmationNode || isConfirmationPayload);
+
+    if (shouldCheckAvailability) {
+      const isReviewFlow =
+        (matchedFlowId &&
+          typeof existingMetadata?.reviewFlowId === "string" &&
+          matchedFlowId === existingMetadata.reviewFlowId) ||
+        (matchedNodeId && matchedNodeId.toLowerCase().startsWith("review-"));
+
+      if (!isReviewFlow) {
+        const availability = await checkSlotAvailability(
+          accountId,
+          String(reservationVariables.date ?? ""),
+          String(reservationVariables.time ?? ""),
+        );
+
+        if (!availability.available) {
+          const timeNodeId = await findTimeNodeId(supabase, matchedFlowId);
+          const message = `❗ Leider ist der gewünschte Termin nicht verfügbar.\n\n${formatSlotSuggestions(availability.suggestions)}`;
+          availabilityOverride = {
+            message,
+            timeNodeId,
+            suggestions: availability.suggestions,
+          };
+          mergedVariables = {
+            ...mergedVariables,
+            time: undefined,
+          };
+
+          flowResponse = {
+            text: message,
+            quickReplies: [],
+            nextNodeId: timeNodeId,
+            isEndOfFlow: false,
+          };
+          matchedNodeId = timeNodeId ?? matchedNodeId;
+        }
+      }
+    }
+  }
+
   // Send response if we have one
   if (flowResponse) {
     let sendResult;
@@ -1063,6 +1221,33 @@ async function processMessagingEvent(
             Boolean(flowResponse.nextNodeId),
         },
       });
+
+      if (availabilityOverride) {
+        const updatedMetadata: ConversationMetadata = {
+          ...existingMetadata,
+          variables: mergedVariables,
+          reservationId: undefined,
+          flowCompleted: undefined,
+        };
+
+        const { error: availabilityMetaError } = await supabase
+          .from("conversations")
+          .update({ metadata: updatedMetadata })
+          .eq("id", conversation.id);
+
+        if (availabilityMetaError) {
+          await reqLogger.error("webhook", `Failed to update availability metadata: ${availabilityMetaError.message}`);
+        }
+
+        await reqLogger.info("webhook", "Availability override applied", {
+          metadata: {
+            flowId: matchedFlowId,
+            timeNodeId: availabilityOverride.timeNodeId,
+            suggestions: availabilityOverride.suggestions,
+          },
+        });
+        return;
+      }
 
       const isReviewFlow =
         (matchedFlowId &&
@@ -1304,6 +1489,53 @@ async function processMessagingEvent(
               },
             });
           } else {
+            if (reservationResult.error === "slot_unavailable") {
+              const suggestionText = formatSlotSuggestions(reservationResult.suggestions ?? []);
+              const unavailableMessage =
+                `❗ Leider ist der gewünschte Termin nicht verfügbar.\n\n${suggestionText}`;
+
+              await sendInstagramMessage({
+                recipientId: senderId,
+                text: unavailableMessage,
+                quickReplies: [],
+                accessToken,
+              });
+
+              const updatedVariables: ExtractedVariables = {
+                ...mergedVariables,
+                time: undefined,
+              };
+
+              const resetMetadata: ConversationMetadata = {
+                ...existingMetadata,
+                variables: updatedVariables,
+                reservationId: undefined,
+                flowCompleted: undefined,
+              };
+
+              const timeNodeId = matchedFlowId
+                ? await findTimeNodeId(supabase, matchedFlowId)
+                : null;
+
+              await supabase
+                .from("conversations")
+                .update({
+                  metadata: resetMetadata,
+                  current_flow_id: matchedFlowId,
+                  current_node_id: timeNodeId,
+                  status: "active",
+                })
+                .eq("id", conversation.id);
+
+              await reqLogger.info("webhook", "Slot unavailable, user prompted for new time", {
+                metadata: {
+                  flowId: matchedFlowId,
+                  suggestions: reservationResult.suggestions ?? [],
+                },
+              });
+              return;
+            }
+
             await reqLogger.warn("webhook", "Could not create reservation", {
               metadata: {
                 missingFields: reservationResult.missingFields,

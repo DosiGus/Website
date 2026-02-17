@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from("integrations")
       .select(
-        "provider,status,account_name,instagram_id,instagram_username,page_id,expires_at,updated_at,google_review_url",
+        "provider,status,account_name,instagram_id,instagram_username,page_id,expires_at,updated_at,google_review_url,calendar_id,calendar_time_zone",
       )
       .eq("account_id", accountId);
 
@@ -96,29 +96,46 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const body = (await request.json()) as { provider?: string; google_review_url?: string | null };
+    const body = (await request.json()) as {
+      provider?: string;
+      google_review_url?: string | null;
+      calendar_id?: string | null;
+      calendar_time_zone?: string | null;
+    };
     const provider = body?.provider;
 
     if (!provider) {
       return NextResponse.json({ error: "Provider fehlt." }, { status: 400 });
     }
 
-    if (!("google_review_url" in body)) {
+    if (!("google_review_url" in body) && !("calendar_id" in body) && !("calendar_time_zone" in body)) {
       return NextResponse.json({ error: "Kein Feld zum Aktualisieren angegeben." }, { status: 400 });
     }
 
     const supabase = createSupabaseServerClient();
+    const update: Record<string, string | null> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if ("google_review_url" in body) {
+      update.google_review_url = body.google_review_url || null;
+    }
+
+    if ("calendar_id" in body) {
+      update.calendar_id = body.calendar_id || null;
+    }
+
+    if ("calendar_time_zone" in body) {
+      update.calendar_time_zone = body.calendar_time_zone || null;
+    }
 
     const { data, error } = await supabase
       .from("integrations")
-      .update({
-        google_review_url: body.google_review_url || null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(update)
       .eq("account_id", accountId)
       .eq("provider", provider)
       .select(
-        "provider,status,account_name,instagram_id,instagram_username,page_id,expires_at,updated_at,google_review_url",
+        "provider,status,account_name,instagram_id,instagram_username,page_id,expires_at,updated_at,google_review_url,calendar_id,calendar_time_zone",
       )
       .single();
 

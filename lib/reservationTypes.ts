@@ -27,6 +27,10 @@ export type Reservation = {
   phone_number: string | null;
   email: string | null;
   special_requests: string | null;
+  google_calendar_id: string | null;
+  google_event_id: string | null;
+  google_event_link: string | null;
+  google_time_zone: string | null;
   status: ReservationStatus;
   created_at: string;
   updated_at: string;
