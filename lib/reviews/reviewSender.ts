@@ -5,6 +5,7 @@ import { sendInstagramMessage } from "../meta/instagramApi";
 import { recordMessageFailure } from "../meta/messageFailures";
 import { ConversationMetadata, ConversationVariables } from "../flowTypes";
 import { logger } from "../logger";
+import { decryptToken } from "../security/tokenEncryption";
 
 const REVIEW_TEMPLATE_ID = "template-google-review";
 const REVIEW_START_NODE_ID = "review-rating";
@@ -184,6 +185,34 @@ export async function sendReviewRequestForReservation(
     return { success: false, status: "missing_integration" };
   }
 
+  let accessToken: string | null = null;
+  try {
+    accessToken = decryptToken(integration.access_token);
+  } catch (error) {
+    await logger.warn("system", "Review request skipped: token decrypt failed", {
+      metadata: {
+        reservationId,
+        conversationId,
+        integrationId: integration.id,
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    return { success: false, status: "missing_integration" };
+  }
+
+  if (!accessToken) {
+    await logger.warn("system", "Review request skipped: token missing after decrypt", {
+      metadata: {
+        reservationId,
+        conversationId,
+        integrationId: integration.id,
+        reason,
+      },
+    });
+    return { success: false, status: "missing_integration" };
+  }
+
   if (!integration.google_review_url) {
     await upsertReviewRequest({
       supabase,
@@ -246,7 +275,7 @@ export async function sendReviewRequestForReservation(
     recipientId: reservation.instagram_sender_id ?? "",
     text: flowResponse.text,
     quickReplies: flowResponse.quickReplies,
-    accessToken: integration.access_token,
+    accessToken,
   });
 
   if (!sendResult.success) {

@@ -101,6 +101,13 @@ export async function createReservationFromVariables(
       input.reservation_time
     );
     if (!availability.available) {
+      if (availability.error === "availability_error") {
+        return {
+          success: false,
+          missingFields: [],
+          error: "availability_error",
+        };
+      }
       return {
         success: false,
         missingFields: [],

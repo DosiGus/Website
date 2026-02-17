@@ -15,7 +15,7 @@ import {
   sendInstagramMessageWithImage,
 } from "../../../../lib/meta/instagramApi";
 import { recordMessageFailure } from "../../../../lib/meta/messageFailures";
-import { findMatchingFlow, parseQuickReplyPayload } from "../../../../lib/webhook/flowMatcher";
+import { findMatchingFlow, listTriggerKeywords, parseQuickReplyPayload } from "../../../../lib/webhook/flowMatcher";
 import { executeFlowNode, handleQuickReplySelection, handleFreeTextInput } from "../../../../lib/webhook/flowExecutor";
 import { logger, createRequestLogger } from "../../../../lib/logger";
 import {
@@ -35,11 +35,19 @@ import {
 } from "../../../../lib/webhook/reservationCreator";
 import { cancelGoogleCalendarEvent } from "../../../../lib/google/calendar";
 import { type SlotSuggestion } from "../../../../lib/google/availability";
+import { decryptToken, encryptToken, isEncryptedToken } from "../../../../lib/security/tokenEncryption";
 import {
   findOrCreateContact,
   updateContactDisplayName,
   touchContact,
 } from "../../../../lib/contacts";
+
+class ConversationStateConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConversationStateConflictError";
+  }
+}
 
 function extractReviewRating(text: string): number | null {
   if (!text) return null;
@@ -225,7 +233,8 @@ export async function POST(request: Request) {
     const qstashToken = process.env.QSTASH_TOKEN;
     if (!qstashToken) {
       await reqLogger.error("webhook", "QSTASH_TOKEN missing; processing inline");
-      await processInstagramWebhookPayload(payload, reqLogger);
+      const baseUrl = new URL(request.url).origin;
+      await processInstagramWebhookPayload(payload, reqLogger, baseUrl);
       return NextResponse.json({ received: true });
     }
 
@@ -252,7 +261,8 @@ export async function POST(request: Request) {
 
 export async function processInstagramWebhookPayload(
   payload: InstagramWebhookPayload,
-  reqLogger: ReturnType<typeof createRequestLogger>
+  reqLogger: ReturnType<typeof createRequestLogger>,
+  baseUrl?: string
 ) {
   const entrySummaries = Array.isArray(payload?.entry)
     ? payload.entry.slice(0, 3).map((entry) => {
@@ -297,14 +307,85 @@ export async function processInstagramWebhookPayload(
 
   for (const entry of payload.entry || []) {
     for (const event of entry.messaging || []) {
-      await processMessagingEvent(event, entry.id, reqLogger);
+      try {
+        await processMessagingEvent(event, entry.id, reqLogger, baseUrl);
+      } catch (error) {
+        await handleProcessingError(error, event, entry.id, reqLogger, baseUrl);
+      }
     }
     const changeEvents = entry.changes || [];
     for (const change of changeEvents) {
       const mapped = await changeToMessagingEvent(change, entry.id, reqLogger);
       if (!mapped) continue;
-      await processMessagingEvent(mapped.event, mapped.instagramAccountId, reqLogger);
+      try {
+        await processMessagingEvent(mapped.event, mapped.instagramAccountId, reqLogger, baseUrl);
+      } catch (error) {
+        await handleProcessingError(error, mapped.event, mapped.instagramAccountId, reqLogger, baseUrl);
+      }
     }
+  }
+}
+
+async function handleProcessingError(
+  error: unknown,
+  event: InstagramMessagingEvent,
+  instagramAccountId: string,
+  reqLogger: ReturnType<typeof createRequestLogger>,
+  baseUrl?: string
+) {
+  if (error instanceof ConversationStateConflictError) {
+    await enqueueConflictRetry(event, instagramAccountId, reqLogger, baseUrl);
+    return;
+  }
+
+  await reqLogger.logError("webhook", error, "Failed to process messaging event", {
+    metadata: { instagramAccountId },
+  });
+}
+
+async function enqueueConflictRetry(
+  event: InstagramMessagingEvent,
+  instagramAccountId: string,
+  reqLogger: ReturnType<typeof createRequestLogger>,
+  baseUrl?: string
+) {
+  const qstashToken = process.env.QSTASH_TOKEN;
+  if (!qstashToken || !baseUrl) {
+    await reqLogger.warn("webhook", "Conflict retry skipped: missing QStash config");
+    return;
+  }
+
+  const retryCount = typeof (event as any).__wesponde_retry === "number"
+    ? (event as any).__wesponde_retry
+    : 0;
+  if (retryCount >= 2) {
+    await reqLogger.warn("webhook", "Conflict retry limit reached", {
+      metadata: { instagramAccountId, retryCount },
+    });
+    return;
+  }
+
+  const nextEvent = { ...event, __wesponde_retry: retryCount + 1 };
+  const retryPayload = {
+    object: "instagram",
+    entry: [
+      {
+        id: instagramAccountId,
+        time: event.timestamp ?? Date.now(),
+        messaging: [nextEvent],
+      },
+    ],
+  } as InstagramWebhookPayload;
+
+  const qstash = new Client({ token: qstashToken });
+  try {
+    await qstash.publishJSON({
+      url: `${baseUrl}/api/webhooks/instagram/process`,
+      body: retryPayload,
+      delay: 2,
+    });
+  } catch (queueError) {
+    await reqLogger.logError("webhook", queueError, "Failed to requeue conflict retry");
   }
 }
 
@@ -412,7 +493,8 @@ async function changeToMessagingEvent(
 async function processMessagingEvent(
   event: InstagramMessagingEvent,
   instagramAccountId: string,
-  reqLogger: ReturnType<typeof createRequestLogger>
+  reqLogger: ReturnType<typeof createRequestLogger>,
+  _baseUrl?: string
 ) {
   const supabase = createSupabaseServerClient();
   const senderId = event.sender.id;
@@ -454,11 +536,34 @@ async function processMessagingEvent(
 
   const userId = integration.user_id;
   const accountId = integration.account_id;
-  const accessToken = integration.access_token;
-
-  if (!accessToken) {
+  if (!integration.access_token) {
     await reqLogger.error("webhook", "Integration has no access token");
     return;
+  }
+
+  let accessToken: string | null = null;
+  try {
+    accessToken = decryptToken(integration.access_token);
+  } catch (error) {
+    await reqLogger.warn("webhook", "Failed to decrypt integration access token", {
+      metadata: { error: error instanceof Error ? error.message : String(error) },
+    });
+    return;
+  }
+
+  if (!accessToken) {
+    await reqLogger.error("webhook", "Integration access token missing after decrypt");
+    return;
+  }
+
+  if (process.env.TOKEN_ENCRYPTION_KEY && !isEncryptedToken(integration.access_token)) {
+    await supabase
+      .from("integrations")
+      .update({
+        access_token: encryptToken(integration.access_token),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", integration.id);
   }
 
   let contactId: string | null = null;
@@ -482,7 +587,7 @@ async function processMessagingEvent(
   // Get or create conversation
   let { data: conversation } = await supabase
     .from("conversations")
-    .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id")
+    .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version")
     .eq("integration_id", integration.id)
     .eq("instagram_sender_id", senderId)
     .single();
@@ -501,7 +606,7 @@ async function processMessagingEvent(
         status: "active",
         metadata: {},
       })
-      .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id")
+      .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version")
       .single();
 
     if (convError) {
@@ -510,25 +615,58 @@ async function processMessagingEvent(
     }
 
     conversation = newConversation;
-  } else if (contactId && !conversation.contact_id) {
-    const { error: contactUpdateError } = await supabase
+  }
+
+  let conversationVersion = conversation.state_version ?? 0;
+  let responseSent = false;
+
+  const updateConversationState = async (
+    updates: Record<string, unknown>,
+    context: string
+  ) => {
+    const { data, error } = await supabase
       .from("conversations")
       .update({
+        ...updates,
+        state_version: conversationVersion + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", conversation.id)
+      .eq("state_version", conversationVersion)
+      .select("state_version")
+      .maybeSingle();
+
+    if (error) {
+      await reqLogger.error("webhook", `${context}: ${error.message}`);
+      throw error;
+    }
+
+    if (!data) {
+      if (responseSent) {
+        await reqLogger.warn("webhook", "Conversation update skipped due to version conflict", {
+          metadata: { context },
+        });
+        return false;
+      }
+      throw new ConversationStateConflictError(context);
+    }
+
+    conversationVersion = data.state_version;
+    return true;
+  };
+
+  if (contactId && !conversation.contact_id) {
+    const updated = await updateConversationState(
+      {
         contact_id: contactId,
         channel: "instagram_dm",
         channel_sender_id: senderId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", conversation.id);
+      },
+      "Failed to backfill contact on conversation"
+    );
 
-    if (contactUpdateError) {
-      await reqLogger.warn("webhook", "Failed to backfill contact on conversation", {
-        metadata: {
-          conversationId: conversation.id,
-          contactId,
-          error: contactUpdateError.message,
-        },
-      });
+    if (updated) {
+      conversation.contact_id = contactId;
     }
   }
 
@@ -669,7 +807,7 @@ async function processMessagingEvent(
     }
 
     if (nodeKey.includes("time")) {
-      const extractedTime = extractTime(trimmedMessage);
+      const extractedTime = extractTime(trimmedMessage, { allowDotWithoutUhr: true });
       if (extractedTime) overrideVariables.time = extractedTime;
     }
 
@@ -742,14 +880,10 @@ async function processMessagingEvent(
       variables: mergedVariables,
     };
 
-    const { error: metaUpdateError } = await supabase
-      .from("conversations")
-      .update({ metadata: updatedMetadata })
-      .eq("id", conversation.id);
-
-    if (metaUpdateError) {
-      await reqLogger.error("webhook", `Failed to update conversation metadata: ${metaUpdateError.message}`);
-    }
+    await updateConversationState(
+      { metadata: updatedMetadata },
+      "Failed to update conversation metadata"
+    );
 
     await reqLogger.info("webhook", "Variables extracted from message", {
       metadata: { newVariables, overrideVariables, mergedVariables },
@@ -1021,14 +1155,10 @@ async function processMessagingEvent(
         reviewFlowId: undefined,
         reviewRequestId: undefined,
       };
-      const { error: resetError1 } = await supabase
-        .from("conversations")
-        .update({ metadata: existingMetadata, current_flow_id: null, current_node_id: null })
-        .eq("id", conversation.id);
-
-      if (resetError1) {
-        await reqLogger.error("webhook", `Failed to reset conversation for new reservation: ${resetError1.message}`);
-      }
+      await updateConversationState(
+        { metadata: existingMetadata, current_flow_id: null, current_node_id: null },
+        "Failed to reset conversation for new reservation"
+      );
 
       await reqLogger.info("webhook", "User requested new reservation, metadata cleared", {
         metadata: { previousReservationId: existingMetadata.reservationId },
@@ -1122,14 +1252,10 @@ async function processMessagingEvent(
         reviewFlowId: undefined,
         reviewRequestId: undefined,
       };
-      const { error: resetError2 } = await supabase
-        .from("conversations")
-        .update({ metadata: existingMetadata, current_flow_id: null, current_node_id: null })
-        .eq("id", conversation.id);
-
-      if (resetError2) {
-        await reqLogger.error("webhook", `Failed to reset conversation for new flow: ${resetError2.message}`);
-      }
+      await updateConversationState(
+        { metadata: existingMetadata, current_flow_id: null, current_node_id: null },
+        "Failed to reset conversation for new flow"
+      );
 
       await reqLogger.info("webhook", "New flow started, metadata reset", {
         metadata: {
@@ -1227,20 +1353,17 @@ async function processMessagingEvent(
       }
 
       // Update conversation state
+      responseSent = true;
       const storedNodeId = flowResponse.isEndOfFlow ? null : matchedNodeId;
-      const { error: convUpdateError } = await supabase
-        .from("conversations")
-        .update({
+      await updateConversationState(
+        {
           current_flow_id: matchedFlowId,
           current_node_id: storedNodeId,
           last_message_at: new Date().toISOString(),
           status: flowResponse.isEndOfFlow ? "closed" : "active",
-        })
-        .eq("id", conversation.id);
-
-      if (convUpdateError) {
-        await reqLogger.error("webhook", `Failed to update conversation state: ${convUpdateError.message}`);
-      }
+        },
+        "Failed to update conversation state"
+      );
 
       await reqLogger.info("webhook", "Response sent successfully", {
         metadata: {
@@ -1299,14 +1422,10 @@ async function processMessagingEvent(
               reservationId: undefined,
               flowCompleted: undefined,
             };
-            const { error: cleanupError } = await supabase
-              .from("conversations")
-              .update({ metadata: cleanedMetadata })
-              .eq("id", conversation.id);
-
-            if (cleanupError) {
-              await reqLogger.error("webhook", `Failed to cleanup orphaned metadata: ${cleanupError.message}`);
-            }
+            await updateConversationState(
+              { metadata: cleanedMetadata },
+              "Failed to cleanup orphaned metadata"
+            );
           }
         }
 
@@ -1484,14 +1603,10 @@ async function processMessagingEvent(
               flowCompleted: true,
             };
 
-            const { error: finalMetaError } = await supabase
-              .from("conversations")
-              .update({ metadata: finalMetadata })
-              .eq("id", conversation.id);
-
-            if (finalMetaError) {
-              await reqLogger.error("webhook", `Failed to update final metadata: ${finalMetaError.message}`);
-            }
+            await updateConversationState(
+              { metadata: finalMetadata },
+              "Failed to update final metadata"
+            );
 
             await reqLogger.info("webhook", "Reservation created from flow", {
               metadata: {
@@ -1500,6 +1615,48 @@ async function processMessagingEvent(
               },
             });
           } else {
+            if (reservationResult.error === "availability_error") {
+              const availabilityErrorMessage =
+                "⚠️ Wir konnten den Kalender gerade nicht prüfen. Bitte versuche es in ein paar Minuten erneut oder nenne eine alternative Zeit.";
+
+              const availabilitySendResult = await sendInstagramMessage({
+                recipientId: senderId,
+                text: availabilityErrorMessage,
+                quickReplies: [],
+                accessToken,
+              });
+              if (!availabilitySendResult.success) {
+                await reqLogger.warn("webhook", "Failed to send availability error message", {
+                  metadata: { error: availabilitySendResult.error, code: availabilitySendResult.code },
+                });
+                try {
+                  await recordMessageFailure({
+                    integrationId: integration.id,
+                    conversationId: conversation.id,
+                    recipientId: senderId,
+                    messageType: "text",
+                    content: availabilityErrorMessage,
+                    errorCode: availabilitySendResult.code,
+                    errorMessage: availabilitySendResult.error,
+                    retryable: availabilitySendResult.retryable,
+                    attempts: availabilitySendResult.attempts,
+                  });
+                } catch (error) {
+                  await reqLogger.warn("webhook", "Failed to record message failure", {
+                    metadata: { error: String(error) },
+                  });
+                }
+              }
+
+              await reqLogger.warn("webhook", "Availability check failed, reservation skipped", {
+                metadata: {
+                  flowId: matchedFlowId,
+                  variables: reservationVariables,
+                },
+              });
+              return;
+            }
+
             if (reservationResult.error === "slot_unavailable") {
               const suggestionText = formatSlotSuggestions(reservationResult.suggestions ?? []);
               const unavailableMessage =
@@ -1534,6 +1691,10 @@ async function processMessagingEvent(
                 }
               }
 
+              if (unavailableSendResult.success) {
+                responseSent = true;
+              }
+
               const updatedVariables: ExtractedVariables = {
                 ...mergedVariables,
                 time: undefined,
@@ -1550,15 +1711,15 @@ async function processMessagingEvent(
                 ? await findTimeNodeId(supabase, matchedFlowId)
                 : null;
 
-              await supabase
-                .from("conversations")
-                .update({
+              await updateConversationState(
+                {
                   metadata: resetMetadata,
                   current_flow_id: matchedFlowId,
                   current_node_id: timeNodeId,
                   status: "active",
-                })
-                .eq("id", conversation.id);
+                },
+                "Failed to reset conversation after slot unavailable"
+              );
 
               await reqLogger.info("webhook", "Slot unavailable, user prompted for new time", {
                 metadata: {
@@ -1595,14 +1756,50 @@ async function processMessagingEvent(
       metadata: { messageText: messageText.slice(0, 100) },
     });
 
-    // Update last_message_at even without response
-    const { error: lastMsgError } = await supabase
-      .from("conversations")
-      .update({ last_message_at: new Date().toISOString() })
-      .eq("id", conversation.id);
+    if (messageType === "text" && messageText.trim().length > 0) {
+      const keywords = await listTriggerKeywords(accountId);
+      const fallbackMessage = keywords.length > 0
+        ? `Ich habe dich nicht verstanden. Du kannst z. B. schreiben: ${keywords.join(", ")}.`
+        : "Ich habe dich nicht verstanden. Bitte schreibe kurz, wobei ich helfen kann.";
 
-    if (lastMsgError) {
-      await reqLogger.error("webhook", `Failed to update last_message_at: ${lastMsgError.message}`);
+      const fallbackSendResult = await sendInstagramMessage({
+        recipientId: senderId,
+        text: fallbackMessage,
+        quickReplies: [],
+        accessToken,
+      });
+      if (!fallbackSendResult.success) {
+        await reqLogger.warn("webhook", "Failed to send fallback message", {
+          metadata: { error: fallbackSendResult.error, code: fallbackSendResult.code },
+        });
+        try {
+          await recordMessageFailure({
+            integrationId: integration.id,
+            conversationId: conversation.id,
+            recipientId: senderId,
+            messageType: "text",
+            content: fallbackMessage,
+            errorCode: fallbackSendResult.code,
+            errorMessage: fallbackSendResult.error,
+            retryable: fallbackSendResult.retryable,
+            attempts: fallbackSendResult.attempts,
+          });
+        } catch (error) {
+          await reqLogger.warn("webhook", "Failed to record message failure", {
+            metadata: { error: String(error) },
+          });
+        }
+      }
+
+      if (fallbackSendResult.success) {
+        responseSent = true;
+      }
     }
+
+    // Update last_message_at even without response
+    await updateConversationState(
+      { last_message_at: new Date().toISOString() },
+      "Failed to update last_message_at"
+    );
   }
 }

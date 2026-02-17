@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
 import { requireAccountMember } from "../../../../lib/apiAuth";
 import { META_GRAPH_BASE } from "../../../../lib/meta/types";
+import { decryptToken } from "../../../../lib/security/tokenEncryption";
 
 /**
  * GET: Diagnose Meta/Instagram webhook configuration.
@@ -77,10 +78,25 @@ export async function GET(request: Request) {
           instagramId: integration.instagram_id,
         };
 
+        let accessToken: string | null = null;
+        try {
+          accessToken = decryptToken(integration.access_token);
+        } catch (error) {
+          pageCheck.tokenDebug = { error: error instanceof Error ? error.message : String(error) };
+          pageChecks.push(pageCheck);
+          continue;
+        }
+
+        if (!accessToken) {
+          pageCheck.tokenDebug = { error: "token_missing" };
+          pageChecks.push(pageCheck);
+          continue;
+        }
+
         // Check page subscribed_apps
         try {
           const pageSubsResponse = await fetch(
-            `${META_GRAPH_BASE}/${integration.page_id}/subscribed_apps?access_token=${encodeURIComponent(integration.access_token)}`,
+            `${META_GRAPH_BASE}/${integration.page_id}/subscribed_apps?access_token=${encodeURIComponent(accessToken)}`,
           );
           const pageSubsData = await pageSubsResponse.json();
           pageCheck.pageSubscriptions = {
@@ -95,7 +111,7 @@ export async function GET(request: Request) {
         // Debug the stored token
         try {
           const debugResponse = await fetch(
-            `${META_GRAPH_BASE}/debug_token?input_token=${encodeURIComponent(integration.access_token)}&access_token=${encodeURIComponent(appAccessToken)}`,
+            `${META_GRAPH_BASE}/debug_token?input_token=${encodeURIComponent(accessToken)}&access_token=${encodeURIComponent(appAccessToken)}`,
           );
           const debugData = await debugResponse.json();
           pageCheck.tokenDebug = {
@@ -115,7 +131,7 @@ export async function GET(request: Request) {
         if (integration.instagram_id) {
           try {
             const igCheckResponse = await fetch(
-              `${META_GRAPH_BASE}/${integration.instagram_id}?fields=id,username&access_token=${encodeURIComponent(integration.access_token)}`,
+              `${META_GRAPH_BASE}/${integration.instagram_id}?fields=id,username&access_token=${encodeURIComponent(accessToken)}`,
             );
             const igCheckData = await igCheckResponse.json();
             pageCheck.instagramAccess = {

@@ -9,7 +9,8 @@ const handler = async (request: Request) => {
 
   try {
     const payload = (await request.json()) as InstagramWebhookPayload;
-    await processInstagramWebhookPayload(payload, reqLogger);
+    const baseUrl = new URL(request.url).origin;
+    await processInstagramWebhookPayload(payload, reqLogger, baseUrl);
   } catch (error) {
     await reqLogger.logError("webhook", error, "Queued webhook processing failed");
   }

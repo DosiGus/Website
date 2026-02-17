@@ -23,6 +23,21 @@ type VariableDefinition = {
   transform?: (match: string) => string | number;
 };
 
+function normalizeNumericDate(dateStr: string): string | null {
+  const parts = dateStr.split(/[.\-/]/);
+  if (parts.length < 2) return null;
+  const dayNum = parseInt(parts[0], 10);
+  const monthNum = parseInt(parts[1], 10);
+  if (!dayNum || !monthNum || dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) {
+    return null;
+  }
+  let year = parts[2] || new Date().getFullYear().toString();
+  if (year.length === 2) year = "20" + year;
+  const day = String(dayNum).padStart(2, "0");
+  const month = String(monthNum).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 // Standard variable patterns for German restaurant/service businesses
 const VARIABLE_PATTERNS: VariableDefinition[] = [
   {
@@ -33,6 +48,7 @@ const VARIABLE_PATTERNS: VariableDefinition[] = [
   {
     key: "date",
     pattern: /(\d{1,2}[.\-/]\d{1,2}(?:[.\-/]\d{2,4})?)/,
+    transform: (match) => normalizeNumericDate(match) ?? "",
   },
   {
     key: "time",
@@ -65,9 +81,10 @@ export function extractVariables(
 
     const match = messageText.match(def.pattern);
     if (match && match[1]) {
-      variables[def.key] = def.transform
-        ? def.transform(match[1])
-        : match[1].trim();
+      const value = def.transform ? def.transform(match[1]) : match[1].trim();
+      if (value !== null && value !== undefined && value !== "") {
+        variables[def.key] = value;
+      }
     }
   }
 
@@ -185,11 +202,10 @@ export function extractDate(messageText: string): string | null {
   // Handle explicit dates like "15.01", "15.01.2024", "15/01/24"
   const dateMatch = trimmed.match(/(\d{1,2})[.\-/](\d{1,2})(?:[.\-/](\d{2,4}))?/);
   if (dateMatch) {
-    const day = dateMatch[1].padStart(2, "0");
-    const month = dateMatch[2].padStart(2, "0");
-    let year = dateMatch[3] || today.getFullYear().toString();
-    if (year.length === 2) year = "20" + year;
-    return `${year}-${month}-${day}`;
+    const normalized = normalizeNumericDate(dateMatch[0]);
+    if (normalized) {
+      return normalized;
+    }
   }
 
   return null;
@@ -199,7 +215,14 @@ export function extractDate(messageText: string): string | null {
  * Extracts a time from a message.
  * Only matches clear time patterns, NOT date patterns like "15.03"
  */
-export function extractTime(messageText: string): string | null {
+type ExtractTimeOptions = {
+  allowDotWithoutUhr?: boolean;
+};
+
+export function extractTime(
+  messageText: string,
+  options: ExtractTimeOptions = {}
+): string | null {
   const trimmed = messageText.trim().toLowerCase();
 
   // Handle "19:00" (with colon - clearly a time)
@@ -217,6 +240,17 @@ export function extractTime(messageText: string): string | null {
     const hour = parseInt(dotTimeWithUhr[1], 10);
     if (hour >= 0 && hour <= 24) {
       return `${dotTimeWithUhr[1].padStart(2, "0")}:${dotTimeWithUhr[2]}`;
+    }
+  }
+
+  if (options.allowDotWithoutUhr) {
+    const dotTimeMatch = trimmed.match(/^(\d{1,2})\.(\d{2})$/);
+    if (dotTimeMatch) {
+      const hour = parseInt(dotTimeMatch[1], 10);
+      const minute = parseInt(dotTimeMatch[2], 10);
+      if (hour >= 0 && hour <= 24 && minute >= 0 && minute <= 59) {
+        return `${dotTimeMatch[1].padStart(2, "0")}:${dotTimeMatch[2]}`;
+      }
     }
   }
 

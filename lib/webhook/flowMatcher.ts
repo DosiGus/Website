@@ -74,6 +74,48 @@ export async function findMatchingFlow(
   return null;
 }
 
+export async function listTriggerKeywords(
+  accountId: string,
+  limit = 6
+): Promise<string[]> {
+  const supabase = createSupabaseServerClient();
+  const { data: flows, error } = await supabase
+    .from("flows")
+    .select("triggers")
+    .eq("account_id", accountId)
+    .eq("status", "Aktiv");
+
+  if (error || !flows) {
+    return [];
+  }
+
+  const keywords: string[] = [];
+  const seen = new Set<string>();
+
+  for (const flow of flows) {
+    const triggers = flow.triggers as FlowTrigger[];
+    if (!triggers || triggers.length === 0) continue;
+
+    for (const trigger of triggers) {
+      if (trigger.type !== "KEYWORD") continue;
+      const triggerKeywords = trigger.config?.keywords || [];
+      for (const keyword of triggerKeywords) {
+        const normalized = String(keyword).trim();
+        if (!normalized) continue;
+        const key = normalized.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        keywords.push(normalized);
+        if (keywords.length >= limit) {
+          return keywords;
+        }
+      }
+    }
+  }
+
+  return keywords;
+}
+
 /**
  * Checks if the message matches any of the keywords based on match type.
  */

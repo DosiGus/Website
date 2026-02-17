@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { createSupabaseServerClient } from "../../../../../lib/supabaseServerClient";
 import { createRequestLogger } from "../../../../../lib/logger";
+import { encryptToken } from "../../../../../lib/security/tokenEncryption";
 import {
   GOOGLE_TOKEN_URL,
   GOOGLE_USERINFO_URL,
@@ -208,6 +209,9 @@ export async function GET(request: Request) {
   const accountLabel =
     userInfo?.email || userInfo?.name || "Google Kalender";
 
+  const encryptedAccessToken = encryptToken(tokenBody.access_token);
+  const encryptedRefreshToken = refreshToken ? encryptToken(refreshToken) : null;
+
   const { error: integrationError } = await supabase
     .from("integrations")
     .upsert(
@@ -216,8 +220,8 @@ export async function GET(request: Request) {
         account_id: accountId,
         provider: "google_calendar",
         status: "connected",
-        access_token: tokenBody.access_token,
-        refresh_token: refreshToken,
+        access_token: encryptedAccessToken,
+        refresh_token: encryptedRefreshToken,
         expires_at: expiresAt,
         account_name: accountLabel,
         updated_at: new Date().toISOString(),

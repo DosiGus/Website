@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "../supabaseServerClient";
 import { GOOGLE_CALENDAR_BASE, GOOGLE_TOKEN_URL } from "./types";
 import { logger } from "../logger";
+import { decryptToken, encryptToken, isEncryptedToken } from "../security/tokenEncryption";
 
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
@@ -35,12 +36,33 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
     throw new Error("Google Kalender ist nicht verbunden.");
   }
 
+  const decryptedAccessToken = decryptToken(integration.access_token);
+  const decryptedRefreshToken = decryptToken(integration.refresh_token);
+
+  if (process.env.TOKEN_ENCRYPTION_KEY) {
+    const updates: { access_token?: string; refresh_token?: string; updated_at?: string } = {};
+    if (integration.access_token && !isEncryptedToken(integration.access_token)) {
+      updates.access_token = encryptToken(integration.access_token);
+    }
+    if (integration.refresh_token && !isEncryptedToken(integration.refresh_token)) {
+      updates.refresh_token = encryptToken(integration.refresh_token);
+    }
+    if (Object.keys(updates).length > 0) {
+      updates.updated_at = new Date().toISOString();
+      await supabase.from("integrations").update(updates).eq("id", integration.id);
+    }
+  }
+
+  if (!decryptedAccessToken) {
+    throw new Error("Google Kalender ist nicht verbunden.");
+  }
+
   const expiresAt = integration.expires_at ? new Date(integration.expires_at).getTime() : 0;
   const needsRefresh = !expiresAt || Date.now() + TOKEN_REFRESH_BUFFER_MS >= expiresAt;
 
   if (!needsRefresh) {
     return {
-      accessToken: integration.access_token,
+      accessToken: decryptedAccessToken,
       integrationId: integration.id,
       calendarId: integration.calendar_id ?? null,
       calendarTimeZone: integration.calendar_time_zone ?? null,
@@ -54,7 +76,7 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
     throw new Error("Google OAuth ist nicht korrekt konfiguriert.");
   }
 
-  if (!integration.refresh_token) {
+  if (!decryptedRefreshToken) {
     throw new Error("Refresh-Token fehlt. Bitte Google Kalender erneut verbinden.");
   }
 
@@ -64,7 +86,7 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
     body: new URLSearchParams({
       client_id: googleClientId,
       client_secret: googleClientSecret,
-      refresh_token: integration.refresh_token,
+      refresh_token: decryptedRefreshToken,
       grant_type: "refresh_token",
     }),
   });
@@ -93,10 +115,11 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
       : 3600;
   const expiresAtIso = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
+  const encryptedAccessToken = encryptToken(refreshBody.access_token);
   const { error: updateError } = await supabase
     .from("integrations")
     .update({
-      access_token: refreshBody.access_token,
+      access_token: encryptedAccessToken,
       expires_at: expiresAtIso,
       updated_at: new Date().toISOString(),
     })

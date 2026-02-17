@@ -21,6 +21,7 @@ export type SlotSuggestion = {
 export type SlotAvailabilityResult = {
   available: boolean;
   suggestions: SlotSuggestion[];
+  error?: string;
 };
 
 export async function checkSlotAvailability(
@@ -80,12 +81,12 @@ export async function checkSlotAvailability(
 
     return { available: false, suggestions };
   } catch (error) {
-    await logger.warn("integration", "Availability fallback used", {
+    await logger.warn("integration", "Availability check failed", {
       metadata: {
         error: error instanceof Error ? error.message : "Unknown error",
       },
     });
-    return { available: true, suggestions: [] };
+    return { available: false, suggestions: [], error: "availability_error" };
   }
 }
 
@@ -141,7 +142,12 @@ async function getBusyIntervals(params: BusyIntervalParams): Promise<BusyInterva
     }),
   });
 
-  const payload = await response.json();
+  let payload: any = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
   if (!response.ok) {
     await logger.warn("integration", "Google freeBusy failed", {
       metadata: {
@@ -149,7 +155,7 @@ async function getBusyIntervals(params: BusyIntervalParams): Promise<BusyInterva
         error: payload?.error ?? payload,
       },
     });
-    return [];
+    throw new Error("freebusy_failed");
   }
 
   const busy = payload?.calendars?.[calendarId]?.busy ?? [];

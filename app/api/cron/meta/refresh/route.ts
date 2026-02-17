@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "../../../../../lib/supabaseServerCli
 import { createRequestLogger } from "../../../../../lib/logger";
 import { META_GRAPH_BASE } from "../../../../../lib/meta/types";
 import { sendEmail } from "../../../../../lib/email/resend";
+import { decryptToken, encryptToken, isEncryptedToken } from "../../../../../lib/security/tokenEncryption";
 
 const REFRESH_LOOKAHEAD_DAYS = 10;
 
@@ -78,6 +79,52 @@ export async function GET(request: Request) {
       continue;
     }
 
+    let decryptedRefreshToken: string | null = null;
+    try {
+      decryptedRefreshToken = decryptToken(integration.refresh_token);
+    } catch (error) {
+      await reqLogger.warn("oauth", "Meta refresh skipped: token decrypt failed", {
+        metadata: {
+          integrationId: integration.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+      issues.push({
+        integrationId: integration.id,
+        accountId: integration.account_id,
+        accountName: integration.account_name ?? null,
+        instagramId: integration.instagram_id ?? null,
+        reason: "Token konnte nicht entschluesselt werden.",
+      });
+      skipped += 1;
+      continue;
+    }
+
+    if (!decryptedRefreshToken) {
+      skipped += 1;
+      await reqLogger.warn("oauth", "Meta refresh skipped: refresh token missing after decrypt", {
+        metadata: { integrationId: integration.id },
+      });
+      issues.push({
+        integrationId: integration.id,
+        accountId: integration.account_id,
+        accountName: integration.account_name ?? null,
+        instagramId: integration.instagram_id ?? null,
+        reason: "Token fehlt oder konnte nicht entschluesselt werden.",
+      });
+      continue;
+    }
+
+    if (process.env.TOKEN_ENCRYPTION_KEY && !isEncryptedToken(integration.refresh_token)) {
+      await supabase
+        .from("integrations")
+        .update({
+          refresh_token: encryptToken(integration.refresh_token),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", integration.id);
+    }
+
     try {
       const refreshResponse = await fetch(
         `${META_GRAPH_BASE}/oauth/access_token?` +
@@ -85,7 +132,7 @@ export async function GET(request: Request) {
             grant_type: "fb_exchange_token",
             client_id: metaAppId,
             client_secret: metaAppSecret,
-            fb_exchange_token: integration.refresh_token,
+            fb_exchange_token: decryptedRefreshToken,
           }),
       );
 
@@ -190,11 +237,14 @@ export async function GET(request: Request) {
 
       const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
+      const encryptedAccessToken = encryptToken(pageMatch.access_token);
+      const encryptedUserToken = encryptToken(nextUserToken);
+
       const { error: updateError } = await supabase
         .from("integrations")
         .update({
-          access_token: pageMatch.access_token,
-          refresh_token: nextUserToken,
+          access_token: encryptedAccessToken,
+          refresh_token: encryptedUserToken,
           expires_at: expiresAt,
           page_id: pageMatch.id ?? integration.page_id,
           account_name: pageMatch.name ?? integration.account_name,

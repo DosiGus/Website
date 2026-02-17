@@ -400,6 +400,7 @@ create table if not exists public.conversations (
   current_node_id text,
   status text not null default 'active' check (status in ('active', 'closed', 'paused')),
   metadata jsonb default '{}'::jsonb,
+  state_version integer not null default 0,
   last_message_at timestamptz default now(),
   created_at timestamptz default now(),
   updated_at timestamptz default now()

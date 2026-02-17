@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../../lib/supabaseServerClient";
 import { createRequestLogger } from "../../../../../lib/logger";
+import { encryptToken } from "../../../../../lib/security/tokenEncryption";
 import { randomUUID } from "crypto";
 import {
   META_GRAPH_BASE,
@@ -735,6 +736,8 @@ export async function GET(request: Request) {
       ? longLivedToken.expires_in
       : 60 * 24 * 60 * 60; // 60 days in seconds
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+    const encryptedPageToken = encryptToken(firstPage.access_token);
+    const encryptedUserToken = encryptToken(longLivedToken.access_token);
 
     const { error: integrationError } = await supabase
       .from("integrations")
@@ -744,8 +747,8 @@ export async function GET(request: Request) {
           account_id: accountId,
           provider: "meta",
           status: "connected",
-          access_token: firstPage.access_token,
-          refresh_token: longLivedToken.access_token,
+          access_token: encryptedPageToken,
+          refresh_token: encryptedUserToken,
           expires_at: expiresAt,
           page_id: firstPage.id,
           instagram_id: instagramId,

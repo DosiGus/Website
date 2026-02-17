@@ -61,17 +61,50 @@ export async function findOrCreateContact(
   // Create channel entry
   const { error: channelError } = await supabase
     .from("contact_channels")
-    .insert({
-      contact_id: newContact.id,
-      account_id: accountId,
-      channel,
-      channel_identifier: channelIdentifier,
-    });
+    .upsert(
+      {
+        contact_id: newContact.id,
+        account_id: accountId,
+        channel,
+        channel_identifier: channelIdentifier,
+      },
+      {
+        onConflict: "account_id,channel,channel_identifier",
+        ignoreDuplicates: true,
+      }
+    );
 
   if (channelError) {
     throw new Error(
       `Failed to create contact channel: ${channelError.message}`
     );
+  }
+
+  const { data: resolved } = await supabase
+    .from("contact_channels")
+    .select("contact_id, contacts!inner(id, display_name)")
+    .eq("account_id", accountId)
+    .eq("channel", channel)
+    .eq("channel_identifier", channelIdentifier)
+    .limit(1)
+    .maybeSingle();
+
+  if (!resolved) {
+    throw new Error("Failed to resolve contact channel after upsert");
+  }
+
+  const resolvedContact = resolved.contacts as unknown as {
+    id: string;
+    display_name: string | null;
+  };
+
+  if (resolvedContact.id !== newContact.id) {
+    await supabase.from("contacts").delete().eq("id", newContact.id);
+    return {
+      contactId: resolvedContact.id,
+      displayName: resolvedContact.display_name,
+      isNew: false,
+    };
   }
 
   return {
