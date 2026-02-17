@@ -103,13 +103,6 @@ async function getBusyIntervals(params: BusyIntervalParams): Promise<BusyInterva
   const supabase = createSupabaseServerClient();
   const { accountId, calendarId, timeMin, timeMax, timeZone } = params;
 
-  await supabase
-    .from("calendar_availability_cache")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("calendar_id", calendarId)
-    .lt("expires_at", new Date().toISOString());
-
   const { data: cached } = await supabase
     .from("calendar_availability_cache")
     .select("busy, expires_at")
@@ -283,7 +276,12 @@ function zonedTimeToUtc(dateStr: string, timeStr: string, timeZone: string): Dat
   const [hour, minute] = timeStr.split(":").map(Number);
   const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
   const offset = getTimeZoneOffsetMs(utcDate, timeZone);
-  return new Date(utcDate.getTime() - offset);
+  let adjusted = new Date(utcDate.getTime() - offset);
+  const offsetAfter = getTimeZoneOffsetMs(adjusted, timeZone);
+  if (offset !== offsetAfter) {
+    adjusted = new Date(utcDate.getTime() - Math.max(offset, offsetAfter));
+  }
+  return adjusted;
 }
 
 function getTimeZoneOffsetMs(date: Date, timeZone: string): number {

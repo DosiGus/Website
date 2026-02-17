@@ -12,7 +12,7 @@ import { normalizeCalendarSettings } from "../google/settings";
 import crypto from "crypto";
 
 export type ReservationCreationResult =
-  | { success: true; reservationId: string }
+  | { success: true; reservationId: string; warning?: "calendar_error" }
   | { success: false; missingFields: string[]; error?: string; suggestions?: SlotSuggestion[] };
 
 /**
@@ -206,7 +206,7 @@ export async function createReservationFromVariables(
             });
           }
         }
-        return { success: false, missingFields: [], error: error?.message ?? "calendar_store_failed" };
+        return { success: false, missingFields: [], error: "calendar_store_failed" };
       }
 
       return { success: true, reservationId: data.id };
@@ -219,7 +219,36 @@ export async function createReservationFromVariables(
           error: errorMessage,
         },
       });
-      return { success: false, missingFields: [], error: "calendar_error" };
+      const fallbackReservationId = crypto.randomUUID();
+      const { data: fallbackReservation, error: fallbackError } = await supabase
+        .from("reservations")
+        .insert({
+          id: fallbackReservationId,
+          user_id: userId,
+          account_id: accountId,
+          contact_id: contactId || null,
+          ...input,
+          google_event_id: null,
+          google_event_link: null,
+          google_calendar_id: null,
+          google_time_zone: null,
+        })
+        .select("id")
+        .single();
+
+      if (fallbackError || !fallbackReservation) {
+        await logger.warn("integration", "Failed to store reservation after calendar error", {
+          userId,
+          metadata: { error: fallbackError?.message ?? "Unknown error" },
+        });
+        return { success: false, missingFields: [], error: "calendar_error" };
+      }
+
+      return {
+        success: true,
+        reservationId: fallbackReservation.id,
+        warning: "calendar_error",
+      };
     }
   } catch (err) {
     console.error("Error creating reservation:", err);

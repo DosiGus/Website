@@ -13,6 +13,7 @@ import {
 } from "../../../lib/validation/reservationSchema";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 import { cancelGoogleCalendarEvent, updateGoogleCalendarEvent } from "../../../lib/google/calendar";
+import { createRequestLogger } from "../../../lib/logger";
 import { normalizeCalendarSettings } from "../../../lib/google/settings";
 import { sendReviewRequestForReservation } from "../../../lib/reviews/reviewSender";
 
@@ -465,6 +466,11 @@ export async function DELETE(request: Request) {
       console.error("Reservation DELETE error:", error);
       return NextResponse.json({ error: "Fehler beim Löschen der Reservierung" }, { status: 500 });
     }
+
+    const reqLogger = createRequestLogger("api");
+    await reqLogger.info("api", "Reservation deleted", {
+      metadata: { accountId, reservationId: id },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

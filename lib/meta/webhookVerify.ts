@@ -69,24 +69,18 @@ function safeCompare(a: string, b: string): boolean {
 
 /**
  * Verifies the hub.verify_token for webhook subscription verification.
- * Accepts META_WEBHOOK_VERIFY_TOKEN or META_APP_SECRET (for re-subscription).
+ * Accepts META_WEBHOOK_VERIFY_TOKEN only.
  */
 export function verifySubscriptionToken(token: string | null): boolean {
   if (!token) {
     return false;
   }
 
-  // Accept either the dedicated verify token OR the app secret
-  // This allows re-subscribing the webhook using the app secret
-  const candidates = [
-    process.env.META_WEBHOOK_VERIFY_TOKEN,
-    process.env.META_APP_SECRET,
-  ].filter((t): t is string => Boolean(t));
-
-  if (candidates.length === 0) {
-    console.error("Neither META_WEBHOOK_VERIFY_TOKEN nor META_APP_SECRET is configured");
+  const expected = process.env.META_WEBHOOK_VERIFY_TOKEN;
+  if (!expected) {
+    console.error("META_WEBHOOK_VERIFY_TOKEN is not configured");
     return false;
   }
 
-  return candidates.some((expected) => safeCompare(token, expected));
+  return safeCompare(token, expected);
 }

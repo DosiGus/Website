@@ -1,6 +1,7 @@
 // DEPRECATED: Use DELETE /api/integrations instead
 import { NextResponse } from "next/server";
 import { requireAccountMember, isRoleAtLeast } from "../../../../../lib/apiAuth";
+import { createRequestLogger } from "../../../../../lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -24,8 +25,17 @@ export async function POST(request: Request) {
       .eq("provider", "meta");
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const reqLogger = createRequestLogger("api");
+      await reqLogger.error("api", "Failed to disconnect meta integration", {
+        metadata: { accountId, error: error.message },
+      });
+      return NextResponse.json({ error: "Integration konnte nicht getrennt werden" }, { status: 500 });
     }
+
+    const reqLogger = createRequestLogger("api");
+    await reqLogger.info("api", "Meta integration disconnected", {
+      metadata: { accountId },
+    });
 
     return NextResponse.json({ status: "disconnected" });
   } catch (error) {

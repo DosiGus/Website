@@ -918,7 +918,11 @@ export default function IntegrationsClient() {
         <p className="mt-4 text-sm text-zinc-400">
           Automatisiere Kundengespräche auch über WhatsApp Business. Wir arbeiten daran!
         </p>
-        <button className="mt-6 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-400 transition-all hover:border-white/20 hover:text-white">
+        <button
+          type="button"
+          disabled
+          className="mt-6 cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-500 opacity-70"
+        >
           Bei Launch benachrichtigen
         </button>
       </div>

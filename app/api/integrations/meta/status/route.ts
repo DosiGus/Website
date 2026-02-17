@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Status konnte nicht geladen werden" }, { status: 500 });
     }
 
     if (!data) {

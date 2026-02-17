@@ -38,8 +38,9 @@ export async function findMatchingFlow(
   }
 
   const normalizedMessage = messageText.toLowerCase().trim();
+  const matches: Array<MatchedFlow & { score: number }> = [];
 
-  // Check each flow's triggers
+  // Check each flow's triggers and score matches
   for (const flow of flows) {
     const triggers = flow.triggers as FlowTrigger[];
 
@@ -55,10 +56,10 @@ export async function findMatchingFlow(
       const keywords = trigger.config?.keywords || [];
       const matchType = trigger.config?.matchType || "CONTAINS";
 
-      const isMatch = matchKeywords(normalizedMessage, keywords, matchType);
+      const matchScore = scoreKeywords(normalizedMessage, keywords, matchType);
 
-      if (isMatch && trigger.startNodeId) {
-        return {
+      if (matchScore > 0 && trigger.startNodeId) {
+        matches.push({
           flowId: flow.id,
           flowName: flow.name,
           triggerId: trigger.id,
@@ -66,12 +67,27 @@ export async function findMatchingFlow(
           nodes: flow.nodes,
           edges: flow.edges,
           metadata: flow.metadata ?? null,
-        };
+          score: matchScore,
+        });
       }
     }
   }
 
-  return null;
+  if (matches.length === 0) {
+    return null;
+  }
+
+  matches.sort((a, b) => b.score - a.score);
+  const best = matches[0];
+  return {
+    flowId: best.flowId,
+    flowName: best.flowName,
+    triggerId: best.triggerId,
+    startNodeId: best.startNodeId,
+    nodes: best.nodes,
+    edges: best.edges,
+    metadata: best.metadata ?? null,
+  };
 }
 
 export async function listTriggerKeywords(
@@ -119,14 +135,16 @@ export async function listTriggerKeywords(
 /**
  * Checks if the message matches any of the keywords based on match type.
  */
-function matchKeywords(
+function scoreKeywords(
   message: string,
   keywords: string[],
   matchType: FlowTriggerMatchType
-): boolean {
+): number {
   if (!keywords || keywords.length === 0) {
-    return false;
+    return 0;
   }
+
+  let bestScore = 0;
 
   for (const keyword of keywords) {
     const normalizedKeyword = keyword.toLowerCase().trim();
@@ -135,19 +153,28 @@ function matchKeywords(
       continue;
     }
 
-    if (matchType === "EXACT") {
-      if (message === normalizedKeyword) {
-        return true;
-      }
-    } else {
-      // CONTAINS
-      if (message.includes(normalizedKeyword)) {
-        return true;
-      }
+    const isMatch = matchKeyword(message, normalizedKeyword, matchType);
+    if (isMatch) {
+      const baseScore = matchType === "EXACT" ? 1000 : 100;
+      bestScore = Math.max(bestScore, baseScore + normalizedKeyword.length);
     }
   }
 
-  return false;
+  return bestScore;
+}
+
+function matchKeyword(
+  message: string,
+  keyword: string,
+  matchType: FlowTriggerMatchType
+): boolean {
+  if (matchType === "EXACT") {
+    return message === keyword;
+  }
+
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const boundaryRegex = new RegExp(`(^|\\s|[.,!?])${escaped}($|\\s|[.,!?])`, "i");
+  return boundaryRegex.test(message);
 }
 
 /**

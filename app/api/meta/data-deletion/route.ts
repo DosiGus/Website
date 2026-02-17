@@ -51,9 +51,9 @@ function parseSignedRequest(
 }
 
 /**
- * Delete all data associated with a Facebook user ID.
- * Looks up integrations by facebook_user_id to find the account,
- * then deletes all related data for that account.
+ * Delete Meta/Instagram data associated with a Facebook user ID.
+ * We disconnect the integration and remove stored tokens, without deleting
+ * unrelated account data or historical conversations.
  */
 async function deleteUserData(facebookUserId: string, reqLogger: ReturnType<typeof createRequestLogger>) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -66,11 +66,19 @@ async function deleteUserData(facebookUserId: string, reqLogger: ReturnType<type
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-  // Find integrations linked to this Facebook user ID
-  const { data: integrations } = await supabase
+  // Find Meta integrations linked to this Facebook user ID
+  const { data: integrations, error: integrationError } = await supabase
     .from("integrations")
     .select("id, account_id")
-    .eq("facebook_user_id", facebookUserId);
+    .eq("facebook_user_id", facebookUserId)
+    .eq("provider", "meta");
+
+  if (integrationError) {
+    await reqLogger.error("oauth", "Failed to load integrations for data deletion", {
+      metadata: { error: integrationError.message, facebookUserId },
+    });
+    return;
+  }
 
   if (!integrations || integrations.length === 0) {
     await reqLogger.info("oauth", "No integrations found for Facebook user ID, data deletion logged for manual review", {
@@ -79,23 +87,40 @@ async function deleteUserData(facebookUserId: string, reqLogger: ReturnType<type
     return;
   }
 
-  const accountIds = Array.from(new Set(integrations.map((i) => i.account_id)));
+  for (const integration of integrations) {
+    const { error: disconnectError } = await supabase
+      .from("integrations")
+      .update({
+        status: "disconnected",
+        access_token: null,
+        refresh_token: null,
+        expires_at: null,
+        page_id: null,
+        instagram_id: null,
+        instagram_username: null,
+        account_name: null,
+        facebook_user_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", integration.id);
 
-  for (const accountId of accountIds) {
-    // Delete in order respecting foreign key constraints
-    await supabase.from("review_requests").delete().eq("account_id", accountId);
-    await supabase.from("messages").delete().eq("account_id", accountId);
-    await supabase.from("reservations").delete().eq("account_id", accountId);
-    await supabase.from("conversations").delete().eq("account_id", accountId);
-    await supabase.from("contact_channels").delete().eq("account_id", accountId);
-    await supabase.from("contacts").delete().eq("account_id", accountId);
-    await supabase.from("flows").delete().eq("account_id", accountId);
-    await supabase.from("logs").delete().eq("account_id", accountId);
-    await supabase.from("oauth_states").delete().eq("account_id", accountId);
-    await supabase.from("integrations").delete().eq("account_id", accountId);
+    if (disconnectError) {
+      await reqLogger.error("oauth", "Failed to disconnect integration during data deletion", {
+        metadata: {
+          error: disconnectError.message,
+          facebookUserId,
+          integrationId: integration.id,
+        },
+      });
+      continue;
+    }
 
-    await reqLogger.info("oauth", "Deleted all data for account via Meta data deletion", {
-      metadata: { accountId, facebookUserId },
+    await reqLogger.info("oauth", "Meta data deletion completed (integration disconnected)", {
+      metadata: {
+        accountId: integration.account_id,
+        integrationId: integration.id,
+        facebookUserId,
+      },
     });
   }
 }

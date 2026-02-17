@@ -359,5 +359,31 @@ export async function GET(request: Request) {
     }
   }
 
+  const cleanupNow = new Date().toISOString();
+  const failureCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const cleanupTasks = [
+    {
+      name: "oauth_states",
+      query: supabase.from("oauth_states").delete().lt("expires_at", cleanupNow),
+    },
+    {
+      name: "message_failures",
+      query: supabase.from("message_failures").delete().lt("created_at", failureCutoff),
+    },
+    {
+      name: "calendar_availability_cache",
+      query: supabase.from("calendar_availability_cache").delete().lt("expires_at", cleanupNow),
+    },
+  ];
+
+  for (const task of cleanupTasks) {
+    const { error } = await task.query;
+    if (error) {
+      await reqLogger.warn("oauth", "Cleanup task failed", {
+        metadata: { table: task.name, error: error.message },
+      });
+    }
+  }
+
   return NextResponse.json({ refreshed, failed, skipped, total: candidates.length, issues: issues.length });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAccountMember } from "../../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
+import { createRequestLogger } from "../../../../lib/logger";
 
 const ROLE_VALUES = ["owner", "admin", "member", "viewer"] as const;
 type AccountRole = (typeof ROLE_VALUES)[number];
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
   try {
     const { user, accountId, role, supabase } = await requireAccountMember(request);
     const supabaseAdmin = createSupabaseServerClient();
+    const reqLogger = createRequestLogger("api", user.id);
 
     const { data: members, error } = await supabase
       .from("account_members")
@@ -20,7 +22,11 @@ export async function GET(request: Request) {
       .order("joined_at", { ascending: true });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      await reqLogger.error("api", "Failed to load account members", {
+        userId: user.id,
+        metadata: { accountId, error: error.message },
+      });
+      return NextResponse.json({ error: "Fehler beim Laden der Mitglieder" }, { status: 500 });
     }
 
     const userIds = (members ?? []).map((member) => member.user_id);
@@ -80,7 +86,8 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { accountId, role, supabase } = await requireAccountMember(request);
+    const { user, accountId, role, supabase } = await requireAccountMember(request);
+    const reqLogger = createRequestLogger("api", user.id);
 
     if (role !== "owner" && role !== "admin") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
@@ -148,8 +155,26 @@ export async function PATCH(request: Request) {
       .single();
 
     if (updateError || !updated) {
-      return NextResponse.json({ error: updateError?.message ?? "Update fehlgeschlagen" }, { status: 500 });
+      await reqLogger.error("api", "Failed to update account member role", {
+        userId: user.id,
+        metadata: {
+          accountId,
+          targetUserId,
+          error: updateError?.message ?? "unknown",
+        },
+      });
+      return NextResponse.json({ error: "Update fehlgeschlagen" }, { status: 500 });
     }
+
+    await reqLogger.info("api", "Account member role updated", {
+      userId: user.id,
+      metadata: {
+        accountId,
+        targetUserId,
+        previousRole: targetMember.role,
+        newRole: nextRole,
+      },
+    });
 
     return NextResponse.json({ member: updated });
   } catch (error) {

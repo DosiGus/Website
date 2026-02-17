@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Client } from "@upstash/qstash";
+import crypto from "crypto";
 import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
 import {
   verifyWebhookSignature,
@@ -51,9 +52,14 @@ class ConversationStateConflictError extends Error {
 
 function extractReviewRating(text: string): number | null {
   if (!text) return null;
-  const digitMatch = text.match(/([1-5])/);
-  if (digitMatch) {
-    return Number.parseInt(digitMatch[1], 10);
+  const normalized = text.toLowerCase();
+  const explicitMatch = normalized.match(/\b([1-5])\b\s*(?:\/\s*5|von\s*5|sterne?)\b/);
+  if (explicitMatch) {
+    return Number.parseInt(explicitMatch[1], 10);
+  }
+  const compact = normalized.replace(/\s+/g, "");
+  if (/^[1-5][.!]?$/.test(compact)) {
+    return Number.parseInt(compact[0], 10);
   }
   const starMatches = text.match(/⭐/g);
   if (starMatches && starMatches.length > 0 && starMatches.length <= 5) {
@@ -593,13 +599,24 @@ async function processMessagingEvent(
   }
 
   if (process.env.TOKEN_ENCRYPTION_KEY && !isEncryptedToken(integration.access_token)) {
-    await supabase
+    const { data: encryptedRow, error: encryptError } = await supabase
       .from("integrations")
       .update({
         access_token: encryptToken(integration.access_token),
         updated_at: new Date().toISOString(),
       })
-      .eq("id", integration.id);
+      .eq("id", integration.id)
+      .eq("access_token", integration.access_token)
+      .select("id")
+      .maybeSingle();
+
+    if (encryptError) {
+      await reqLogger.warn("webhook", "Failed to encrypt integration token", {
+        metadata: { error: encryptError.message },
+      });
+    } else if (!encryptedRow) {
+      await reqLogger.info("webhook", "Integration token encryption skipped (already updated)");
+    }
   }
 
   let contactId: string | null = null;
@@ -631,19 +648,25 @@ async function processMessagingEvent(
   if (!conversation) {
     const { data: newConversation, error: convError } = await supabase
       .from("conversations")
-      .insert({
-        user_id: userId,
-        account_id: accountId,
-        integration_id: integration.id,
-        contact_id: contactId,
-        instagram_sender_id: senderId,
-        channel: "instagram_dm",
-        channel_sender_id: senderId,
-        status: "active",
-        metadata: {},
-      })
+      .upsert(
+        {
+          user_id: userId,
+          account_id: accountId,
+          integration_id: integration.id,
+          contact_id: contactId,
+          instagram_sender_id: senderId,
+          channel: "instagram_dm",
+          channel_sender_id: senderId,
+          status: "active",
+          metadata: {},
+        },
+        {
+          onConflict: "integration_id,instagram_sender_id",
+          ignoreDuplicates: true,
+        },
+      )
       .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version")
-      .single();
+      .maybeSingle();
 
     if (convError) {
       await reqLogger.error("webhook", `Failed to create conversation: ${convError.message}`);
@@ -651,6 +674,25 @@ async function processMessagingEvent(
     }
 
     conversation = newConversation;
+
+    if (!conversation) {
+      const { data: existingConversation, error: existingError } = await supabase
+        .from("conversations")
+        .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version")
+        .eq("integration_id", integration.id)
+        .eq("instagram_sender_id", senderId)
+        .single();
+
+      if (existingError || !existingConversation) {
+        await reqLogger.error(
+          "webhook",
+          `Failed to resolve conversation after upsert: ${existingError?.message ?? "Not found"}`,
+        );
+        return;
+      }
+
+      conversation = existingConversation;
+    }
   }
 
   let conversationVersion = conversation.state_version ?? 0;
@@ -731,7 +773,8 @@ async function processMessagingEvent(
   if (!instagramMessageId && event.postback) {
     const payloadPart = (quickReplyPayload ?? "").slice(0, 120);
     const timestampPart = event.timestamp ?? Date.now();
-    instagramMessageId = `postback:${senderId}:${recipientId}:${timestampPart}:${payloadPart}`;
+    const nonce = crypto.randomUUID();
+    instagramMessageId = `postback:${senderId}:${recipientId}:${timestampPart}:${payloadPart}:${nonce}`;
   }
 
   let incomingMessageRowId: string | null = null;
@@ -1154,15 +1197,21 @@ async function processMessagingEvent(
     // Handle special payloads for existing reservation management
     if (quickReplyPayload === "CANCEL_EXISTING_RESERVATION") {
       // User wants to cancel their existing reservation
-      const { data: existingRes } = await supabase
+      let reservationQuery = supabase
         .from("reservations")
         .select("id, guest_name, reservation_date, reservation_time, google_event_id, google_calendar_id")
-        .eq("instagram_sender_id", senderId)
         .eq("account_id", accountId)
         .in("status", ["pending", "confirmed"])
         .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
+
+      if (contactId) {
+        reservationQuery = reservationQuery.eq("contact_id", contactId);
+      } else {
+        reservationQuery = reservationQuery.eq("instagram_sender_id", senderId);
+      }
+
+      const { data: existingRes } = await reservationQuery.single();
 
       if (existingRes) {
         const { error: cancelError } = await supabase
@@ -1175,11 +1224,20 @@ async function processMessagingEvent(
         }
 
         if (existingRes.google_event_id) {
-          await cancelGoogleCalendarEvent({
-            accountId,
-            eventId: existingRes.google_event_id,
-            calendarId: existingRes.google_calendar_id ?? undefined,
-          });
+          try {
+            await cancelGoogleCalendarEvent({
+              accountId,
+              eventId: existingRes.google_event_id,
+              calendarId: existingRes.google_calendar_id ?? undefined,
+            });
+          } catch (error) {
+            await reqLogger.warn("webhook", "Failed to cancel calendar event for reservation", {
+              metadata: {
+                reservationId: existingRes.id,
+                error: error instanceof Error ? error.message : String(error),
+              },
+            });
+          }
         }
 
         const cancelText = `✅ Deine Reservierung wurde storniert.\n\nFalls du eine neue Reservierung machen möchtest, schreib einfach "Reservieren" oder "Tisch buchen".`;
@@ -1568,30 +1626,7 @@ async function processMessagingEvent(
           }
         }
 
-        // Check if the current node is a confirmation node (multiple naming conventions)
-        const confirmationNodeIds = [
-          "confirmed",
-          "confirmation",
-          "bestätigung",
-          "bestaetigung",
-          "bestaetigt",
-          "bestätigt",
-          "abschluss",
-          "fertig",
-          "done",
-          "complete",
-          "end",
-          "ende",
-          "danke",
-          "thanks",
-          "thank",
-          "success",
-          "erfolgreich",
-        ];
         const matchedNodeIdLower = matchedNodeId?.toLowerCase() ?? "";
-        const isConfirmationNode = confirmationNodeIds.some((id) =>
-          matchedNodeIdLower.includes(id.toLowerCase())
-        );
 
         // Check if the quick reply payload indicates confirmation
         const confirmationPayloads = [
@@ -1643,19 +1678,10 @@ async function processMessagingEvent(
         // Only consider it a final step if the response text explicitly confirms the reservation
         // AND we're not at a data collection node
         const looksLikeFinalStep =
-          (hasAllReservationData &&
-            !isDataCollectionNode &&
-            flowResponse.isEndOfFlow) ||
-          (hasAllReservationData &&
-            !isDataCollectionNode &&
-            flowResponse.text &&
-            (flowResponse.text.toLowerCase().includes("reservierung ist bestätigt") ||
-              flowResponse.text.toLowerCase().includes("vielen dank") ||
-              flowResponse.text.toLowerCase().includes("erfolgreich")));
+          hasAllReservationData && !isDataCollectionNode && flowResponse.isEndOfFlow;
 
         const shouldStoreSubmission =
           flowResponse.isEndOfFlow ||
-          isConfirmationNode ||
           isConfirmationPayload ||
           looksLikeFinalStep;
 
@@ -1670,7 +1696,6 @@ async function processMessagingEvent(
           metadata: {
             reservationAlreadyExists,
             isEndOfFlow: flowResponse.isEndOfFlow,
-            isConfirmationNode,
             isConfirmationPayload,
             looksLikeFinalStep,
             hasAllReservationData,
@@ -1756,6 +1781,40 @@ async function processMessagingEvent(
                 variables: reservationVariables,
               },
             });
+
+            if (reservationResult.warning === "calendar_error") {
+              const calendarWarningMessage =
+                "ℹ️ Dein Termin wurde gespeichert. Der Kalender konnte gerade nicht aktualisiert werden.";
+
+              const warningSendResult = await sendInstagramMessage({
+                recipientId: senderId,
+                text: calendarWarningMessage,
+                quickReplies: [],
+                accessToken,
+              });
+              if (!warningSendResult.success) {
+                await reqLogger.warn("webhook", "Failed to send calendar warning message", {
+                  metadata: { error: warningSendResult.error, code: warningSendResult.code },
+                });
+                try {
+                  await recordMessageFailure({
+                    integrationId: integration.id,
+                    conversationId: conversation.id,
+                    recipientId: senderId,
+                    messageType: "text",
+                    content: calendarWarningMessage,
+                    errorCode: warningSendResult.code,
+                    errorMessage: warningSendResult.error,
+                    retryable: warningSendResult.retryable,
+                    attempts: warningSendResult.attempts,
+                  });
+                } catch (error) {
+                  await reqLogger.warn("webhook", "Failed to record message failure", {
+                    metadata: { error: String(error) },
+                  });
+                }
+              }
+            }
           } else {
             if (reservationResult.error === "availability_error") {
               const availabilityErrorMessage =
@@ -1837,6 +1896,52 @@ async function processMessagingEvent(
               }
 
               await reqLogger.warn("webhook", "Calendar event failed, reservation skipped", {
+                metadata: {
+                  flowId: matchedFlowId,
+                  variables: reservationVariables,
+                },
+              });
+              return;
+            }
+
+            if (reservationResult.error === "calendar_store_failed") {
+              const storeErrorMessage =
+                "⚠️ Wir konnten deine Buchung gerade nicht speichern. Bitte versuche es gleich noch einmal.";
+
+              const storeSendResult = await sendInstagramMessage({
+                recipientId: senderId,
+                text: storeErrorMessage,
+                quickReplies: [],
+                accessToken,
+              });
+              if (!storeSendResult.success) {
+                await reqLogger.warn("webhook", "Failed to send reservation store error message", {
+                  metadata: { error: storeSendResult.error, code: storeSendResult.code },
+                });
+                try {
+                  await recordMessageFailure({
+                    integrationId: integration.id,
+                    conversationId: conversation.id,
+                    recipientId: senderId,
+                    messageType: "text",
+                    content: storeErrorMessage,
+                    errorCode: storeSendResult.code,
+                    errorMessage: storeSendResult.error,
+                    retryable: storeSendResult.retryable,
+                    attempts: storeSendResult.attempts,
+                  });
+                } catch (error) {
+                  await reqLogger.warn("webhook", "Failed to record message failure", {
+                    metadata: { error: String(error) },
+                  });
+                }
+              }
+
+              if (storeSendResult.success) {
+                responseSent = true;
+              }
+
+              await reqLogger.warn("webhook", "Reservation store failed after calendar event", {
                 metadata: {
                   flowId: matchedFlowId,
                   variables: reservationVariables,

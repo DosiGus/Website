@@ -81,6 +81,15 @@ class Logger {
     }
 
     try {
+      const dbEnabled = process.env.LOG_DB_ENABLED !== "false";
+      if (!dbEnabled) {
+        return;
+      }
+      const sampleRateRaw = Number.parseFloat(process.env.LOG_DB_SAMPLE_RATE ?? "1");
+      const sampleRate = Number.isFinite(sampleRateRaw) ? sampleRateRaw : 1;
+      if (sampleRate < 1 && Math.random() > sampleRate) {
+        return;
+      }
       const supabaseAdmin = createSupabaseServerClient();
       await supabaseAdmin.from("logs").insert(entry);
     } catch (err) {

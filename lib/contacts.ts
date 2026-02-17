@@ -129,7 +129,7 @@ export async function updateContactDisplayName(
       updated_at: new Date().toISOString(),
     })
     .eq("id", contactId)
-    .is("display_name", null);
+    .or("display_name.is.null,display_name.eq.,display_name.eq.Unbekannt");
 }
 
 /**

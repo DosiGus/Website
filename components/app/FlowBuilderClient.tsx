@@ -245,6 +245,21 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
 
+  const getAccessToken = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token ?? null;
+    if (!token) {
+      router.replace("/login");
+      return null;
+    }
+    if (token !== accessToken) {
+      setAccessToken(token);
+    }
+    return token;
+  }, [accessToken, router, supabase]);
+
   const snippets = useMemo(
     () => [
       {
@@ -367,6 +382,15 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   }, [currentSnapshot, loading]);
 
   useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAccessToken(session?.access_token ?? null);
+    });
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, [supabase]);
+
+  useEffect(() => {
     async function loadUser() {
       const {
         data: { user },
@@ -376,25 +400,23 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         return;
       }
       setUserId(user.id);
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        router.replace("/login");
-        return;
-      }
-      setAccessToken(session.access_token);
+      await getAccessToken();
     }
     loadUser();
-  }, [router, supabase]);
+  }, [router, supabase, getAccessToken]);
 
   useEffect(() => {
-    if (!userId || !accessToken) return;
+    if (!userId) return;
     async function fetchFlow() {
       setLoading(true);
+      const token = await getAccessToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       const response = await fetch(`/api/flows/${flowId}`, {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       if (response.status === 404) {
@@ -436,7 +458,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       }
     }
     fetchFlow();
-  }, [flowId, userId, accessToken]);
+  }, [flowId, userId, getAccessToken]);
 
   useEffect(() => {
     setLintWarnings(lintFlow(nodes, edges, triggers).warnings);
@@ -1016,13 +1038,15 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const handleSave = useCallback(
     async (silent = false) => {
-      if (!accessToken || loading) return;
+      if (loading) return;
+      const token = await getAccessToken();
+      if (!token) return;
       if (!silent) setSaveState("saving");
       const response = await fetch(`/api/flows/${flowId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: flowName,
@@ -1058,16 +1082,17 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         setTimeout(() => setSaveState("idle"), 4000);
       }
     },
-    [accessToken, loading, flowId, flowName, status, nodes, edges, triggers, metadata],
+    [loading, flowId, flowName, status, nodes, edges, triggers, metadata, getAccessToken],
   );
 
   const handleExport = useCallback(async () => {
-    if (!accessToken) return;
+    const token = await getAccessToken();
+    if (!token) return;
     setExporting(true);
     try {
       const response = await fetch(`/api/flows/${flowId}/export`, {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       if (!response.ok) {
@@ -1090,7 +1115,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     } finally {
       setExporting(false);
     }
-  }, [accessToken, flowId]);
+  }, [flowId, getAccessToken]);
 
   const duplicateSelectedNode = useCallback(() => {
     if (!selectedNode) return;
@@ -1102,9 +1127,15 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if ((event.target as HTMLElement)?.tagName === "INPUT" || (event.target as HTMLElement)?.tagName === "TEXTAREA") {
+      const target = event.target as HTMLElement;
+      const tagName = target?.tagName;
+      if (target?.isContentEditable || tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
         return;
       }
+      const hasSelection =
+        Boolean(selectedNodeId || selectedEdgeId) ||
+        selection.nodes.length > 0 ||
+        selection.edges.length > 0;
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "c") {
         event.preventDefault();
         handleCopy();
@@ -1121,7 +1152,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         event.preventDefault();
         duplicateSelectedNode();
       }
-      if (event.key === "Delete" || event.key === "Backspace") {
+      if ((event.key === "Delete" || event.key === "Backspace") && hasSelection) {
         event.preventDefault();
         deleteSelection();
       }
@@ -1137,10 +1168,31 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [handleCopy, handlePaste, handleSave, duplicateSelectedNode, deleteSelection, reactFlowInstance]);
+  }, [
+    handleCopy,
+    handlePaste,
+    handleSave,
+    duplicateSelectedNode,
+    deleteSelection,
+    reactFlowInstance,
+    selectedNodeId,
+    selectedEdgeId,
+    selection.nodes.length,
+    selection.edges.length,
+  ]);
 
   useEffect(() => {
-    if (!accessToken || loading) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!accessToken || loading || !hasUnsavedChanges) return;
     if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
     autoSaveRef.current = setTimeout(() => {
       handleSave(true);
@@ -1148,7 +1200,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     return () => {
       if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
     };
-  }, [nodes, edges, flowName, status, accessToken, loading, handleSave]);
+  }, [nodes, edges, flowName, status, accessToken, loading, handleSave, hasUnsavedChanges]);
 
   const fitToView = useCallback(
     () => reactFlowInstance?.fitView({ padding: 0.2, duration: 600 }),
@@ -1207,9 +1259,22 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const applyInlineEdit = useCallback(() => {
     if (!inlineEditNodeId) return;
-    handleNodeFieldChange("text", inlineEditValue);
+    setNodes((prev) =>
+      prev.map((node) =>
+        node.id === inlineEditNodeId
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                text: inlineEditValue,
+                label: inlineEditValue,
+              },
+            }
+          : node,
+      ),
+    );
     setInlineEditNodeId(null);
-  }, [handleNodeFieldChange, inlineEditNodeId, inlineEditValue]);
+  }, [inlineEditNodeId, inlineEditValue]);
 
   const handleSnippetInsert = useCallback(
     (text: string) => {

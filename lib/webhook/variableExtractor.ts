@@ -23,19 +23,47 @@ type VariableDefinition = {
   transform?: (match: string) => string | number;
 };
 
+function isValidDateParts(year: number, month: number, day: number): boolean {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
 function normalizeNumericDate(dateStr: string): string | null {
   const parts = dateStr.split(/[.\-/]/);
   if (parts.length < 2) return null;
-  const dayNum = parseInt(parts[0], 10);
-  const monthNum = parseInt(parts[1], 10);
-  if (!dayNum || !monthNum || dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) {
+  const dayNum = Number.parseInt(parts[0], 10);
+  const monthNum = Number.parseInt(parts[1], 10);
+  if (!Number.isFinite(dayNum) || !Number.isFinite(monthNum) || dayNum < 1 || monthNum < 1 || monthNum > 12) {
     return null;
   }
   let year = parts[2] || new Date().getFullYear().toString();
   if (year.length === 2) year = "20" + year;
+  const yearNum = Number.parseInt(year, 10);
+  if (!Number.isFinite(yearNum)) return null;
+  if (!isValidDateParts(yearNum, monthNum, dayNum)) return null;
   const day = String(dayNum).padStart(2, "0");
   const month = String(monthNum).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return `${yearNum}-${month}-${day}`;
+}
+
+function normalizeTimeString(timeStr: string): string | null {
+  const match = timeStr.match(/^(\d{1,2})[.:](\d{2})$/);
+  if (!match) return null;
+  const hour = Number.parseInt(match[1], 10);
+  const minute = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (minute < 0 || minute > 59) return null;
+  if (hour < 0 || hour > 23) {
+    if (hour === 24 && minute === 0) {
+      return "00:00";
+    }
+    return null;
+  }
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
 }
 
 // Standard variable patterns for German restaurant/service businesses
@@ -53,11 +81,17 @@ const VARIABLE_PATTERNS: VariableDefinition[] = [
   {
     key: "time",
     pattern: /(\d{1,2}[.:]\d{2})\s*(?:uhr)?/i,
+    transform: (match) => normalizeTimeString(match) ?? "",
   },
   {
     key: "phone",
-    pattern: /(?:tel|telefon|handy|mobil|nummer)?[:\s]*(\+?[\d\s\-/]{8,})/i,
-    transform: (match) => match.replace(/[\s\-/]/g, ""),
+    pattern: /(?:tel|telefon|handy|mobil|nummer)?[:\s]*(\+?\d[\d\s\-/]{6,}\d)/i,
+    transform: (match) => {
+      const normalized = match.replace(/[\s\-/]/g, "");
+      const digits = normalized.replace(/\D/g, "");
+      if (digits.length < 7 || digits.length > 15) return "";
+      return normalized;
+    },
   },
   {
     key: "email",
@@ -109,7 +143,7 @@ export function extractName(messageText: string): string | null {
     if (words.length <= 3) {
       // Check if all words look like names (letters only, including German umlauts)
       const looksLikeName = words.every((w) =>
-        /^[A-Za-zÄÖÜäöüß]+$/.test(w)
+        /^[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß'\.-]*$/.test(w)
       );
       if (looksLikeName) {
         return trimmed;
@@ -119,9 +153,9 @@ export function extractName(messageText: string): string | null {
 
   // Try to extract from patterns like "Ich heiße Max" or "Mein Name ist Max"
   const namePatterns = [
-    /(?:ich\s+(?:heiße|heisse|bin))\s+([A-Za-zÄÖÜäöüß]+(?:\s+[A-Za-zÄÖÜäöüß]+)?)/i,
-    /(?:mein\s+name\s+ist)\s+([A-Za-zÄÖÜäöüß]+(?:\s+[A-Za-zÄÖÜäöüß]+)?)/i,
-    /(?:name[:\s]+)([A-Za-zÄÖÜäöüß]+(?:\s+[A-Za-zÄÖÜäöüß]+)?)/i,
+    /(?:ich\s+(?:heiße|heisse|bin))\s+([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß'\.-]*(?:\s+[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß'\.-]*)?)/i,
+    /(?:mein\s+name\s+ist)\s+([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß'\.-]*(?:\s+[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß'\.-]*)?)/i,
+    /(?:name[:\s]+)([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß'\.-]*(?:\s+[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß'\.-]*)?)/i,
   ];
 
   for (const pattern of namePatterns) {
@@ -215,7 +249,7 @@ export function extractDate(
       const targetDay = i;
       const currentDay = getWeekdayFromDateString(today);
       let daysUntil = targetDay - currentDay;
-      if (daysUntil <= 0) daysUntil += 7;
+      if (daysUntil < 0) daysUntil += 7;
       return addDaysToDateString(today, daysUntil);
     }
   }
@@ -262,48 +296,37 @@ export function extractTime(
   // Handle "19:00" (with colon - clearly a time)
   const colonTimeMatch = trimmed.match(/(\d{1,2}):(\d{2})/);
   if (colonTimeMatch) {
-    const hour = parseInt(colonTimeMatch[1], 10);
-    if (hour >= 0 && hour <= 24) {
-      return `${colonTimeMatch[1].padStart(2, "0")}:${colonTimeMatch[2]}`;
-    }
+    const normalized = normalizeTimeString(`${colonTimeMatch[1]}:${colonTimeMatch[2]}`);
+    if (normalized) return normalized;
   }
 
   // Handle "19.00 Uhr", "19.30 uhr" (dot with "uhr" - clearly a time)
   const dotTimeWithUhr = trimmed.match(/(\d{1,2})\.(\d{2})\s*uhr/i);
   if (dotTimeWithUhr) {
-    const hour = parseInt(dotTimeWithUhr[1], 10);
-    if (hour >= 0 && hour <= 24) {
-      return `${dotTimeWithUhr[1].padStart(2, "0")}:${dotTimeWithUhr[2]}`;
-    }
+    const normalized = normalizeTimeString(`${dotTimeWithUhr[1]}:${dotTimeWithUhr[2]}`);
+    if (normalized) return normalized;
   }
 
   if (options.allowDotWithoutUhr) {
     const dotTimeMatch = trimmed.match(/^(\d{1,2})\.(\d{2})$/);
     if (dotTimeMatch) {
-      const hour = parseInt(dotTimeMatch[1], 10);
-      const minute = parseInt(dotTimeMatch[2], 10);
-      if (hour >= 0 && hour <= 24 && minute >= 0 && minute <= 59) {
-        return `${dotTimeMatch[1].padStart(2, "0")}:${dotTimeMatch[2]}`;
-      }
+      const normalized = normalizeTimeString(`${dotTimeMatch[1]}:${dotTimeMatch[2]}`);
+      if (normalized) return normalized;
     }
   }
 
   // Handle "19 Uhr", "um 19 uhr" (hour with "uhr")
   const hourMatch = trimmed.match(/(\d{1,2})\s*uhr/i);
   if (hourMatch) {
-    const hour = parseInt(hourMatch[1], 10);
-    if (hour >= 0 && hour <= 24) {
-      return `${hourMatch[1].padStart(2, "0")}:00`;
-    }
+    const normalized = normalizeTimeString(`${hourMatch[1]}:00`);
+    if (normalized) return normalized;
   }
 
   // Handle "um 19:30", "gegen 20:00"
   const prefixTimeMatch = trimmed.match(/(?:um|gegen|ab)\s*(\d{1,2})[:\.](\d{2})/i);
   if (prefixTimeMatch) {
-    const hour = parseInt(prefixTimeMatch[1], 10);
-    if (hour >= 0 && hour <= 24) {
-      return `${prefixTimeMatch[1].padStart(2, "0")}:${prefixTimeMatch[2]}`;
-    }
+    const normalized = normalizeTimeString(`${prefixTimeMatch[1]}:${prefixTimeMatch[2]}`);
+    if (normalized) return normalized;
   }
 
   return null;

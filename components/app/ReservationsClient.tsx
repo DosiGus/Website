@@ -82,6 +82,8 @@ export default function ReservationsClient({ vertical }: Props) {
   // Pending action state
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const lastStatusParamRef = useRef<string | null>(null);
+  const requestIdRef = useRef(0);
+  const lastFilterKeyRef = useRef<string | null>(null);
 
   // Stats
   const [stats, setStats] = useState({
@@ -134,6 +136,7 @@ export default function ReservationsClient({ vertical }: Props) {
 
     setLoading(true);
     setError(null);
+    const requestId = ++requestIdRef.current;
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
@@ -167,11 +170,14 @@ export default function ReservationsClient({ vertical }: Props) {
       }
 
       const data: ReservationListResponse = await response.json();
+      if (requestId !== requestIdRef.current) return;
       setReservations(data.reservations);
       setTotal(data.total);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten");
     } finally {
+      if (requestId !== requestIdRef.current) return;
       setLoading(false);
     }
   };
@@ -215,16 +221,20 @@ export default function ReservationsClient({ vertical }: Props) {
     }
   };
 
+  const filterKey = `${statusFilter}|${dateFrom}|${dateTo}`;
+
   useEffect(() => {
+    if (!userId) return;
+    if (lastFilterKeyRef.current !== filterKey && currentPage !== 1) {
+      lastFilterKeyRef.current = filterKey;
+      setCurrentPage(1);
+      return;
+    }
+    lastFilterKeyRef.current = filterKey;
     loadReservations();
     loadStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, currentPage, statusFilter, dateFrom, dateTo]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [statusFilter, dateFrom, dateTo]);
+  }, [userId, currentPage, filterKey]);
 
   // Client-side search filter
   const filteredReservations = useMemo(() => {

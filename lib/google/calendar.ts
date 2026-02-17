@@ -133,6 +133,7 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
           }
         }
       }
+      throw new Error("Token-Erneuerung läuft bereits. Bitte erneut versuchen.");
     }
 
     const googleClientId = process.env.GOOGLE_CLIENT_ID;

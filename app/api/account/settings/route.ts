@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Einstellungen konnten nicht geladen werden" }, { status: 500 });
     }
 
     const calendar = normalizeCalendarSettings((data?.settings as any)?.calendar ?? null);

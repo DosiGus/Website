@@ -8,8 +8,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const level = searchParams.get("level");
     const source = searchParams.get("source");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 200);
-    const offset = parseInt(searchParams.get("offset") || "0", 10);
+    const rawLimit = Number.parseInt(searchParams.get("limit") || "50", 10);
+    const rawOffset = Number.parseInt(searchParams.get("offset") || "0", 10);
+    const limit = Math.min(Number.isFinite(rawLimit) ? rawLimit : 50, 200);
+    const offset = Number.isFinite(rawOffset) ? rawOffset : 0;
 
     let query = supabase
       .from("logs")
@@ -29,7 +31,7 @@ export async function GET(request: Request) {
     const { data: logs, count, error } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Logs konnten nicht geladen werden" }, { status: 500 });
     }
 
     return NextResponse.json({

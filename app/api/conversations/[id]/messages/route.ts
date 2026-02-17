@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "../../../../../lib/apiAuth";
+import { requireAccountMember } from "../../../../../lib/apiAuth";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../../lib/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +13,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { user, supabase } = await requireUser(request);
+    const { accountId, supabase } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = await checkRateLimit(`messages:${user.id}`, RATE_LIMITS.generous);
+    const rateLimit = await checkRateLimit(`messages:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -26,27 +26,23 @@ export async function GET(
 
     const conversationId = params.id;
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get("limit") || "100", 10), 500);
-    const offset = parseInt(searchParams.get("offset") || "0", 10);
+    const rawLimit = Number.parseInt(searchParams.get("limit") || "100", 10);
+    const rawOffset = Number.parseInt(searchParams.get("offset") || "0", 10);
+    const limit = Math.min(Number.isFinite(rawLimit) ? rawLimit : 100, 500);
+    const offset = Number.isFinite(rawOffset) ? rawOffset : 0;
 
     // First verify the conversation belongs to the user
     const { data: conversation, error: convError } = await supabase
       .from("conversations")
-      .select("id, user_id, instagram_sender_id, metadata")
+      .select("id, account_id, instagram_sender_id, metadata")
       .eq("id", conversationId)
+      .eq("account_id", accountId)
       .single();
 
     if (convError || !conversation) {
       return NextResponse.json(
         { error: "Konversation nicht gefunden" },
         { status: 404 }
-      );
-    }
-
-    if (conversation.user_id !== user.id) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 403 }
       );
     }
 
@@ -91,6 +87,9 @@ export async function GET(
       offset,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }

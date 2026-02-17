@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAccountMember, isRoleAtLeast } from "../../../lib/apiAuth";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
+import { createRequestLogger } from "../../../lib/logger";
 
 const integrationsPatchSchema = z.object({
   provider: z.enum(["meta", "google_calendar"]),
@@ -31,7 +32,11 @@ export async function GET(request: Request) {
       .eq("account_id", accountId);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const reqLogger = createRequestLogger("api");
+      await reqLogger.error("api", "Failed to load integrations", {
+        metadata: { accountId, error: error.message },
+      });
+      return NextResponse.json({ error: "Fehler beim Laden der Integrationen" }, { status: 500 });
     }
 
     return NextResponse.json({ integrations: data ?? [] });
@@ -83,8 +88,17 @@ export async function DELETE(request: Request) {
       .eq("provider", provider);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const reqLogger = createRequestLogger("api");
+      await reqLogger.error("api", "Failed to disconnect integration", {
+        metadata: { accountId, provider, error: error.message },
+      });
+      return NextResponse.json({ error: "Integration konnte nicht getrennt werden" }, { status: 500 });
     }
+
+    const reqLogger = createRequestLogger("api");
+    await reqLogger.info("api", "Integration disconnected", {
+      metadata: { accountId, provider },
+    });
 
     return NextResponse.json({ status: "disconnected" });
   } catch (error) {
@@ -156,7 +170,11 @@ export async function PATCH(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const reqLogger = createRequestLogger("api");
+      await reqLogger.error("api", "Failed to update integration", {
+        metadata: { accountId, provider, error: error.message },
+      });
+      return NextResponse.json({ error: "Integration konnte nicht aktualisiert werden" }, { status: 500 });
     }
 
     if (!data) {

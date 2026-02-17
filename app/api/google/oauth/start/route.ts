@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         requestId,
         userId: user.id,
       });
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "OAuth konnte nicht gestartet werden" }, { status: 500 });
     }
 
     const params = new URLSearchParams({

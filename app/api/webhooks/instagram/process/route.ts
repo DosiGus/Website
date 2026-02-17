@@ -11,11 +11,11 @@ const handler = async (request: Request) => {
     const payload = (await request.json()) as InstagramWebhookPayload;
     const baseUrl = new URL(request.url).origin;
     await processInstagramWebhookPayload(payload, reqLogger, baseUrl);
+    return NextResponse.json({ received: true });
   } catch (error) {
     await reqLogger.logError("webhook", error, "Queued webhook processing failed");
+    return NextResponse.json({ received: false }, { status: 500 });
   }
-
-  return NextResponse.json({ received: true });
 };
 
 const hasQstashKeys = Boolean(
@@ -24,4 +24,14 @@ const hasQstashKeys = Boolean(
 
 export const POST = hasQstashKeys
   ? verifySignatureAppRouter(handler)
-  : handler;
+  : async () => {
+      const reqLogger = createRequestLogger("webhook");
+      await reqLogger.error(
+        "webhook",
+        "QStash signing keys fehlen, Verarbeitung verweigert",
+      );
+      return NextResponse.json(
+        { error: "QStash signing keys fehlen" },
+        { status: 500 },
+      );
+    };

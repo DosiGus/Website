@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "../../../../../lib/apiAuth";
+import { requireAccountMember } from "../../../../../lib/apiAuth";
 import { defaultMetadata } from "../../../../../lib/defaultFlow";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../../lib/rateLimit";
 
@@ -8,8 +8,8 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
-    const { user, supabase } = await requireUser(request);
-    const rateLimit = await checkRateLimit(`flows_export:${user.id}`, RATE_LIMITS.standard);
+    const { accountId, supabase } = await requireAccountMember(request);
+    const rateLimit = await checkRateLimit(`flows_export:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -20,7 +20,7 @@ export async function GET(
       .from("flows")
       .select("*")
       .eq("id", params.id)
-      .eq("user_id", user.id)
+      .eq("account_id", accountId)
       .single();
 
     if (error || !data) {
@@ -36,7 +36,10 @@ export async function GET(
       edges: data.edges ?? [],
       metadata: data.metadata ?? defaultMetadata,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

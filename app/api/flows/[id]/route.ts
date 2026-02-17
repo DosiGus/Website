@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { requireAccountMember, isRoleAtLeast } from "../../../../lib/apiAuth";
 import { defaultMetadata } from "../../../../lib/defaultFlow";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../lib/rateLimit";
+import { z } from "zod";
+import { createRequestLogger } from "../../../../lib/logger";
+
+const flowPutSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  status: z.enum(["Entwurf", "Aktiv"]).optional(),
+  nodes: z.array(z.any()).optional(),
+  edges: z.array(z.any()).optional(),
+  triggers: z.array(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+}).strict();
 
 export async function GET(
   request: Request,
@@ -24,7 +35,7 @@ export async function GET(
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
+      return NextResponse.json({ error: "Flow nicht gefunden" }, { status: 404 });
     }
 
     return NextResponse.json(data);
@@ -52,23 +63,41 @@ export async function PUT(
         { status: 429, headers: rateLimitHeaders(rateLimit) }
       );
     }
-    const body = await request.json();
+    const parseResult = flowPutSchema.safeParse(await request.json());
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Ungültige Eingabe", details: parseResult.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const body = parseResult.data;
+    if (
+      body.name === undefined &&
+      body.status === undefined &&
+      body.nodes === undefined &&
+      body.edges === undefined &&
+      body.triggers === undefined &&
+      body.metadata === undefined
+    ) {
+      return NextResponse.json({ error: "Keine Felder zum Aktualisieren." }, { status: 400 });
+    }
+    const update: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (body.name !== undefined) update.name = body.name;
+    if (body.status !== undefined) update.status = body.status;
+    if (body.nodes !== undefined) update.nodes = body.nodes;
+    if (body.edges !== undefined) update.edges = body.edges;
+    if (body.triggers !== undefined) update.triggers = body.triggers;
+    if (body.metadata !== undefined) update.metadata = body.metadata ?? defaultMetadata;
     const { error } = await supabase
       .from("flows")
-      .update({
-        name: body.name,
-        status: body.status,
-        nodes: body.nodes,
-        edges: body.edges,
-        triggers: body.triggers ?? [],
-        metadata: body.metadata ?? defaultMetadata,
-        updated_at: new Date().toISOString(),
-      })
+      .update(update)
       .eq("id", params.id)
       .eq("account_id", accountId);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Flow konnte nicht aktualisiert werden" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
@@ -103,8 +132,13 @@ export async function DELETE(
       .eq("account_id", accountId);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Flow konnte nicht gelöscht werden" }, { status: 500 });
     }
+
+    const reqLogger = createRequestLogger("api");
+    await reqLogger.info("api", "Flow deleted", {
+      metadata: { accountId, flowId: params.id },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

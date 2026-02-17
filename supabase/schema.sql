@@ -60,7 +60,12 @@ create policy "Owner duerfen Account bearbeiten"
 
 create policy "Authentifizierte User erstellen Accounts"
   on public.accounts for insert
-  with check (auth.uid() is not null);
+  with check (
+    auth.uid() is not null
+    and not exists (
+      select 1 from public.account_members where user_id = auth.uid()
+    )
+  );
 
 -- RLS: account_members
 create policy "Mitglieder sehen Mitglieder"
@@ -188,6 +193,8 @@ create policy "Account-Mitglieder erstellen Kontakte" on public.contacts
 create policy "Account-Mitglieder bearbeiten Kontakte" on public.contacts
   for update using (account_id in (select public.user_account_ids()))
   with check (account_id in (select public.user_account_ids()));
+create policy "Account-Mitglieder loeschen Kontakte" on public.contacts
+  for delete using (account_id in (select public.user_account_ids()));
 
 -- Channel identities (Instagram PSID, WhatsApp number, etc.)
 create table if not exists public.contact_channels (
@@ -242,22 +249,16 @@ create index if not exists flows_account_id_idx on public.flows(account_id);
 
 alter table public.flows enable row level security;
 
--- Legacy user_id policies
-create policy "Flows sind nur fuer Besitzer sichtbar"
-  on public.flows for select using (auth.uid() = user_id);
-create policy "Besitzer duerfen Flows bearbeiten"
-  on public.flows for update using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-create policy "Besitzer duerfen Flows erstellen"
-  on public.flows for insert with check (auth.uid() = user_id);
-
 -- Account-based policies
 create policy "Account-Mitglieder sehen Flows" on public.flows
   for select using (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder bearbeiten Flows" on public.flows
-  for update using (account_id in (select public.user_account_ids()));
+  for update using (account_id in (select public.user_account_ids()))
+  with check (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder erstellen Flows" on public.flows
   for insert with check (account_id in (select public.user_account_ids()));
+create policy "Account-Mitglieder loeschen Flows" on public.flows
+  for delete using (account_id in (select public.user_account_ids()));
 
 -- =============================================================================
 -- 4. FLOW TEMPLATES (system-wide, read-only)
@@ -277,6 +278,9 @@ create table if not exists public.flow_templates (
 );
 
 alter table public.flow_templates enable row level security;
+
+create policy "Authentifizierte sehen Flow Templates"
+  on public.flow_templates for select using (auth.uid() is not null);
 
 insert into public.flow_templates (slug, name, vertical, description, nodes, edges, triggers)
 values
@@ -351,22 +355,16 @@ create unique index if not exists integrations_account_provider_idx
 
 alter table public.integrations enable row level security;
 
--- Legacy user_id policies
-create policy "Integrationen nur fuer Besitzer sichtbar"
-  on public.integrations for select using (auth.uid() = user_id);
-create policy "Besitzer duerfen Integrationen bearbeiten"
-  on public.integrations for update using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-create policy "Besitzer duerfen Integrationen erstellen"
-  on public.integrations for insert with check (auth.uid() = user_id);
-
 -- Account-based policies
 create policy "Account-Mitglieder sehen Integrationen" on public.integrations
   for select using (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder bearbeiten Integrationen" on public.integrations
-  for update using (account_id in (select public.user_account_ids()));
+  for update using (account_id in (select public.user_account_ids()))
+  with check (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder erstellen Integrationen" on public.integrations
   for insert with check (account_id in (select public.user_account_ids()));
+create policy "Account-Mitglieder loeschen Integrationen" on public.integrations
+  for delete using (account_id in (select public.user_account_ids()));
 
 -- =============================================================================
 -- 6. OAUTH STATES (server-only, temporary)
@@ -409,6 +407,7 @@ create table if not exists public.conversations (
 
 create index if not exists conversations_user_id_idx on public.conversations(user_id);
 create index if not exists conversations_account_id_idx on public.conversations(account_id);
+create index if not exists conversations_account_status_idx on public.conversations(account_id, status);
 create index if not exists conversations_integration_id_idx on public.conversations(integration_id);
 create index if not exists conversations_instagram_sender_id_idx on public.conversations(instagram_sender_id);
 create index if not exists conversations_contact_id_idx on public.conversations(contact_id);
@@ -420,22 +419,16 @@ create index if not exists conversations_metadata_idx
 
 alter table public.conversations enable row level security;
 
--- Legacy user_id policies
-create policy "Conversations sind nur fuer Besitzer sichtbar"
-  on public.conversations for select using (auth.uid() = user_id);
-create policy "Besitzer duerfen Conversations bearbeiten"
-  on public.conversations for update using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-create policy "Besitzer duerfen Conversations erstellen"
-  on public.conversations for insert with check (auth.uid() = user_id);
-
 -- Account-based policies
 create policy "Account-Mitglieder sehen Conversations" on public.conversations
   for select using (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder bearbeiten Conversations" on public.conversations
-  for update using (account_id in (select public.user_account_ids()));
+  for update using (account_id in (select public.user_account_ids()))
+  with check (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder erstellen Conversations" on public.conversations
   for insert with check (account_id in (select public.user_account_ids()));
+create policy "Account-Mitglieder loeschen Conversations" on public.conversations
+  for delete using (account_id in (select public.user_account_ids()));
 
 -- =============================================================================
 -- 8. MESSAGES
@@ -466,19 +459,21 @@ create index if not exists messages_sent_at_idx on public.messages(sent_at desc)
 
 alter table public.messages enable row level security;
 
-create policy "Messages sind nur fuer Conversation-Besitzer sichtbar"
-  on public.messages for select using (
+create policy "Account-Mitglieder sehen Messages" on public.messages
+  for select using (
     exists (
       select 1 from public.conversations c
-      where c.id = conversation_id and c.user_id = auth.uid()
+      where c.id = conversation_id
+        and c.account_id in (select public.user_account_ids())
     )
   );
 
-create policy "Messages duerfen nur von Conversation-Besitzern erstellt werden"
-  on public.messages for insert with check (
+create policy "Account-Mitglieder erstellen Messages" on public.messages
+  for insert with check (
     exists (
       select 1 from public.conversations c
-      where c.id = conversation_id and c.user_id = auth.uid()
+      where c.id = conversation_id
+        and c.account_id in (select public.user_account_ids())
     )
   );
 
@@ -509,6 +504,26 @@ create index if not exists message_failures_integration_id_idx on public.message
 create index if not exists message_failures_conversation_id_idx on public.message_failures(conversation_id);
 create index if not exists message_failures_created_at_idx on public.message_failures(created_at desc);
 
+alter table public.message_failures enable row level security;
+
+create policy "Account-Mitglieder sehen Message Failures" on public.message_failures
+  for select using (
+    exists (
+      select 1 from public.integrations i
+      where i.id = integration_id
+        and i.account_id in (select public.user_account_ids())
+    )
+  );
+
+create policy "Account-Mitglieder erstellen Message Failures" on public.message_failures
+  for insert with check (
+    exists (
+      select 1 from public.integrations i
+      where i.id = integration_id
+        and i.account_id in (select public.user_account_ids())
+    )
+  );
+
 -- =============================================================================
 -- 8c. INTEGRATION ALERTS (Email throttle)
 -- =============================================================================
@@ -525,6 +540,14 @@ create table if not exists public.integration_alerts (
 create index if not exists integration_alerts_integration_id_idx on public.integration_alerts(integration_id);
 create index if not exists integration_alerts_account_id_idx on public.integration_alerts(account_id);
 create index if not exists integration_alerts_sent_at_idx on public.integration_alerts(sent_at desc);
+
+alter table public.integration_alerts enable row level security;
+
+create policy "Account-Mitglieder sehen Integration Alerts" on public.integration_alerts
+  for select using (account_id in (select public.user_account_ids()));
+
+create policy "Account-Mitglieder erstellen Integration Alerts" on public.integration_alerts
+  for insert with check (account_id in (select public.user_account_ids()));
 
 -- =============================================================================
 -- 9. RESERVATIONS
@@ -567,6 +590,7 @@ create table if not exists public.reservations (
 
 create index if not exists reservations_user_id_idx on public.reservations(user_id);
 create index if not exists reservations_account_id_idx on public.reservations(account_id);
+create index if not exists reservations_account_status_idx on public.reservations(account_id, status);
 create index if not exists reservations_date_idx on public.reservations(reservation_date);
 create index if not exists reservations_status_idx on public.reservations(status);
 create index if not exists reservations_conversation_idx on public.reservations(conversation_id);
@@ -575,24 +599,16 @@ create index if not exists reservations_user_date_idx on public.reservations(use
 
 alter table public.reservations enable row level security;
 
--- Legacy user_id policies
-create policy "Reservations sind nur fuer Besitzer sichtbar"
-  on public.reservations for select using (auth.uid() = user_id);
-create policy "Besitzer duerfen Reservations bearbeiten"
-  on public.reservations for update using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-create policy "Besitzer duerfen Reservations erstellen"
-  on public.reservations for insert with check (auth.uid() = user_id);
-create policy "Besitzer duerfen Reservations loeschen"
-  on public.reservations for delete using (auth.uid() = user_id);
-
 -- Account-based policies
 create policy "Account-Mitglieder sehen Reservations" on public.reservations
   for select using (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder bearbeiten Reservations" on public.reservations
-  for update using (account_id in (select public.user_account_ids()));
+  for update using (account_id in (select public.user_account_ids()))
+  with check (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder erstellen Reservations" on public.reservations
   for insert with check (account_id in (select public.user_account_ids()));
+create policy "Account-Mitglieder loeschen Reservations" on public.reservations
+  for delete using (account_id in (select public.user_account_ids()));
 
 -- =============================================================================
 -- 9. FLOW SUBMISSIONS (universal flow outputs)
@@ -627,7 +643,8 @@ alter table public.calendar_availability_cache enable row level security;
 create policy "Account-Mitglieder sehen Calendar Cache" on public.calendar_availability_cache
   for select using (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder bearbeiten Calendar Cache" on public.calendar_availability_cache
-  for update using (account_id in (select public.user_account_ids()));
+  for update using (account_id in (select public.user_account_ids()))
+  with check (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder erstellen Calendar Cache" on public.calendar_availability_cache
   for insert with check (account_id in (select public.user_account_ids()));
 
@@ -675,7 +692,8 @@ create policy "Besitzer duerfen Flow Submissions loeschen"
 create policy "Account-Mitglieder sehen Flow Submissions" on public.flow_submissions
   for select using (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder bearbeiten Flow Submissions" on public.flow_submissions
-  for update using (account_id in (select public.user_account_ids()));
+  for update using (account_id in (select public.user_account_ids()))
+  with check (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder erstellen Flow Submissions" on public.flow_submissions
   for insert with check (account_id in (select public.user_account_ids()));
 
@@ -727,7 +745,8 @@ create policy "Besitzer duerfen Review Requests bearbeiten"
 create policy "Account-Mitglieder sehen Review Requests" on public.review_requests
   for select using (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder bearbeiten Review Requests" on public.review_requests
-  for update using (account_id in (select public.user_account_ids()));
+  for update using (account_id in (select public.user_account_ids()))
+  with check (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder erstellen Review Requests" on public.review_requests
   for insert with check (account_id in (select public.user_account_ids()));
 
@@ -761,7 +780,65 @@ alter table public.logs enable row level security;
 create policy "Account-Mitglieder sehen Logs" on public.logs
   for select using (account_id in (select public.user_account_ids()));
 create policy "Account-Mitglieder bearbeiten Logs" on public.logs
-  for update using (account_id in (select public.user_account_ids()));
+  for update using (account_id in (select public.user_account_ids()))
+  with check (account_id in (select public.user_account_ids()));
+
+-- =============================================================================
+-- 12. UPDATED_AT TRIGGERS
+-- =============================================================================
+
+create or replace function public.set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists set_updated_at_accounts on public.accounts;
+create trigger set_updated_at_accounts
+  before update on public.accounts
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at_contacts on public.contacts;
+create trigger set_updated_at_contacts
+  before update on public.contacts
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at_flows on public.flows;
+create trigger set_updated_at_flows
+  before update on public.flows
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at_integrations on public.integrations;
+create trigger set_updated_at_integrations
+  before update on public.integrations
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at_conversations on public.conversations;
+create trigger set_updated_at_conversations
+  before update on public.conversations
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at_reservations on public.reservations;
+create trigger set_updated_at_reservations
+  before update on public.reservations
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at_calendar_cache on public.calendar_availability_cache;
+create trigger set_updated_at_calendar_cache
+  before update on public.calendar_availability_cache
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at_flow_submissions on public.flow_submissions;
+create trigger set_updated_at_flow_submissions
+  before update on public.flow_submissions
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at_review_requests on public.review_requests;
+create trigger set_updated_at_review_requests
+  before update on public.review_requests
+  for each row execute function public.set_updated_at();
 create policy "Account-Mitglieder erstellen Logs" on public.logs
   for insert with check (account_id in (select public.user_account_ids()));
 
