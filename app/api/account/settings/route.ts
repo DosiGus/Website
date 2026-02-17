@@ -6,6 +6,7 @@ import {
   normalizeCalendarSettings,
   type CalendarSettings,
 } from "../../../../lib/google/settings";
+import { isVerticalKey, type VerticalKey } from "../../../../lib/verticals";
 
 export async function GET(request: Request) {
   try {
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from("accounts")
-      .select("settings")
+      .select("settings, vertical")
       .eq("id", accountId)
       .single();
 
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
     }
 
     const calendar = normalizeCalendarSettings((data?.settings as any)?.calendar ?? null);
-    return NextResponse.json({ calendar });
+    return NextResponse.json({ calendar, vertical: data?.vertical ?? null });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -47,39 +48,62 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const body = (await request.json()) as { calendar?: CalendarSettings };
-    if (!body?.calendar) {
-      return NextResponse.json({ error: "Keine Kalender-Einstellungen angegeben." }, { status: 400 });
+    const body = (await request.json()) as {
+      calendar?: CalendarSettings;
+      vertical?: VerticalKey | null;
+    };
+    const wantsCalendar = body?.calendar !== undefined;
+    const wantsVertical = body?.vertical !== undefined;
+    if (!wantsCalendar && !wantsVertical) {
+      return NextResponse.json({ error: "Keine Einstellungen angegeben." }, { status: 400 });
+    }
+    if (wantsVertical && body.vertical !== null && !isVerticalKey(body.vertical)) {
+      return NextResponse.json({ error: "Ungültige Branche." }, { status: 400 });
     }
 
     const supabase = createSupabaseServerClient();
-    const { data: account, error: loadError } = await supabase
-      .from("accounts")
-      .select("settings")
-      .eq("id", accountId)
-      .single();
+    const updatePayload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    let nextCalendar: CalendarSettings | null = null;
 
-    if (loadError) {
-      return NextResponse.json({ error: loadError.message }, { status: 500 });
+    if (wantsCalendar) {
+      const { data: account, error: loadError } = await supabase
+        .from("accounts")
+        .select("settings")
+        .eq("id", accountId)
+        .single();
+
+      if (loadError) {
+        return NextResponse.json({ error: loadError.message }, { status: 500 });
+      }
+
+      const currentSettings = (account?.settings ?? {}) as Record<string, unknown>;
+      nextCalendar = normalizeCalendarSettings(body.calendar);
+      const nextSettings = {
+        ...currentSettings,
+        calendar: nextCalendar,
+      };
+      updatePayload.settings = nextSettings;
     }
 
-    const currentSettings = (account?.settings ?? {}) as Record<string, unknown>;
-    const nextCalendar = normalizeCalendarSettings(body.calendar);
-    const nextSettings = {
-      ...currentSettings,
-      calendar: nextCalendar,
-    };
+    if (wantsVertical) {
+      updatePayload.vertical = body.vertical;
+    }
 
     const { error: updateError } = await supabase
       .from("accounts")
-      .update({ settings: nextSettings, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq("id", accountId);
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ calendar: nextCalendar });
+    return NextResponse.json({
+      calendar: nextCalendar ?? undefined,
+      vertical: wantsVertical ? body.vertical : undefined,
+    });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

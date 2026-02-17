@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import {
-  defaultNodes,
-  defaultEdges,
-  defaultTriggers,
   defaultMetadata,
+  getDefaultFlowPreset,
 } from "../../../lib/defaultFlow";
+import { type VerticalKey } from "../../../lib/verticals";
 import { requireUser, requireAccountMember } from "../../../lib/apiAuth";
 import { fallbackTemplates } from "../../../lib/flowTemplates";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
@@ -61,10 +60,17 @@ export async function POST(request: Request) {
     const customTriggers = body.triggers;
     const customMetadata = body.metadata;
     const supabase = createSupabaseServerClient();
-    let nodesToUse = defaultNodes;
-    let edgesToUse = defaultEdges;
-    let triggersToUse = defaultTriggers;
-    let metadataToUse = defaultMetadata;
+    const { data: account } = await supabase
+      .from("accounts")
+      .select("vertical")
+      .eq("id", accountId)
+      .single();
+    const accountVertical = (account?.vertical as VerticalKey | null) ?? null;
+    const defaultPreset = getDefaultFlowPreset(accountVertical);
+    let nodesToUse = defaultPreset.nodes;
+    let edgesToUse = defaultPreset.edges;
+    let triggersToUse = defaultPreset.triggers;
+    let metadataToUse = defaultPreset.metadata;
 
     if (templateId) {
       // PRIORITY: Check code templates FIRST (they are always up-to-date)
@@ -90,7 +96,7 @@ export async function POST(request: Request) {
           triggersToUse =
             (template.triggers as any) && Array.isArray(template.triggers)
               ? (template.triggers as any)
-              : defaultTriggers;
+              : defaultPreset.triggers;
           metadataToUse = (template.metadata as any) ?? defaultMetadata;
         }
       }

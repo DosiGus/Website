@@ -4,6 +4,7 @@ import AppAuthGate from "../../components/AppAuthGate";
 import AppSidebar from "../../components/app/AppSidebar";
 import AppTopbar from "../../components/app/AppTopbar";
 import OnboardingGuide from "../../components/app/OnboardingGuide";
+import VerticalGate from "../../components/app/VerticalGate";
 
 export default function ProtectedAppLayout({ children }: { children: ReactNode }) {
   return (
@@ -15,6 +16,7 @@ export default function ProtectedAppLayout({ children }: { children: ReactNode }
             <AppTopbar />
             <main className="flex-1 space-y-8 bg-zinc-950 px-8 py-8">{children}</main>
             <OnboardingGuide />
+            <VerticalGate />
           </div>
         </div>
       </div>

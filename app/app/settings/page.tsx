@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock } from "lucide-react";
+import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock, Building2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../lib/supabaseBrowserClient";
 import { getDefaultCalendarSettings, type CalendarSettings } from "../../../lib/google/settings";
+import { VERTICAL_OPTIONS, type VerticalKey } from "../../../lib/verticals";
 
 export default function SettingsPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -29,6 +30,10 @@ export default function SettingsPage() {
   const [calendarNotice, setCalendarNotice] = useState<string | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [calendarForm, setCalendarForm] = useState<CalendarSettings>(getDefaultCalendarSettings());
+  const [vertical, setVertical] = useState<VerticalKey | null>(null);
+  const [verticalSaving, setVerticalSaving] = useState(false);
+  const [verticalNotice, setVerticalNotice] = useState<string | null>(null);
+  const [verticalError, setVerticalError] = useState<string | null>(null);
 
   type TeamRole = "owner" | "admin" | "member" | "viewer";
   type TeamMember = {
@@ -148,6 +153,7 @@ export default function SettingsPage() {
       }
       const payload = await response.json();
       setCalendarForm(payload.calendar ?? getDefaultCalendarSettings());
+      setVertical(payload.vertical ?? null);
     } catch {
       setCalendarError("Kalender-Einstellungen konnten nicht geladen werden.");
     } finally {
@@ -259,6 +265,43 @@ export default function SettingsPage() {
         },
       };
     });
+  };
+
+  const handleVerticalChange = async (nextVertical: VerticalKey) => {
+    if (verticalSaving || nextVertical === vertical) return;
+    setVerticalSaving(true);
+    setVerticalNotice(null);
+    setVerticalError(null);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setVerticalError("Bitte erneut anmelden.");
+      setVerticalSaving(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/account/settings", {
+        method: "PATCH",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ vertical: nextVertical }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setVerticalError(payload?.error || "Branche konnte nicht gespeichert werden.");
+        setVerticalSaving(false);
+        return;
+      }
+      setVertical(nextVertical);
+      setVerticalNotice("Branche gespeichert.");
+    } catch {
+      setVerticalError("Branche konnte nicht gespeichert werden.");
+    } finally {
+      setVerticalSaving(false);
+    }
   };
 
   const handleCalendarDayRangeChange = (day: string, start: string, end: string) => {
@@ -485,6 +528,67 @@ export default function SettingsPage() {
               />
             </label>
           </div>
+        </div>
+
+        {/* Industry Section */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Branche</h2>
+              <p className="text-sm text-zinc-400">Wähle, welche Default-Flows wir dir zeigen sollen</p>
+            </div>
+          </div>
+
+          {calendarLoading ? (
+            <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+              Branchen-Einstellungen werden geladen...
+            </div>
+          ) : (
+            <div className="mt-6 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {VERTICAL_OPTIONS.map((option) => {
+                  const isActive = vertical === option.key;
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      disabled={verticalSaving}
+                      onClick={() => handleVerticalChange(option.key)}
+                      className={`flex h-full flex-col rounded-2xl border px-4 py-3 text-left transition ${
+                        isActive
+                          ? "border-emerald-500/60 bg-emerald-500/10"
+                          : "border-white/10 bg-white/5 hover:border-emerald-400/40 hover:bg-emerald-500/10"
+                      }`}
+                    >
+                      <div className="text-sm font-semibold text-white">{option.label}</div>
+                      <div className="mt-2 text-xs text-zinc-400">{option.description}</div>
+                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-zinc-500">
+                        {option.examples.map((example) => (
+                          <span key={example} className="rounded-full border border-white/10 px-2 py-1">
+                            {example}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {verticalNotice && (
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                  {verticalNotice}
+                </div>
+              )}
+              {verticalError && (
+                <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                  {verticalError}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Calendar Section */}
