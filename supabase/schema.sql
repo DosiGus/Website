@@ -508,6 +508,23 @@ create index if not exists message_failures_conversation_id_idx on public.messag
 create index if not exists message_failures_created_at_idx on public.message_failures(created_at desc);
 
 -- =============================================================================
+-- 8c. INTEGRATION ALERTS (Email throttle)
+-- =============================================================================
+
+create table if not exists public.integration_alerts (
+  id uuid primary key default gen_random_uuid(),
+  integration_id uuid references public.integrations(id) on delete cascade,
+  account_id uuid references public.accounts(id) on delete cascade,
+  alert_type text not null,
+  message text,
+  sent_at timestamptz default now()
+);
+
+create index if not exists integration_alerts_integration_id_idx on public.integration_alerts(integration_id);
+create index if not exists integration_alerts_account_id_idx on public.integration_alerts(account_id);
+create index if not exists integration_alerts_sent_at_idx on public.integration_alerts(sent_at desc);
+
+-- =============================================================================
 -- 9. RESERVATIONS
 -- =============================================================================
 
