@@ -481,6 +481,33 @@ create policy "Messages duerfen nur von Conversation-Besitzern erstellt werden"
   );
 
 -- =============================================================================
+-- 8b. MESSAGE FAILURES (Dead-letter)
+-- =============================================================================
+
+create table if not exists public.message_failures (
+  id uuid primary key default gen_random_uuid(),
+  integration_id uuid references public.integrations(id) on delete set null,
+  conversation_id uuid references public.conversations(id) on delete set null,
+  provider text not null default 'meta',
+  direction text not null default 'outgoing',
+  message_type text not null default 'text',
+  recipient_id text,
+  content text,
+  quick_replies jsonb,
+  error_code integer,
+  error_message text not null,
+  retryable boolean default false,
+  attempts integer,
+  flow_id uuid references public.flows(id) on delete set null,
+  node_id text,
+  created_at timestamptz default now()
+);
+
+create index if not exists message_failures_integration_id_idx on public.message_failures(integration_id);
+create index if not exists message_failures_conversation_id_idx on public.message_failures(conversation_id);
+create index if not exists message_failures_created_at_idx on public.message_failures(created_at desc);
+
+-- =============================================================================
 -- 9. RESERVATIONS
 -- =============================================================================
 

@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "../supabaseServerClient";
 import { fallbackTemplates } from "../flowTemplates";
 import { executeFlowNode } from "../webhook/flowExecutor";
 import { sendInstagramMessage } from "../meta/instagramApi";
+import { recordMessageFailure } from "../meta/messageFailures";
 import { ConversationMetadata, ConversationVariables } from "../flowTypes";
 import { logger } from "../logger";
 
@@ -253,6 +254,26 @@ export async function sendReviewRequestForReservation(
     await logger.error("system", `Review request send failed: ${sendResult.error}`, {
       metadata: { reservationId, reviewRequestId: reviewRequest.id },
     });
+    try {
+      await recordMessageFailure({
+        integrationId: integration.id,
+        conversationId: conversation.id,
+        recipientId: reservation.instagram_sender_id ?? null,
+        messageType: flowResponse.quickReplies.length > 0 ? "quick_reply" : "text",
+        content: flowResponse.text,
+        quickReplies: flowResponse.quickReplies,
+        errorCode: sendResult.code,
+        errorMessage: sendResult.error,
+        retryable: sendResult.retryable,
+        attempts: sendResult.attempts,
+        flowId: reviewFlow.flowId,
+        nodeId: REVIEW_START_NODE_ID,
+      });
+    } catch (error) {
+      await logger.warn("system", "Failed to record review message failure", {
+        metadata: { reservationId, reviewRequestId: reviewRequest.id, error: String(error) },
+      });
+    }
     return { success: false, status: "send_failed" };
   }
 

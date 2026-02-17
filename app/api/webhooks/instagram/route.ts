@@ -14,6 +14,7 @@ import {
   sendInstagramMessage,
   sendInstagramMessageWithImage,
 } from "../../../../lib/meta/instagramApi";
+import { recordMessageFailure } from "../../../../lib/meta/messageFailures";
 import { findMatchingFlow, parseQuickReplyPayload } from "../../../../lib/webhook/flowMatcher";
 import { executeFlowNode, handleQuickReplySelection, handleFreeTextInput } from "../../../../lib/webhook/flowExecutor";
 import { logger, createRequestLogger } from "../../../../lib/logger";
@@ -930,7 +931,7 @@ async function processMessagingEvent(
 
         const cancelText = `✅ Deine Reservierung wurde storniert.\n\nFalls du eine neue Reservierung machen möchtest, schreib einfach "Reservieren" oder "Tisch buchen".`;
 
-        await sendInstagramMessage({
+        const cancelSendResult = await sendInstagramMessage({
           recipientId: senderId,
           text: cancelText,
           quickReplies: [
@@ -938,6 +939,29 @@ async function processMessagingEvent(
           ],
           accessToken,
         });
+        if (!cancelSendResult.success) {
+          await reqLogger.warn("webhook", "Failed to send cancellation message", {
+            metadata: { error: cancelSendResult.error, code: cancelSendResult.code },
+          });
+          try {
+            await recordMessageFailure({
+              integrationId: integration.id,
+              conversationId: conversation.id,
+              recipientId: senderId,
+              messageType: "quick_reply",
+              content: cancelText,
+              quickReplies: [{ label: "Neue Reservierung", payload: "NEUE_RESERVIERUNG" }],
+              errorCode: cancelSendResult.code,
+              errorMessage: cancelSendResult.error,
+              retryable: cancelSendResult.retryable,
+              attempts: cancelSendResult.attempts,
+            });
+          } catch (error) {
+            await reqLogger.warn("webhook", "Failed to record message failure", {
+              metadata: { error: String(error) },
+            });
+          }
+        }
 
         await reqLogger.info("webhook", "Reservation cancelled by user", {
           metadata: { reservationId: existingRes.id },
@@ -949,12 +973,34 @@ async function processMessagingEvent(
     if (quickReplyPayload === "KEEP_EXISTING_RESERVATION") {
       const keepText = `👍 Alles klar! Deine bestehende Reservierung bleibt unverändert.\n\nFalls du Fragen hast, schreib uns einfach!`;
 
-      await sendInstagramMessage({
+      const keepSendResult = await sendInstagramMessage({
         recipientId: senderId,
         text: keepText,
         quickReplies: [],
         accessToken,
       });
+      if (!keepSendResult.success) {
+        await reqLogger.warn("webhook", "Failed to send keep-reservation message", {
+          metadata: { error: keepSendResult.error, code: keepSendResult.code },
+        });
+        try {
+          await recordMessageFailure({
+            integrationId: integration.id,
+            conversationId: conversation.id,
+            recipientId: senderId,
+            messageType: "text",
+            content: keepText,
+            errorCode: keepSendResult.code,
+            errorMessage: keepSendResult.error,
+            retryable: keepSendResult.retryable,
+            attempts: keepSendResult.attempts,
+          });
+        } catch (error) {
+          await reqLogger.warn("webhook", "Failed to record message failure", {
+            metadata: { error: String(error) },
+          });
+        }
+      }
       return;
     }
 
@@ -1013,7 +1059,7 @@ async function processMessagingEvent(
           `📌 Status: ${existingReservation.status === "confirmed" ? "Bestätigt" : "Ausstehend"}\n\n` +
           `Was möchtest du tun?`;
 
-        await sendInstagramMessage({
+        const existingResSendResult = await sendInstagramMessage({
           recipientId: senderId,
           text: existingResText,
           quickReplies: [
@@ -1023,6 +1069,33 @@ async function processMessagingEvent(
           ],
           accessToken,
         });
+        if (!existingResSendResult.success) {
+          await reqLogger.warn("webhook", "Failed to send existing reservation options", {
+            metadata: { error: existingResSendResult.error, code: existingResSendResult.code },
+          });
+          try {
+            await recordMessageFailure({
+              integrationId: integration.id,
+              conversationId: conversation.id,
+              recipientId: senderId,
+              messageType: "quick_reply",
+              content: existingResText,
+              quickReplies: [
+                { label: "Stornieren", payload: "CANCEL_EXISTING_RESERVATION" },
+                { label: "Behalten", payload: "KEEP_EXISTING_RESERVATION" },
+                { label: "Neue Reservierung", payload: "FORCE_NEW_RESERVATION" },
+              ],
+              errorCode: existingResSendResult.code,
+              errorMessage: existingResSendResult.error,
+              retryable: existingResSendResult.retryable,
+              attempts: existingResSendResult.attempts,
+            });
+          } catch (error) {
+            await reqLogger.warn("webhook", "Failed to record message failure", {
+              metadata: { error: String(error) },
+            });
+          }
+        }
 
         await reqLogger.info("webhook", "User has existing reservation, showing options", {
           metadata: {
@@ -1107,6 +1180,33 @@ async function processMessagingEvent(
         quickReplies: flowResponse.quickReplies,
         accessToken,
       });
+    }
+
+    if (!sendResult.success) {
+      await reqLogger.warn("webhook", "Failed to send response", {
+        metadata: { error: sendResult.error, code: sendResult.code },
+      });
+      try {
+        await recordMessageFailure({
+          integrationId: integration.id,
+          conversationId: conversation.id,
+          recipientId: senderId,
+          messageType: flowResponse.quickReplies.length > 0 ? "quick_reply" : "text",
+          content: flowResponse.text,
+          quickReplies: flowResponse.quickReplies,
+          errorCode: sendResult.code,
+          errorMessage: sendResult.error,
+          retryable: sendResult.retryable,
+          attempts: sendResult.attempts,
+          flowId: matchedFlowId,
+          nodeId: matchedNodeId,
+        });
+      } catch (error) {
+        await reqLogger.warn("webhook", "Failed to record message failure", {
+          metadata: { error: String(error) },
+        });
+      }
+      return;
     }
 
     if (sendResult.success) {
@@ -1405,12 +1505,34 @@ async function processMessagingEvent(
               const unavailableMessage =
                 `❗ Leider ist der gewünschte Termin nicht verfügbar.\n\n${suggestionText}`;
 
-              await sendInstagramMessage({
+              const unavailableSendResult = await sendInstagramMessage({
                 recipientId: senderId,
                 text: unavailableMessage,
                 quickReplies: [],
                 accessToken,
               });
+              if (!unavailableSendResult.success) {
+                await reqLogger.warn("webhook", "Failed to send slot unavailable message", {
+                  metadata: { error: unavailableSendResult.error, code: unavailableSendResult.code },
+                });
+                try {
+                  await recordMessageFailure({
+                    integrationId: integration.id,
+                    conversationId: conversation.id,
+                    recipientId: senderId,
+                    messageType: "text",
+                    content: unavailableMessage,
+                    errorCode: unavailableSendResult.code,
+                    errorMessage: unavailableSendResult.error,
+                    retryable: unavailableSendResult.retryable,
+                    attempts: unavailableSendResult.attempts,
+                  });
+                } catch (error) {
+                  await reqLogger.warn("webhook", "Failed to record message failure", {
+                    metadata: { error: String(error) },
+                  });
+                }
+              }
 
               const updatedVariables: ExtractedVariables = {
                 ...mergedVariables,
@@ -1467,8 +1589,6 @@ async function processMessagingEvent(
           metadata: { matchedFlowId, matchedNodeId },
         });
       }
-    } else {
-      await reqLogger.error("webhook", `Failed to send response: ${sendResult.error}`);
     }
   } else {
     await reqLogger.info("webhook", "No matching flow for message", {

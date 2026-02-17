@@ -21,8 +21,30 @@ export type SendImageOptions = {
 };
 
 type ApiResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string; code?: number };
+  | { success: true; data: T; attempts?: number }
+  | { success: false; error: string; code?: number; retryable?: boolean; attempts?: number };
+
+const MAX_RETRY_ATTEMPTS = 3;
+const BASE_RETRY_DELAY_MS = 500;
+const RETRYABLE_ERROR_CODES = new Set([4, 17, 341, 2]);
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isRetryableStatus(status: number) {
+  return status === 408 || status === 429 || (status >= 500 && status < 600);
+}
+
+function getRetryDelayMs(attempt: number, retryAfterHeader: string | null) {
+  if (retryAfterHeader) {
+    const retryAfterSeconds = Number.parseInt(retryAfterHeader, 10);
+    if (!Number.isNaN(retryAfterSeconds) && retryAfterSeconds > 0) {
+      return retryAfterSeconds * 1000;
+    }
+  }
+  const backoff = BASE_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+  const jitter = Math.floor(Math.random() * 200);
+  return backoff + jitter;
+}
 
 /**
  * Sends a text message via Instagram Messaging API.
@@ -122,75 +144,123 @@ async function sendToInstagramApi(
 ): Promise<ApiResult<InstagramSendMessageResponse>> {
   const url = `${META_GRAPH_BASE}/me/messages?access_token=${accessToken}`;
 
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      const errorData = data as InstagramApiError;
-      const errorMessage = errorData.error?.message || "Unknown API error";
-      const errorCode = errorData.error?.code;
-
-      await logger.error("integration", `Instagram API error: ${errorMessage}`, {
-        metadata: {
-          code: errorCode,
-          subcode: errorData.error?.error_subcode,
-          type: errorData.error?.type,
-          recipientId: body.recipient.id,
+  for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify(body),
       });
 
-      // Handle specific error codes
-      if (errorCode === 190) {
-        return {
-          success: false,
-          error: "Access token expired or invalid",
-          code: errorCode,
-        };
-      }
+      const data = await response.json().catch(() => null);
 
-      if (errorCode === 10 || errorCode === 100) {
-        return {
-          success: false,
-          error: "Permission denied or invalid recipient",
-          code: errorCode,
-        };
-      }
+      if (!response.ok) {
+        const errorData = data as InstagramApiError | null;
+        const errorMessage = errorData?.error?.message || "Unknown API error";
+        const errorCode = errorData?.error?.code;
+        const retryable =
+          isRetryableStatus(response.status) ||
+          (typeof errorCode === "number" && RETRYABLE_ERROR_CODES.has(errorCode));
 
-      // Rate limiting
-      if (errorCode === 4 || errorCode === 17 || errorCode === 341) {
-        return {
-          success: false,
-          error: "Rate limit exceeded, please try again later",
-          code: errorCode,
-        };
+        if (!retryable || attempt === MAX_RETRY_ATTEMPTS) {
+          await logger.error("integration", `Instagram API error: ${errorMessage}`, {
+            metadata: {
+              code: errorCode,
+              subcode: errorData?.error?.error_subcode,
+              type: errorData?.error?.type,
+              recipientId: body.recipient.id,
+              attempts: attempt,
+              status: response.status,
+              retryable,
+            },
+          });
+
+          if (errorCode === 190) {
+            return {
+              success: false,
+              error: "Access token expired or invalid",
+              code: errorCode,
+              retryable: false,
+              attempts: attempt,
+            };
+          }
+
+          if (errorCode === 10 || errorCode === 100) {
+            return {
+              success: false,
+              error: "Permission denied or invalid recipient",
+              code: errorCode,
+              retryable: false,
+              attempts: attempt,
+            };
+          }
+
+          if (errorCode === 4 || errorCode === 17 || errorCode === 341) {
+            return {
+              success: false,
+              error: "Rate limit exceeded, please try again later",
+              code: errorCode,
+              retryable: true,
+              attempts: attempt,
+            };
+          }
+
+          return {
+            success: false,
+            error: errorMessage,
+            code: errorCode,
+            retryable,
+            attempts: attempt,
+          };
+        }
+
+        await logger.warn("integration", "Instagram API retry scheduled", {
+          metadata: {
+            code: errorCode,
+            recipientId: body.recipient.id,
+            attempt,
+            status: response.status,
+          },
+        });
+
+        await sleep(getRetryDelayMs(attempt, response.headers.get("retry-after")));
+        continue;
       }
 
       return {
-        success: false,
-        error: errorMessage,
-        code: errorCode,
+        success: true,
+        data: data as InstagramSendMessageResponse,
+        attempts: attempt,
       };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Network error";
+      const isLastAttempt = attempt === MAX_RETRY_ATTEMPTS;
+
+      if (isLastAttempt) {
+        await logger.error("integration", `Instagram API request failed: ${message}`, {
+          metadata: { recipientId: body.recipient.id, attempts: attempt },
+        });
+        return {
+          success: false,
+          error: message,
+          retryable: true,
+          attempts: attempt,
+        };
+      }
+
+      await logger.warn("integration", "Instagram API request failed, retrying", {
+        metadata: { recipientId: body.recipient.id, attempt, error: message },
+      });
+      await sleep(getRetryDelayMs(attempt, null));
     }
-
-    return {
-      success: true,
-      data: data as InstagramSendMessageResponse,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Network error";
-    await logger.error("integration", `Instagram API request failed: ${message}`);
-
-    return {
-      success: false,
-      error: message,
-    };
   }
+
+  return {
+    success: false,
+    error: "Retry attempts exhausted",
+    retryable: false,
+    attempts: MAX_RETRY_ATTEMPTS,
+  };
 }
