@@ -11,6 +11,7 @@ export default function VerticalGate() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [canManage, setCanManage] = useState(true);
 
   useEffect(() => {
     async function loadVertical() {
@@ -27,6 +28,13 @@ export default function VerticalGate() {
       if (!response.ok) {
         setLoading(false);
         return;
+      }
+      const membersResponse = await fetch("/api/account/members", {
+        headers: { authorization: `Bearer ${session.access_token}` },
+      });
+      if (membersResponse.ok) {
+        const membersPayload = await membersResponse.json();
+        setCanManage(Boolean(membersPayload?.canManage));
       }
       const payload = await response.json();
       setVertical(payload?.vertical ?? null);
@@ -63,7 +71,7 @@ export default function VerticalGate() {
     setSaving(false);
   };
 
-  if (loading || vertical) {
+  if (loading || vertical || !canManage) {
     return null;
   }
 

@@ -268,7 +268,7 @@ export default function SettingsPage() {
   };
 
   const handleVerticalChange = async (nextVertical: VerticalKey) => {
-    if (verticalSaving || nextVertical === vertical) return;
+    if (!canManageTeam || verticalSaving || nextVertical === vertical) return;
     setVerticalSaving(true);
     setVerticalNotice(null);
     setVerticalError(null);
@@ -555,7 +555,7 @@ export default function SettingsPage() {
                     <button
                       key={option.key}
                       type="button"
-                      disabled={verticalSaving}
+                      disabled={verticalSaving || !canManageTeam}
                       onClick={() => handleVerticalChange(option.key)}
                       className={`flex h-full flex-col rounded-2xl border px-4 py-3 text-left transition ${
                         isActive
@@ -577,6 +577,11 @@ export default function SettingsPage() {
                 })}
               </div>
 
+              {!canManageTeam && (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                  Nur Owner oder Admin kann die Branche ändern.
+                </div>
+              )}
               {verticalNotice && (
                 <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
                   {verticalNotice}
