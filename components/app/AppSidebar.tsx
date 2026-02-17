@@ -5,22 +5,42 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Workflow, Plug, Settings, CalendarCheck, MessageCircle, LogOut, Compass } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { useRouter } from "next/navigation";
-
-const navItems = [
-  { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/app/flows", label: "Flows", icon: Workflow },
-  { href: "/app/reservations", label: "Reservierungen", icon: CalendarCheck },
-  { href: "/app/conversations", label: "Konversationen", icon: MessageCircle },
-  { href: "/app/integrations", label: "Integrationen", icon: Plug },
-  { href: "/app/settings", label: "Einstellungen", icon: Settings },
-];
+import { useEffect, useMemo, useState } from "react";
+import type { VerticalKey } from "../../lib/verticals";
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [vertical, setVertical] = useState<VerticalKey | null>(null);
+
+  useEffect(() => {
+    async function loadVertical() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const response = await fetch("/api/account/settings", {
+        headers: { authorization: `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) return;
+      const payload = await response.json();
+      setVertical(payload?.vertical ?? null);
+    }
+    loadVertical();
+  }, [supabase]);
+
+  const reservationLabel =
+    vertical === "gastro" || !vertical ? "Reservierungen" : "Termine";
+
+  const navItems = [
+    { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/app/flows", label: "Flows", icon: Workflow },
+    { href: "/app/reservations", label: reservationLabel, icon: CalendarCheck },
+    { href: "/app/conversations", label: "Konversationen", icon: MessageCircle },
+    { href: "/app/integrations", label: "Integrationen", icon: Plug },
+    { href: "/app/settings", label: "Einstellungen", icon: Settings },
+  ];
 
   const handleLogout = async () => {
-    const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
     router.push("/login");
   };

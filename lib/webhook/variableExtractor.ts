@@ -27,7 +27,7 @@ type VariableDefinition = {
 const VARIABLE_PATTERNS: VariableDefinition[] = [
   {
     key: "guestCount",
-    pattern: /(\d+)\s*(?:person|personen|leute|gäste|gaeste|pax)/i,
+    pattern: /(\d+)\s*(?:person|personen|leute|gäste|gaeste|pax|teilnehmer|teilnehmern)/i,
     transform: (match) => parseInt(match, 10),
   },
   {
