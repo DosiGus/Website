@@ -143,7 +143,11 @@ export default function NewFlowPage() {
         template.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
         template.description.toLowerCase().includes(templateSearch.toLowerCase());
       const matchesVertical =
-        verticalFilter === "alle" ? true : template.vertical === verticalFilter;
+        verticalFilter === "alle"
+          ? true
+          : verticalFilter === "Bewertungen"
+            ? template.vertical === "Bewertungen"
+            : template.vertical === verticalFilter || template.vertical === "Bewertungen";
       return matchesSearch && matchesVertical;
     });
   }, [templates, templateSearch, verticalFilter]);
