@@ -456,6 +456,9 @@ create table if not exists public.messages (
 
 create index if not exists messages_conversation_id_idx on public.messages(conversation_id);
 create index if not exists messages_instagram_message_id_idx on public.messages(instagram_message_id);
+create unique index if not exists messages_instagram_message_id_unique
+  on public.messages(instagram_message_id)
+  where instagram_message_id is not null;
 create index if not exists messages_channel_message_id_idx on public.messages(channel_message_id);
 create index if not exists messages_sent_at_idx on public.messages(sent_at desc);
 

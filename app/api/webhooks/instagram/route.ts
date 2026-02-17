@@ -528,6 +528,53 @@ async function processMessagingEvent(
     messageType = "quick_reply";
   }
 
+  // Idempotency gate: record the incoming message first (duplicate webhooks are common).
+  const incomingMessageRecord = {
+    conversation_id: conversation.id,
+    direction: "incoming",
+    message_type: messageType,
+    content: messageText,
+    quick_reply_payload: quickReplyPayload,
+    instagram_message_id: instagramMessageId,
+    channel_message_id: instagramMessageId,
+    flow_id: conversation.current_flow_id,
+    node_id: conversation.current_node_id,
+  };
+
+  if (instagramMessageId) {
+    const { error: incomingInsertError } = await supabase
+      .from("messages")
+      .insert(incomingMessageRecord);
+
+    if (incomingInsertError) {
+      const isDuplicate =
+        incomingInsertError.code === "23505" ||
+        incomingInsertError.message.toLowerCase().includes("duplicate");
+      if (isDuplicate) {
+        await reqLogger.info("webhook", "Duplicate message, skipping", {
+          metadata: { instagramMessageId },
+        });
+        return;
+      }
+
+      await reqLogger.error(
+        "webhook",
+        `Failed to save incoming message: ${incomingInsertError.message}`,
+      );
+    }
+  } else {
+    const { error: incomingInsertError } = await supabase
+      .from("messages")
+      .insert(incomingMessageRecord);
+
+    if (incomingInsertError) {
+      await reqLogger.error(
+        "webhook",
+        `Failed to save incoming message: ${incomingInsertError.message}`,
+      );
+    }
+  }
+
   // Extract and merge variables from the incoming message
   // NOTE: This is mutable because it may be reset when a new flow starts
   let existingMetadata = (conversation.metadata || {}) as ConversationMetadata;
@@ -714,39 +761,6 @@ async function processMessagingEvent(
         feedbackText: reviewFeedback ?? undefined,
       });
     }
-  }
-
-  // Check for duplicate message (idempotency)
-  if (instagramMessageId) {
-    const { data: existingMessage } = await supabase
-      .from("messages")
-      .select("id")
-      .eq("instagram_message_id", instagramMessageId)
-      .single();
-
-    if (existingMessage) {
-      await reqLogger.info("webhook", "Duplicate message, skipping", {
-        metadata: { instagramMessageId },
-      });
-      return;
-    }
-  }
-
-  // Save incoming message
-  const { error: incomingMsgError } = await supabase.from("messages").insert({
-    conversation_id: conversation.id,
-    direction: "incoming",
-    message_type: messageType,
-    content: messageText,
-    quick_reply_payload: quickReplyPayload,
-    instagram_message_id: instagramMessageId,
-    channel_message_id: instagramMessageId,
-    flow_id: conversation.current_flow_id,
-    node_id: conversation.current_node_id,
-  });
-
-  if (incomingMsgError) {
-    await reqLogger.error("webhook", `Failed to save incoming message: ${incomingMsgError.message}`);
   }
 
   if (contactId) {
@@ -1246,11 +1260,12 @@ async function processMessagingEvent(
         // Only consider it a final step if the response text explicitly confirms the reservation
         // AND we're not at a data collection node
         const looksLikeFinalStep =
-          hasAllReservationData &&
-          !isDataCollectionNode &&
-          flowResponse.isEndOfFlow ||
-          (flowResponse.text &&
+          (hasAllReservationData &&
             !isDataCollectionNode &&
+            flowResponse.isEndOfFlow) ||
+          (hasAllReservationData &&
+            !isDataCollectionNode &&
+            flowResponse.text &&
             (flowResponse.text.toLowerCase().includes("reservierung ist bestätigt") ||
               flowResponse.text.toLowerCase().includes("vielen dank") ||
               flowResponse.text.toLowerCase().includes("erfolgreich")));
