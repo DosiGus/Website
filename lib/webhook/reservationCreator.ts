@@ -63,17 +63,22 @@ export async function createReservationFromVariables(
     return { success: false, missingFields: missing };
   }
 
+  try {
     const supabase = createSupabaseServerClient();
-    const { data: account } = await supabase
+    const { data: account, error: settingsError } = await supabase
       .from("accounts")
       .select("settings")
       .eq("id", accountId)
       .single();
-    const calendarSettings = normalizeCalendarSettings((account?.settings as any)?.calendar ?? null);
-
-  try {
-    // Log the incoming variables for debugging
-    console.log("Creating reservation with variables:", JSON.stringify(variables, null, 2));
+    if (settingsError) {
+      await logger.warn("integration", "Failed to load calendar settings", {
+        userId,
+        metadata: { error: settingsError.message },
+      });
+    }
+    const calendarSettings = normalizeCalendarSettings(
+      (account?.settings as any)?.calendar ?? null
+    );
 
     const input: CreateReservationInput = {
       guest_name: String(variables.name),
@@ -89,9 +94,6 @@ export async function createReservationFromVariables(
       flow_id: flowId || undefined,
       instagram_sender_id: instagramSenderId,
     };
-
-    // Log what we're actually inserting
-    console.log("Reservation input:", JSON.stringify(input, null, 2));
 
     const availability = await checkSlotAvailability(
       accountId,

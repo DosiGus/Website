@@ -32,7 +32,7 @@ import {
   getMissingReservationFields,
 } from "../../../../lib/webhook/reservationCreator";
 import { cancelGoogleCalendarEvent } from "../../../../lib/google/calendar";
-import { checkSlotAvailability } from "../../../../lib/google/availability";
+import { type SlotSuggestion } from "../../../../lib/google/availability";
 import {
   findOrCreateContact,
   updateContactDisplayName,
@@ -92,11 +92,6 @@ function applyDefaults(
   }
   return next;
 }
-
-type SlotSuggestion = {
-  date: string;
-  time: string;
-};
 
 function formatSlotSuggestions(suggestions: SlotSuggestion[]): string {
   if (suggestions.length === 0) {
@@ -1054,113 +1049,6 @@ async function processMessagingEvent(
     }
   }
 
-  let availabilityOverride: { message: string; timeNodeId: string | null; suggestions: SlotSuggestion[] } | null = null;
-
-  if (flowResponse && matchedFlowId) {
-    const outputConfig = resolveOutputConfig(matchedFlowMetadata);
-    const outputType = outputConfig.type;
-    const reservationVariables = applyDefaults(mergedVariables, outputConfig.defaults);
-    const hasAllReservationData = canCreateReservation(
-      reservationVariables,
-      outputConfig.requiredFields
-    );
-
-    const dataCollectionNodes = [
-      "ask-name", "ask-phone", "ask-special", "ask-date", "ask-time", "ask-guests",
-      "ask-date-custom", "ask-time-custom", "ask-guests-large",
-      "special-allergy", "special-occasion"
-    ];
-    const matchedNodeIdLower = matchedNodeId?.toLowerCase() ?? "";
-    const isDataCollectionNode = dataCollectionNodes.some((n) =>
-      matchedNodeIdLower.includes(n.toLowerCase().replace("ask-", ""))
-    );
-
-    const confirmationNodeIds = [
-      "confirmed",
-      "confirmation",
-      "bestätigung",
-      "bestaetigung",
-      "bestaetigt",
-      "bestätigt",
-      "abschluss",
-      "fertig",
-      "done",
-      "complete",
-      "end",
-      "ende",
-      "danke",
-      "thanks",
-      "thank",
-      "success",
-      "erfolgreich",
-    ];
-    const isConfirmationNode = confirmationNodeIds.some((id) =>
-      matchedNodeIdLower.includes(id.toLowerCase())
-    );
-
-    const confirmationPayloads = [
-      "confirm",
-      "bestätigen",
-      "bestaetigen",
-      "ja",
-      "yes",
-      "ok",
-      "buchen",
-      "reservieren",
-      "absenden",
-      "senden",
-    ];
-    const isConfirmationPayload = quickReplyPayload
-      ? confirmationPayloads.some(p =>
-          quickReplyPayload.toLowerCase().includes(p.toLowerCase())
-        )
-      : false;
-
-    const shouldCheckAvailability =
-      outputType === "reservation" &&
-      hasAllReservationData &&
-      !isDataCollectionNode &&
-      (flowResponse.isEndOfFlow || isConfirmationNode || isConfirmationPayload);
-
-    if (shouldCheckAvailability) {
-      const isReviewFlow =
-        (matchedFlowId &&
-          typeof existingMetadata?.reviewFlowId === "string" &&
-          matchedFlowId === existingMetadata.reviewFlowId) ||
-        (matchedNodeId && matchedNodeId.toLowerCase().startsWith("review-"));
-
-      if (!isReviewFlow) {
-        const availability = await checkSlotAvailability(
-          accountId,
-          String(reservationVariables.date ?? ""),
-          String(reservationVariables.time ?? ""),
-        );
-
-        if (!availability.available) {
-          const timeNodeId = await findTimeNodeId(supabase, matchedFlowId);
-          const message = `❗ Leider ist der gewünschte Termin nicht verfügbar.\n\n${formatSlotSuggestions(availability.suggestions)}`;
-          availabilityOverride = {
-            message,
-            timeNodeId,
-            suggestions: availability.suggestions,
-          };
-          mergedVariables = {
-            ...mergedVariables,
-            time: undefined,
-          };
-
-          flowResponse = {
-            text: message,
-            quickReplies: [],
-            nextNodeId: timeNodeId,
-            isEndOfFlow: false,
-          };
-          matchedNodeId = timeNodeId ?? matchedNodeId;
-        }
-      }
-    }
-  }
-
   // Send response if we have one
   if (flowResponse) {
     let sendResult;
@@ -1228,33 +1116,6 @@ async function processMessagingEvent(
             Boolean(flowResponse.nextNodeId),
         },
       });
-
-      if (availabilityOverride) {
-        const updatedMetadata: ConversationMetadata = {
-          ...existingMetadata,
-          variables: mergedVariables,
-          reservationId: undefined,
-          flowCompleted: undefined,
-        };
-
-        const { error: availabilityMetaError } = await supabase
-          .from("conversations")
-          .update({ metadata: updatedMetadata })
-          .eq("id", conversation.id);
-
-        if (availabilityMetaError) {
-          await reqLogger.error("webhook", `Failed to update availability metadata: ${availabilityMetaError.message}`);
-        }
-
-        await reqLogger.info("webhook", "Availability override applied", {
-          metadata: {
-            flowId: matchedFlowId,
-            timeNodeId: availabilityOverride.timeNodeId,
-            suggestions: availabilityOverride.suggestions,
-          },
-        });
-        return;
-      }
 
       const isReviewFlow =
         (matchedFlowId &&
@@ -1330,11 +1191,10 @@ async function processMessagingEvent(
           "success",
           "erfolgreich",
         ];
-        const isConfirmationNode = matchedNodeId
-          ? confirmationNodeIds.some(id =>
-              matchedNodeId.toLowerCase().includes(id.toLowerCase())
-            )
-          : false;
+        const matchedNodeIdLower = matchedNodeId?.toLowerCase() ?? "";
+        const isConfirmationNode = confirmationNodeIds.some((id) =>
+          matchedNodeIdLower.includes(id.toLowerCase())
+        );
 
         // Check if the quick reply payload indicates confirmation
         const confirmationPayloads = [
@@ -1375,9 +1235,13 @@ async function processMessagingEvent(
           "ask-date-custom", "ask-time-custom", "ask-guests-large",
           "special-allergy", "special-occasion"
         ];
-        const isDataCollectionNode = matchedNodeId
-          ? dataCollectionNodes.some(n => matchedNodeId.toLowerCase().includes(n.toLowerCase().replace("ask-", "")))
-          : false;
+        const isDataCollectionNode = dataCollectionNodes.some((nodeId) => {
+          const nodeIdLower = nodeId.toLowerCase();
+          return (
+            matchedNodeIdLower === nodeIdLower ||
+            matchedNodeIdLower.startsWith(`${nodeIdLower}-`)
+          );
+        });
 
         // Only consider it a final step if the response text explicitly confirms the reservation
         // AND we're not at a data collection node

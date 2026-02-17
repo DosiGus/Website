@@ -6,6 +6,7 @@ import { logger } from "../logger";
 
 const CACHE_TTL_MS = 2 * 60 * 1000;
 const SUGGESTION_LIMIT = 3;
+const FREEBUSY_WINDOW_DAYS = 7;
 
 type BusyInterval = {
   start: Date;
@@ -46,10 +47,11 @@ export async function checkSlotAvailability(
     const resolvedCalendarId = calendarId ?? "primary";
     const resolvedTimeZone = calendarTimeZone ?? settings.timeZone;
 
-    const today = getTodayDateString(resolvedTimeZone);
-    const windowEndDate = addDays(today, settings.bookingWindowDays);
-    const timeMin = zonedTimeToUtc(today, "00:00", resolvedTimeZone).toISOString();
-    const timeMax = zonedTimeToUtc(windowEndDate, "23:59", resolvedTimeZone).toISOString();
+    const suggestionWindowDays = Math.min(settings.bookingWindowDays, FREEBUSY_WINDOW_DAYS);
+    const timeMinDate = date;
+    const timeMaxDate = addDays(date, suggestionWindowDays);
+    const timeMin = zonedTimeToUtc(timeMinDate, "00:00", resolvedTimeZone).toISOString();
+    const timeMax = zonedTimeToUtc(timeMaxDate, "23:59", resolvedTimeZone).toISOString();
     const busyIntervals = await getBusyIntervals({
       accountId,
       accessToken,
@@ -72,6 +74,7 @@ export async function checkSlotAvailability(
       time,
       timeZone: resolvedTimeZone,
       settings,
+      rangeDays: suggestionWindowDays,
       busyIntervals,
     });
 
@@ -98,6 +101,13 @@ type BusyIntervalParams = {
 async function getBusyIntervals(params: BusyIntervalParams): Promise<BusyInterval[]> {
   const supabase = createSupabaseServerClient();
   const { accountId, calendarId, timeMin, timeMax, timeZone } = params;
+
+  await supabase
+    .from("calendar_availability_cache")
+    .delete()
+    .eq("account_id", accountId)
+    .eq("calendar_id", calendarId)
+    .lt("expires_at", new Date().toISOString());
 
   const { data: cached } = await supabase
     .from("calendar_availability_cache")
@@ -173,13 +183,14 @@ type SuggestionParams = {
   timeZone: string;
   settings: ReturnType<typeof normalizeCalendarSettings>;
   busyIntervals: BusyInterval[];
+  rangeDays: number;
 };
 
 function generateSuggestions(params: SuggestionParams): SlotSuggestion[] {
-  const { date, time, timeZone, settings, busyIntervals } = params;
+  const { date, time, timeZone, settings, busyIntervals, rangeDays } = params;
   const suggestions: SlotSuggestion[] = [];
 
-  for (let dayOffset = 0; dayOffset < settings.bookingWindowDays; dayOffset += 1) {
+  for (let dayOffset = 0; dayOffset < rangeDays; dayOffset += 1) {
     const currentDate = addDays(date, dayOffset);
     const weekdayKey = getWeekdayKey(currentDate, timeZone);
     const ranges = settings.hours[weekdayKey] ?? [];
@@ -265,18 +276,30 @@ function zonedTimeToUtc(dateStr: string, timeStr: string, timeZone: string): Dat
   const [year, month, day] = dateStr.split("-").map(Number);
   const [hour, minute] = timeStr.split(":").map(Number);
   const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
-  const tzDate = new Date(utcDate.toLocaleString("en-US", { timeZone }));
-  const offset = utcDate.getTime() - tzDate.getTime();
-  return new Date(utcDate.getTime() + offset);
+  const offset = getTimeZoneOffsetMs(utcDate, timeZone);
+  return new Date(utcDate.getTime() - offset);
 }
 
-function getTodayDateString(timeZone: string): string {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-CA", {
+function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
     timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(now);
-  return parts;
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = dtf.formatToParts(date);
+  const lookup = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  const asUTC = Date.UTC(
+    Number(lookup.year),
+    Number(lookup.month) - 1,
+    Number(lookup.day),
+    Number(lookup.hour),
+    Number(lookup.minute),
+    Number(lookup.second)
+  );
+  return asUTC - date.getTime();
 }

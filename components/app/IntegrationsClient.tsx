@@ -44,6 +44,7 @@ export default function IntegrationsClient() {
   const [googleCalendarTimeZone, setGoogleCalendarTimeZone] = useState<string | null>(null);
   const [googleCalendarSaving, setGoogleCalendarSaving] = useState(false);
   const [googleCalendarNotice, setGoogleCalendarNotice] = useState<string | null>(null);
+  const [googleCalendarsLoading, setGoogleCalendarsLoading] = useState(false);
   const [reviewUrl, setReviewUrl] = useState("");
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewSaved, setReviewSaved] = useState(false);
@@ -311,6 +312,7 @@ export default function IntegrationsClient() {
 
   const loadGoogleCalendars = useCallback(async () => {
     try {
+      setGoogleCalendarsLoading(true);
       setGoogleError(null);
       const token = await getAccessToken();
       if (!token) return;
@@ -332,6 +334,8 @@ export default function IntegrationsClient() {
       setGoogleCalendarTimeZone(resolvedCalendar?.timeZone ?? null);
     } catch {
       setGoogleError("Kalender konnten nicht geladen werden.");
+    } finally {
+      setGoogleCalendarsLoading(false);
     }
   }, [getAccessToken, googleIntegration?.calendar_id]);
 
@@ -705,7 +709,13 @@ export default function IntegrationsClient() {
           )}
         </div>
 
-        {googleConnected && googleCalendars.length > 0 && (
+        {googleConnected && googleCalendarsLoading && (
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+            Kalender werden geladen...
+          </div>
+        )}
+
+        {googleConnected && !googleCalendarsLoading && googleCalendars.length > 0 && (
           <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-4">
             <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
               Kalenderauswahl
