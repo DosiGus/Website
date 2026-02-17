@@ -111,7 +111,7 @@ export default function IntegrationsClient() {
     return () => {
       cancelled = true;
     };
-  }, [errorParam, oauthResolved, metaConnected, getAccessToken]);
+  }, [errorParam, oauthResolved, metaConnected, providerParam, getAccessToken]);
 
   const loadStatus = useCallback(async () => {
     try {

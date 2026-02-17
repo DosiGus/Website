@@ -102,8 +102,16 @@ function formatSlotSuggestions(suggestions: SlotSuggestion[]): string {
   if (suggestions.length === 0) {
     return "Bitte nenne eine andere Uhrzeit oder ein anderes Datum.";
   }
-  const lines = suggestions.map((slot) => `• ${formatDate(slot.date)} ${slot.time}`);
+  const lines = suggestions.map((slot) => `• ${formatDisplayDate(slot.date)} ${slot.time}`);
   return `Hier sind die nächsten freien Zeiten:\n${lines.join("\n")}\n\nBitte antworte mit einer Uhrzeit oder einem neuen Datum.`;
+}
+
+function formatDisplayDate(dateStr: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split("-");
+    return `${day}.${month}.${year}`;
+  }
+  return dateStr;
 }
 
 async function findTimeNodeId(
