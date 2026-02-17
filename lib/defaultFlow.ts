@@ -86,6 +86,6 @@ export const defaultTriggers: FlowTrigger[] = [
 export const defaultMetadata: FlowMetadata = {
   version: "1.0",
   output_config: {
-    type: "custom",
+    type: "reservation",
   },
 };

@@ -8,7 +8,7 @@ import type { FlowTemplate } from "../../../../lib/flowTemplates";
 import FlowSetupWizard from "../../../../components/app/FlowSetupWizard";
 import FlowSimulator from "../../../../components/app/FlowSimulator";
 import type { Node, Edge } from "reactflow";
-import type { FlowTrigger } from "../../../../lib/flowTypes";
+import type { FlowMetadata, FlowTrigger } from "../../../../lib/flowTypes";
 
 type CreationMode = "choose" | "wizard" | "empty" | "template";
 
@@ -69,6 +69,7 @@ export default function NewFlowPage() {
     edges: Edge[];
     triggers: FlowTrigger[];
     name: string;
+    metadata: FlowMetadata;
   }) => {
     setStatus("creating");
     setError(null);
@@ -90,6 +91,7 @@ export default function NewFlowPage() {
         nodes: data.nodes,
         edges: data.edges,
         triggers: data.triggers,
+        metadata: data.metadata,
       }),
     });
     if (!response.ok) {

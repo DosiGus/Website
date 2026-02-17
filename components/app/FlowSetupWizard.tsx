@@ -14,7 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Node, Edge } from "reactflow";
-import type { FlowTrigger, FlowQuickReply } from "../../lib/flowTypes";
+import type { FlowTrigger, FlowQuickReply, FlowMetadata } from "../../lib/flowTypes";
 
 type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -46,6 +46,7 @@ type FlowSetupWizardProps = {
     edges: Edge[];
     triggers: FlowTrigger[];
     name: string;
+    metadata: FlowMetadata;
   }) => void;
   onCancel: () => void;
 };
@@ -525,11 +526,19 @@ export default function FlowSetupWizard({ onComplete, onCancel }: FlowSetupWizar
       },
     ];
 
+    const metadata: FlowMetadata = {
+      version: "1.0",
+      output_config: {
+        type: "reservation",
+      },
+    };
+
     onComplete({
       nodes,
       edges,
       triggers,
       name: `${config.restaurantName} - Reservierung`,
+      metadata,
     });
   }, [config, onComplete]);
 
