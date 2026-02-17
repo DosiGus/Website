@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
   try {
     const { accountId } = await requireAccountMember(request);
-    const rateLimit = checkRateLimit(`google_calendar:test:${accountId}`, RATE_LIMITS.standard);
+    const rateLimit = await checkRateLimit(`google_calendar:test:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },

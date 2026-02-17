@@ -1,35 +1,9 @@
-/**
- * Simple in-memory rate limiter for API routes.
- *
- * Note: This works for single-server deployments. For multi-server/edge
- * deployments, consider using Upstash Redis or similar.
- */
+import { Redis } from "@upstash/redis";
 
-interface RateLimitEntry {
-  count: number;
-  resetTime: number;
-}
-
-// In-memory store for rate limiting
-const rateLimitStore = new Map<string, RateLimitEntry>();
-
-// Clean up old entries periodically (every 5 minutes)
-const CLEANUP_INTERVAL = 5 * 60 * 1000;
-let lastCleanup = Date.now();
-
-function cleanupOldEntries() {
-  const now = Date.now();
-  if (now - lastCleanup < CLEANUP_INTERVAL) return;
-
-  lastCleanup = now;
-  const keysToDelete: string[] = [];
-  rateLimitStore.forEach((entry, key) => {
-    if (entry.resetTime < now) {
-      keysToDelete.push(key);
-    }
-  });
-  keysToDelete.forEach((key) => rateLimitStore.delete(key));
-}
+const hasRedisEnv = Boolean(
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+);
+const redis = hasRedisEnv ? Redis.fromEnv() : null;
 
 export interface RateLimitConfig {
   /** Maximum number of requests allowed in the window */
@@ -52,50 +26,43 @@ export interface RateLimitResult {
  * @param config - Rate limit configuration
  * @returns Rate limit result with success status and headers
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig
-): RateLimitResult {
-  cleanupOldEntries();
-
+): Promise<RateLimitResult> {
   const now = Date.now();
-  const key = identifier;
-  const entry = rateLimitStore.get(key);
 
-  // If no entry or window has expired, create new entry
-  if (!entry || entry.resetTime < now) {
-    const newEntry: RateLimitEntry = {
-      count: 1,
-      resetTime: now + config.windowMs,
-    };
-    rateLimitStore.set(key, newEntry);
-
+  if (!redis) {
     return {
       success: true,
       limit: config.limit,
-      remaining: config.limit - 1,
-      resetTime: newEntry.resetTime,
+      remaining: config.limit,
+      resetTime: now + config.windowMs,
     };
   }
 
-  // Increment count
-  entry.count += 1;
+  const windowId = Math.floor(now / config.windowMs);
+  const key = `ratelimit:${identifier}:${windowId}`;
 
-  // Check if over limit
-  if (entry.count > config.limit) {
-    return {
-      success: false,
-      limit: config.limit,
-      remaining: 0,
-      resetTime: entry.resetTime,
-    };
+  const [countResult, ttlResult] = await redis
+    .multi()
+    .incr(key)
+    .pttl(key)
+    .exec();
+
+  const count = Number(countResult ?? 0);
+  let ttlMs = Number(ttlResult ?? 0);
+
+  if (count === 1 || ttlMs <= 0) {
+    await redis.pexpire(key, config.windowMs);
+    ttlMs = config.windowMs;
   }
 
   return {
-    success: true,
+    success: count <= config.limit,
     limit: config.limit,
-    remaining: config.limit - entry.count,
-    resetTime: entry.resetTime,
+    remaining: Math.max(0, config.limit - count),
+    resetTime: now + ttlMs,
   };
 }
 

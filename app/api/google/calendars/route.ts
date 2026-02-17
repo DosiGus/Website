@@ -6,7 +6,7 @@ import { listGoogleCalendars } from "../../../../lib/google/calendar";
 export async function GET(request: Request) {
   try {
     const { accountId } = await requireAccountMember(request);
-    const rateLimit = checkRateLimit(`google_calendar:list:${accountId}`, RATE_LIMITS.generous);
+    const rateLimit = await checkRateLimit(`google_calendar:list:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },

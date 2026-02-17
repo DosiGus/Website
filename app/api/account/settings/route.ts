@@ -11,7 +11,7 @@ import { isVerticalKey, type VerticalKey } from "../../../../lib/verticals";
 export async function GET(request: Request) {
   try {
     const { accountId } = await requireAccountMember(request);
-    const rateLimit = checkRateLimit(`account_settings:${accountId}`, RATE_LIMITS.generous);
+    const rateLimit = await checkRateLimit(`account_settings:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { accountId } = await requireAccountMember(request);
-    const rateLimit = checkRateLimit(`account_settings:${accountId}:update`, RATE_LIMITS.standard);
+    const rateLimit = await checkRateLimit(`account_settings:${accountId}:update`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },

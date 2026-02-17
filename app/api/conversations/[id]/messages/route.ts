@@ -17,7 +17,7 @@ export async function GET(
     const user = await requireUser(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`messages:${user.id}`, RATE_LIMITS.generous);
+    const rateLimit = await checkRateLimit(`messages:${user.id}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },

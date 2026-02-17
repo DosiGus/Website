@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.generous);
+    const rateLimit = await checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
     const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
+    const rateLimit = await checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -195,7 +195,7 @@ export async function PATCH(request: Request) {
     const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
+    const rateLimit = await checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -361,7 +361,7 @@ export async function DELETE(request: Request) {
     const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
+    const rateLimit = await checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },

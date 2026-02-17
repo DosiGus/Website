@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Client } from "@upstash/qstash";
 import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
 import {
   verifyWebhookSignature,
@@ -219,59 +220,25 @@ export async function POST(request: Request) {
 
     // Parse payload
     const payload: InstagramWebhookPayload = JSON.parse(rawBody);
-    const entrySummaries = Array.isArray(payload?.entry)
-      ? payload.entry.slice(0, 3).map((entry) => {
-          const messaging = (entry as { messaging?: unknown }).messaging;
-          const changes = (entry as { changes?: unknown }).changes;
-          const changeFields = Array.isArray(changes)
-            ? changes
-                .map((change) =>
-                  (change as { field?: string }).field
-                )
-                .filter(Boolean)
-            : [];
-          return {
-            id: entry.id,
-            keys: Object.keys(entry ?? {}),
-            messagingCount: Array.isArray(messaging) ? messaging.length : 0,
-            changesCount: Array.isArray(changes) ? changes.length : 0,
-            changeFields,
-          };
-        })
-      : [];
-    const hasMessagingEvents = entrySummaries.some(
-      (summary) => summary.messagingCount > 0,
-    );
-    const hasChangeEvents = entrySummaries.some(
-      (summary) => summary.changesCount > 0,
-    );
-    if (!hasMessagingEvents && !hasChangeEvents) {
-      await reqLogger.warn("webhook", "Webhook payload has no messaging or change events", {
-        metadata: {
-          object: payload?.object,
-          entryCount: Array.isArray(payload?.entry) ? payload.entry.length : 0,
-          entrySummaries,
-        },
-      });
-    }
 
-    // Only process Instagram events
-    if (payload.object !== "instagram") {
-      await reqLogger.info("webhook", `Ignoring non-Instagram event: ${payload.object}`);
+    const qstashToken = process.env.QSTASH_TOKEN;
+    if (!qstashToken) {
+      await reqLogger.error("webhook", "QSTASH_TOKEN missing; processing inline");
+      await processInstagramWebhookPayload(payload, reqLogger);
       return NextResponse.json({ received: true });
     }
 
-    // Process each entry
-    for (const entry of payload.entry) {
-      for (const event of entry.messaging || []) {
-        await processMessagingEvent(event, entry.id, reqLogger);
-      }
-      const changeEvents = entry.changes || [];
-      for (const change of changeEvents) {
-        const mapped = await changeToMessagingEvent(change, entry.id, reqLogger);
-        if (!mapped) continue;
-        await processMessagingEvent(mapped.event, mapped.instagramAccountId, reqLogger);
-      }
+    const qstash = new Client({ token: qstashToken });
+    const baseUrl = new URL(request.url).origin;
+
+    try {
+      await qstash.publishJSON({
+        url: `${baseUrl}/api/webhooks/instagram/process`,
+        body: payload,
+      });
+    } catch (queueError) {
+      await reqLogger.logError("webhook", queueError, "Failed to enqueue webhook");
+      return NextResponse.json({ error: "Queueing failed" }, { status: 500 });
     }
 
     return NextResponse.json({ received: true });
@@ -279,6 +246,64 @@ export async function POST(request: Request) {
     await reqLogger.logError("webhook", error, "Webhook processing failed");
     // Always return 200 to Meta to prevent retries
     return NextResponse.json({ received: true });
+  }
+}
+
+export async function processInstagramWebhookPayload(
+  payload: InstagramWebhookPayload,
+  reqLogger: ReturnType<typeof createRequestLogger>
+) {
+  const entrySummaries = Array.isArray(payload?.entry)
+    ? payload.entry.slice(0, 3).map((entry) => {
+        const messaging = (entry as { messaging?: unknown }).messaging;
+        const changes = (entry as { changes?: unknown }).changes;
+        const changeFields = Array.isArray(changes)
+          ? changes
+              .map((change) =>
+                (change as { field?: string }).field
+              )
+              .filter(Boolean)
+          : [];
+        return {
+          id: entry.id,
+          keys: Object.keys(entry ?? {}),
+          messagingCount: Array.isArray(messaging) ? messaging.length : 0,
+          changesCount: Array.isArray(changes) ? changes.length : 0,
+          changeFields,
+        };
+      })
+    : [];
+  const hasMessagingEvents = entrySummaries.some(
+    (summary) => summary.messagingCount > 0,
+  );
+  const hasChangeEvents = entrySummaries.some(
+    (summary) => summary.changesCount > 0,
+  );
+  if (!hasMessagingEvents && !hasChangeEvents) {
+    await reqLogger.warn("webhook", "Webhook payload has no messaging or change events", {
+      metadata: {
+        object: payload?.object,
+        entryCount: Array.isArray(payload?.entry) ? payload.entry.length : 0,
+        entrySummaries,
+      },
+    });
+  }
+
+  if (payload.object !== "instagram") {
+    await reqLogger.info("webhook", `Ignoring non-Instagram event: ${payload.object}`);
+    return;
+  }
+
+  for (const entry of payload.entry || []) {
+    for (const event of entry.messaging || []) {
+      await processMessagingEvent(event, entry.id, reqLogger);
+    }
+    const changeEvents = entry.changes || [];
+    for (const change of changeEvents) {
+      const mapped = await changeToMessagingEvent(change, entry.id, reqLogger);
+      if (!mapped) continue;
+      await processMessagingEvent(mapped.event, mapped.instagramAccountId, reqLogger);
+    }
   }
 }
 

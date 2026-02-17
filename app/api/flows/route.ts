@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`flows:${accountId}`, RATE_LIMITS.generous);
+    const rateLimit = await checkRateLimit(`flows:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const { user, accountId } = await requireAccountMember(request);
 
     // Rate limiting
-    const rateLimit = checkRateLimit(`flows:${accountId}`, RATE_LIMITS.standard);
+    const rateLimit = await checkRateLimit(`flows:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
