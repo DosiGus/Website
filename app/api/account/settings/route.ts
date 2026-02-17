@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAccountMember } from "../../../../lib/apiAuth";
+import { requireAccountMember, isRoleAtLeast } from "../../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../lib/rateLimit";
 import {
@@ -39,7 +39,10 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { accountId } = await requireAccountMember(request);
+    const { accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     const rateLimit = await checkRateLimit(`account_settings:${accountId}:update`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(

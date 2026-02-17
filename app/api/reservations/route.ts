@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser, requireAccountMember } from "../../../lib/apiAuth";
+import { requireAccountMember, isRoleAtLeast } from "../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import {
   Reservation,
@@ -117,7 +117,10 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { user, accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
 
     // Rate limiting
     const rateLimit = await checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
@@ -192,7 +195,10 @@ export async function POST(request: Request) {
  */
 export async function PATCH(request: Request) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { user, accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
 
     // Rate limiting
     const rateLimit = await checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);
@@ -358,7 +364,10 @@ export async function PATCH(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { user, accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
 
     // Rate limiting
     const rateLimit = await checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.standard);

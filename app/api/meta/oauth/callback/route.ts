@@ -154,12 +154,10 @@ export async function GET(request: Request) {
 
   let accountId = (stateRow as { account_id?: string | null }).account_id ?? null;
   if (!accountId) {
-    const { data: membership, error: membershipError } = await supabase
+    const { data: memberships, error: membershipError } = await supabase
       .from("account_members")
-      .select("account_id")
-      .eq("user_id", stateRow.user_id)
-      .limit(1)
-      .maybeSingle();
+      .select("account_id, role, joined_at")
+      .eq("user_id", stateRow.user_id);
 
     if (membershipError) {
       await log.error("oauth", "Failed to resolve account membership", {
@@ -169,7 +167,21 @@ export async function GET(request: Request) {
       });
     }
 
-    accountId = membership?.account_id ?? null;
+    const rolePriority: Record<string, number> = {
+      viewer: 0,
+      member: 1,
+      admin: 2,
+      owner: 3,
+    };
+    const sorted = (memberships ?? []).sort((a, b) => {
+      const roleDelta =
+        (rolePriority[String(b.role)] ?? 0) - (rolePriority[String(a.role)] ?? 0);
+      if (roleDelta !== 0) return roleDelta;
+      const aJoined = a.joined_at ? new Date(a.joined_at).getTime() : 0;
+      const bJoined = b.joined_at ? new Date(b.joined_at).getTime() : 0;
+      return aJoined - bJoined;
+    });
+    accountId = sorted[0]?.account_id ?? null;
   }
 
   if (!accountId) {
@@ -215,7 +227,7 @@ export async function GET(request: Request) {
       const { data: existingIntegration } = await supabase
         .from("integrations")
         .select("status,account_name,instagram_username")
-        .eq("user_id", stateRow.user_id)
+        .eq("account_id", accountId)
         .eq("provider", "meta")
         .maybeSingle();
 
@@ -757,7 +769,7 @@ export async function GET(request: Request) {
           facebook_user_id: facebookUserId,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "user_id,provider" },
+        { onConflict: "account_id,provider" },
       );
 
     if (integrationError) {

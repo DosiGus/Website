@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../../lib/supabaseServerClient";
-import { requireAccountMember } from "../../../../../lib/apiAuth";
+import { requireAccountMember, isRoleAtLeast } from "../../../../../lib/apiAuth";
 import { META_PERMISSIONS } from "../../../../../lib/meta/types";
 import { createRequestLogger } from "../../../../../lib/logger";
 import crypto from "crypto";
@@ -11,7 +11,10 @@ export async function POST(request: Request) {
   const requestId = crypto.randomUUID();
   const log = createRequestLogger("oauth");
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { user, accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     await log.info("oauth", "OAuth start requested", {
       requestId,
       userId: user.id,

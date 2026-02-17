@@ -5,7 +5,7 @@ import {
   getDefaultFlowPreset,
 } from "../../../lib/defaultFlow";
 import { type VerticalKey } from "../../../lib/verticals";
-import { requireUser, requireAccountMember } from "../../../lib/apiAuth";
+import { requireAccountMember, isRoleAtLeast } from "../../../lib/apiAuth";
 import { fallbackTemplates } from "../../../lib/flowTemplates";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
@@ -41,7 +41,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { user, accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
 
     // Rate limiting
     const rateLimit = await checkRateLimit(`flows:${accountId}`, RATE_LIMITS.standard);

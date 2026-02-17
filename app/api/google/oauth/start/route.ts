@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createSupabaseServerClient } from "../../../../../lib/supabaseServerClient";
-import { requireAccountMember } from "../../../../../lib/apiAuth";
+import { requireAccountMember, isRoleAtLeast } from "../../../../../lib/apiAuth";
 import { createRequestLogger } from "../../../../../lib/logger";
 import { GOOGLE_OAUTH_BASE, GOOGLE_OAUTH_SCOPES } from "../../../../../lib/google/types";
 
@@ -10,7 +10,10 @@ export async function POST(request: Request) {
   const log = createRequestLogger("oauth");
 
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { user, accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
     const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI;
 

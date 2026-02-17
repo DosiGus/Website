@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
-import { requireUser, requireAccountMember } from "../../../lib/apiAuth";
+import { requireAccountMember } from "../../../lib/apiAuth";
 
 export async function GET(request: Request) {
   try {

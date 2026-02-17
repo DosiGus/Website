@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
-import { requireUser, requireAccountMember } from "../../../../lib/apiAuth";
+import { requireAccountMember, isRoleAtLeast } from "../../../../lib/apiAuth";
 import { defaultMetadata } from "../../../../lib/defaultFlow";
 
 export async function GET(
@@ -32,7 +32,10 @@ export async function PUT(
   { params }: { params: { id: string } },
 ) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { user, accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     const body = await request.json();
     const supabase = createSupabaseServerClient();
     const { error } = await supabase
@@ -64,7 +67,10 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { user, accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     const supabase = createSupabaseServerClient();
     const { error } = await supabase
       .from("flows")

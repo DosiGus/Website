@@ -1,11 +1,14 @@
 // DEPRECATED: Use DELETE /api/integrations instead
 import { NextResponse } from "next/server";
-import { requireUser } from "../../../../../lib/apiAuth";
+import { requireAccountMember, isRoleAtLeast } from "../../../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../../../lib/supabaseServerClient";
 
 export async function POST(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     const supabase = createSupabaseServerClient();
 
     const { error } = await supabase
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
         account_name: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", user.id)
+      .eq("account_id", accountId)
       .eq("provider", "meta");
 
     if (error) {

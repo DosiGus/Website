@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAccountMember } from "../../../../../lib/apiAuth";
+import { requireAccountMember, isRoleAtLeast } from "../../../../../lib/apiAuth";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../../lib/rateLimit";
 import { createGoogleCalendarEvent } from "../../../../../lib/google/calendar";
 import { createRequestLogger } from "../../../../../lib/logger";
@@ -10,7 +10,10 @@ export async function POST(request: Request) {
   const log = createRequestLogger("integration");
 
   try {
-    const { accountId } = await requireAccountMember(request);
+    const { accountId, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     const rateLimit = await checkRateLimit(`google_calendar:test:${accountId}`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(

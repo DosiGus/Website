@@ -1,11 +1,11 @@
 // DEPRECATED: Use GET /api/integrations instead
 import { NextResponse } from "next/server";
-import { requireUser } from "../../../../../lib/apiAuth";
+import { requireAccountMember } from "../../../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../../../lib/supabaseServerClient";
 
 export async function GET(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { accountId } = await requireAccountMember(request);
     const supabase = createSupabaseServerClient();
 
     const { data, error } = await supabase
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
       .select(
         "provider,status,account_name,instagram_id,page_id,expires_at,updated_at",
       )
-      .eq("user_id", user.id)
+      .eq("account_id", accountId)
       .eq("provider", "meta")
       .maybeSingle();
 

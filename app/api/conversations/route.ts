@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser, requireAccountMember } from "../../../lib/apiAuth";
+import { requireAccountMember } from "../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
