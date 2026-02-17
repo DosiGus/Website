@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireAccountMember } from "../../../../../lib/apiAuth";
-import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../../lib/rateLimit";
-import { listGoogleCalendars } from "../../../../../lib/google/calendar";
+import { requireAccountMember } from "../../../../lib/apiAuth";
+import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../lib/rateLimit";
+import { listGoogleCalendars } from "../../../../lib/google/calendar";
 
 export async function GET(request: Request) {
   try {
