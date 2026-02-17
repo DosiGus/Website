@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Workflow, Plug, CalendarCheck, Clock } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
+import useAccountVertical from "../../lib/useAccountVertical";
+import { getBookingLabels } from "../../lib/verticals";
 
 interface DashboardStats {
   activeFlows: number;
@@ -15,6 +17,8 @@ interface DashboardStats {
 export default function DashboardStats() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const { vertical } = useAccountVertical();
+  const labels = getBookingLabels(vertical);
 
   useEffect(() => {
     async function fetchStats() {
@@ -85,7 +89,7 @@ export default function DashboardStats() {
       href: "/app/integrations",
     },
     {
-      label: "Reservierungen",
+      label: labels.bookingPlural,
       value: stats?.totalReservations ?? 0,
       description: `${stats?.pendingReservations ?? 0} ausstehend`,
       icon: CalendarCheck,
@@ -96,7 +100,7 @@ export default function DashboardStats() {
     {
       label: "Ausstehend",
       value: stats?.pendingReservations ?? 0,
-      description: "Reservierungen zur Bestätigung",
+      description: `${labels.bookingPlural} zur Bestätigung`,
       icon: Clock,
       gradient: "from-rose-500 to-pink-500",
       bgGlow: "bg-rose-500/20",

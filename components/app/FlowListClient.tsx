@@ -8,6 +8,8 @@ import type { Edge, Node } from "reactflow";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { lintFlow } from "../../lib/flowLint";
 import type { FlowMetadata, FlowTrigger } from "../../lib/flowTypes";
+import useAccountVertical from "../../lib/useAccountVertical";
+import { getBookingLabels } from "../../lib/verticals";
 
 type FlowSummary = {
   id: string;
@@ -56,6 +58,8 @@ export default function FlowListClient({
   const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const lastStatusParamRef = useRef<string | null>(null);
+  const { vertical } = useAccountVertical();
+  const labels = getBookingLabels(vertical);
 
   useEffect(() => {
     const stored = localStorage.getItem("wesponde-flow-favorites");
@@ -515,7 +519,7 @@ export default function FlowListClient({
                   <>
                     <span className="text-zinc-600">•</span>
                     <span>
-                      {(reservationCounts[flow.id] ?? 0).toLocaleString("de-DE")} Reservierungen
+                      {(reservationCounts[flow.id] ?? 0).toLocaleString("de-DE")} {labels.bookingPlural}
                     </span>
                   </>
                 ) : null}

@@ -297,6 +297,9 @@ export default function SettingsPage() {
         setVerticalSaving(false);
         return;
       }
+      window.dispatchEvent(
+        new CustomEvent("wesponde:vertical-changed", { detail: { vertical: nextVertical } })
+      );
       setVertical(nextVertical);
       setVerticalNotice("Branche gespeichert.");
     } catch {

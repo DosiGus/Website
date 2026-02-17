@@ -9,7 +9,8 @@ import FlowSetupWizard from "../../../../components/app/FlowSetupWizard";
 import FlowSimulator from "../../../../components/app/FlowSimulator";
 import type { Node, Edge } from "reactflow";
 import type { FlowMetadata, FlowTrigger } from "../../../../lib/flowTypes";
-import { getDefaultTemplateVertical, type VerticalKey } from "../../../../lib/verticals";
+import { getDefaultTemplateVertical } from "../../../../lib/verticals";
+import useAccountVertical from "../../../../lib/useAccountVertical";
 
 type CreationMode = "choose" | "wizard" | "empty" | "template";
 
@@ -23,8 +24,7 @@ export default function NewFlowPage() {
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [templateSearch, setTemplateSearch] = useState("");
   const [verticalFilter, setVerticalFilter] = useState<string>("alle");
-  const [accountVertical, setAccountVertical] = useState<VerticalKey | null>(null);
-  const [verticalInitialized, setVerticalInitialized] = useState(false);
+  const { vertical: accountVertical } = useAccountVertical();
   const [previewTemplate, setPreviewTemplate] = useState<FlowTemplate | null>(null);
   const [creationMode, setCreationMode] = useState<CreationMode>("choose");
 
@@ -40,28 +40,12 @@ export default function NewFlowPage() {
   }, []);
 
   useEffect(() => {
-    async function loadAccountVertical() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-      const response = await fetch("/api/account/settings", {
-        headers: { authorization: `Bearer ${session.access_token}` },
-      });
-      if (!response.ok) return;
-      const payload = await response.json();
-      setAccountVertical(payload?.vertical ?? null);
-    }
-    loadAccountVertical();
-  }, [supabase]);
-
-  useEffect(() => {
-    if (verticalInitialized) return;
     if (!accountVertical) return;
     const defaultVertical = getDefaultTemplateVertical(accountVertical);
     if (defaultVertical) {
       setVerticalFilter(defaultVertical);
     }
-    setVerticalInitialized(true);
-  }, [accountVertical, verticalInitialized]);
+  }, [accountVertical]);
 
   const createFlow = async (templateId?: string) => {
     setStatus("creating");

@@ -1,28 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import ReservationsClient from "../../../components/app/ReservationsClient";
 import { CalendarCheck } from "lucide-react";
-import { createSupabaseBrowserClient } from "../../../lib/supabaseBrowserClient";
-import { getBookingLabels, type VerticalKey } from "../../../lib/verticals";
+import { getBookingLabels } from "../../../lib/verticals";
+import useAccountVertical from "../../../lib/useAccountVertical";
 
 export default function ReservationsPage() {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [vertical, setVertical] = useState<VerticalKey | null>(null);
-
-  useEffect(() => {
-    async function loadVertical() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-      const response = await fetch("/api/account/settings", {
-        headers: { authorization: `Bearer ${session.access_token}` },
-      });
-      if (!response.ok) return;
-      const payload = await response.json();
-      setVertical(payload?.vertical ?? null);
-    }
-    loadVertical();
-  }, [supabase]);
+  const { vertical } = useAccountVertical();
 
   const labels = getBookingLabels(vertical);
 

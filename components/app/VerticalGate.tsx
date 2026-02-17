@@ -69,6 +69,9 @@ export default function VerticalGate() {
       setSaving(false);
       return;
     }
+    window.dispatchEvent(
+      new CustomEvent("wesponde:vertical-changed", { detail: { vertical: next } })
+    );
     setVertical(next);
     setSaving(false);
   };
