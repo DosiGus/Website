@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireAccountMember, isRoleAtLeast } from "../../../lib/apiAuth";
-import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
 export async function GET(request: Request) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { accountId, supabase } = await requireAccountMember(request);
 
     // Rate limiting
     const rateLimit = await checkRateLimit(`integrations:${accountId}`, RATE_LIMITS.generous);
@@ -15,8 +14,6 @@ export async function GET(request: Request) {
         { status: 429, headers: rateLimitHeaders(rateLimit) }
       );
     }
-
-    const supabase = createSupabaseServerClient();
 
     const { data, error } = await supabase
       .from("integrations")
@@ -37,7 +34,7 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const { user, accountId, role } = await requireAccountMember(request);
+    const { accountId, role, supabase } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -57,8 +54,6 @@ export async function DELETE(request: Request) {
     if (!provider) {
       return NextResponse.json({ error: "Provider fehlt." }, { status: 400 });
     }
-
-    const supabase = createSupabaseServerClient();
 
     const { error } = await supabase
       .from("integrations")
@@ -88,13 +83,13 @@ export async function DELETE(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { user, accountId, role } = await requireAccountMember(request);
+    const { accountId, role, supabase } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
 
     // Rate limiting
-    const rateLimit = await checkRateLimit(`integrations:${user.id}:update`, RATE_LIMITS.standard);
+    const rateLimit = await checkRateLimit(`integrations:${accountId}:update`, RATE_LIMITS.standard);
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte warte einen Moment." },
@@ -118,7 +113,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Kein Feld zum Aktualisieren angegeben." }, { status: 400 });
     }
 
-    const supabase = createSupabaseServerClient();
     const update: Record<string, string | null> = {
       updated_at: new Date().toISOString(),
     };

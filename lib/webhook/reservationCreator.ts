@@ -5,10 +5,11 @@
 import { createSupabaseServerClient } from "../supabaseServerClient";
 import { ExtractedVariables } from "./variableExtractor";
 import { CreateReservationInput } from "../reservationTypes";
-import { createGoogleCalendarEvent } from "../google/calendar";
+import { cancelGoogleCalendarEvent, createGoogleCalendarEvent } from "../google/calendar";
 import { logger } from "../logger";
 import { checkSlotAvailability, type SlotSuggestion } from "../google/availability";
 import { normalizeCalendarSettings } from "../google/settings";
+import crypto from "crypto";
 
 export type ReservationCreationResult =
   | { success: true; reservationId: string }
@@ -20,6 +21,28 @@ export type ReservationCreationResult =
 const REQUIRED_FIELDS = ["name", "date", "time", "guestCount"] as const;
 type RequiredField = (typeof REQUIRED_FIELDS)[number];
 
+function isMissingValue(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    (typeof value === "number" && Number.isNaN(value))
+  );
+}
+
+function normalizeGuestCount(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return Math.floor(value);
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
 /**
  * Checks if all required fields are present to create a reservation.
  */
@@ -27,9 +50,7 @@ export function canCreateReservation(
   variables: ExtractedVariables,
   requiredFields: ReadonlyArray<string> = REQUIRED_FIELDS
 ): boolean {
-  return requiredFields.every(
-    (field) => variables[field] !== undefined && variables[field] !== ""
-  );
+  return requiredFields.every((field) => !isMissingValue(variables[field]));
 }
 
 /**
@@ -39,9 +60,7 @@ export function getMissingReservationFields(
   variables: ExtractedVariables,
   requiredFields: ReadonlyArray<string> = REQUIRED_FIELDS
 ): string[] {
-  return requiredFields.filter(
-    (field) => variables[field] === undefined || variables[field] === ""
-  );
+  return requiredFields.filter((field) => isMissingValue(variables[field]));
 }
 
 /**
@@ -80,11 +99,12 @@ export async function createReservationFromVariables(
       (account?.settings as any)?.calendar ?? null
     );
 
+    const guestCount = normalizeGuestCount(variables.guestCount) ?? 1;
     const input: CreateReservationInput = {
       guest_name: String(variables.name),
       reservation_date: parseDate(String(variables.date)),
       reservation_time: parseTime(String(variables.time)),
-      guest_count: Number(variables.guestCount),
+      guest_count: guestCount,
       phone_number: variables.phone ? String(variables.phone) : null,
       email: variables.email ? String(variables.email) : null,
       special_requests: variables.specialRequests
@@ -116,29 +136,14 @@ export async function createReservationFromVariables(
       };
     }
 
-    const { data, error } = await supabase
-      .from("reservations")
-      .insert({
-        user_id: userId,
-        account_id: accountId,
-        contact_id: contactId || null,
-        ...input,
-      })
-      .select("id")
-      .single();
-
-    if (error) {
-      console.error("Failed to create reservation:", error);
-      return { success: false, missingFields: [], error: error.message };
-    }
-
     try {
+      const reservationId = crypto.randomUUID();
       const descriptionParts = [
         `Name: ${input.guest_name}`,
         input.phone_number ? `Telefon: ${input.phone_number}` : null,
         input.email ? `Email: ${input.email}` : null,
         input.special_requests ? `Notizen: ${input.special_requests}` : null,
-        `Reservierungs-ID: ${data.id}`,
+        `Reservierungs-ID: ${reservationId}`,
       ].filter(Boolean);
 
       const event = await createGoogleCalendarEvent({
@@ -154,33 +159,57 @@ export async function createReservationFromVariables(
       await logger.info("integration", "Google calendar event created", {
         userId,
         metadata: {
-          reservationId: data.id,
+          reservationId,
           eventId: event.id,
         },
       });
 
-      await supabase
+      const { data, error } = await supabase
         .from("reservations")
-        .update({
+        .insert({
+          id: reservationId,
+          user_id: userId,
+          account_id: accountId,
+          contact_id: contactId || null,
+          ...input,
           google_event_id: event.id,
           google_event_link: event.htmlLink,
           google_calendar_id: event.calendarId ?? null,
           google_time_zone: event.timeZone ?? null,
         })
-        .eq("id", data.id);
+        .select("id")
+        .single();
+
+      if (error || !data) {
+        await logger.warn("integration", "Failed to store reservation after calendar event", {
+          userId,
+          metadata: {
+            reservationId,
+            error: error?.message ?? "Unknown error",
+          },
+        });
+        if (event.id) {
+          await cancelGoogleCalendarEvent({
+            accountId,
+            eventId: event.id,
+            calendarId: event.calendarId ?? undefined,
+          });
+        }
+        return { success: false, missingFields: [], error: error?.message ?? "calendar_store_failed" };
+      }
+
+      return { success: true, reservationId: data.id };
     } catch (calendarError) {
       const errorMessage =
         calendarError instanceof Error ? calendarError.message : "Unknown error";
       await logger.warn("integration", "Google calendar event failed", {
         userId,
         metadata: {
-          reservationId: data.id,
           error: errorMessage,
         },
       });
+      return { success: false, missingFields: [], error: "calendar_error" };
     }
-
-    return { success: true, reservationId: data.id };
   } catch (err) {
     console.error("Error creating reservation:", err);
     return {

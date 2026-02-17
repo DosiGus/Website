@@ -10,8 +10,8 @@ const isAccountRole = (value: unknown): value is AccountRole =>
 
 export async function GET(request: Request) {
   try {
-    const { user, accountId, role } = await requireAccountMember(request);
-    const supabase = createSupabaseServerClient();
+    const { user, accountId, role, supabase } = await requireAccountMember(request);
+    const supabaseAdmin = createSupabaseServerClient();
 
     const { data: members, error } = await supabase
       .from("account_members")
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     >();
 
     if (userIds.length > 0) {
-      const { data: users, error: usersError } = await supabase
+      const { data: users, error: usersError } = await supabaseAdmin
         .schema("auth")
         .from("users")
         .select("id, email, raw_user_meta_data")
@@ -77,7 +77,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { user, accountId, role } = await requireAccountMember(request);
+    const { accountId, role, supabase } = await requireAccountMember(request);
 
     if (role !== "owner" && role !== "admin") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
@@ -93,8 +93,6 @@ export async function PATCH(request: Request) {
     if (!targetUserId || !isAccountRole(nextRole)) {
       return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
     }
-
-    const supabase = createSupabaseServerClient();
 
     const { data: targetMember, error: targetError } = await supabase
       .from("account_members")

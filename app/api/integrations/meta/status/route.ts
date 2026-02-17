@@ -1,12 +1,10 @@
 // DEPRECATED: Use GET /api/integrations instead
 import { NextResponse } from "next/server";
 import { requireAccountMember } from "../../../../../lib/apiAuth";
-import { createSupabaseServerClient } from "../../../../../lib/supabaseServerClient";
 
 export async function GET(request: Request) {
   try {
-    const { accountId } = await requireAccountMember(request);
-    const supabase = createSupabaseServerClient();
+    const { accountId, supabase } = await requireAccountMember(request);
 
     const { data, error } = await supabase
       .from("integrations")

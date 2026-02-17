@@ -97,6 +97,10 @@ export function extractVariables(
  */
 export function extractName(messageText: string): string | null {
   const trimmed = messageText.trim();
+  const lower = trimmed.toLowerCase();
+  if (NAME_BLACKLIST.some((phrase) => lower.includes(phrase))) {
+    return null;
+  }
 
   // If it's a short message (likely just a name), use it
   if (trimmed.length < 50) {
@@ -146,27 +150,59 @@ const GERMAN_MONTHS: Record<string, number> = {
   dezember: 12, dez: 12,
 };
 
+const DEFAULT_TIME_ZONE = "Europe/Berlin";
+
+const NAME_BLACKLIST = [
+  "ich weiß nicht",
+  "ich weiss nicht",
+  "weiß ich nicht",
+  "weiss ich nicht",
+  "keine ahnung",
+  "keine idee",
+  "weiß nicht",
+  "weiss nicht",
+];
+
+function getDateStringInTimeZone(timeZone: string, date: Date = new Date()): string {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(date);
+}
+
+function addDaysToDateString(dateStr: string, days: number): string {
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function getWeekdayFromDateString(dateStr: string): number {
+  return new Date(`${dateStr}T00:00:00Z`).getUTCDay();
+}
+
 /**
  * Extracts a date from a message, handling German date formats.
  * Supports: "heute", "morgen", "Samstag", "15. Februar", "15.02", "15/02/2024"
  */
-export function extractDate(messageText: string): string | null {
+export function extractDate(
+  messageText: string,
+  timeZone: string = DEFAULT_TIME_ZONE
+): string | null {
   const trimmed = messageText.trim().toLowerCase();
-  const today = new Date();
+  const today = getDateStringInTimeZone(timeZone);
 
   // Handle relative dates
   if (trimmed === "heute" || /^heute\b/.test(trimmed)) {
-    return formatDate(today);
+    return today;
   }
   if (trimmed === "morgen" || /^morgen\b/.test(trimmed)) {
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return formatDate(tomorrow);
+    return addDaysToDateString(today, 1);
   }
   if (trimmed === "übermorgen" || /^übermorgen\b/.test(trimmed)) {
-    const dayAfter = new Date(today);
-    dayAfter.setDate(dayAfter.getDate() + 2);
-    return formatDate(dayAfter);
+    return addDaysToDateString(today, 2);
   }
 
   // Handle day names (e.g., "Samstag", "am Freitag")
@@ -177,12 +213,10 @@ export function extractDate(messageText: string): string | null {
   for (let i = 0; i < dayNames.length; i++) {
     if (trimmed.includes(dayNames[i])) {
       const targetDay = i;
-      const currentDay = today.getDay();
+      const currentDay = getWeekdayFromDateString(today);
       let daysUntil = targetDay - currentDay;
       if (daysUntil <= 0) daysUntil += 7;
-      const targetDate = new Date(today);
-      targetDate.setDate(targetDate.getDate() + daysUntil);
-      return formatDate(targetDate);
+      return addDaysToDateString(today, daysUntil);
     }
   }
 
@@ -194,7 +228,7 @@ export function extractDate(messageText: string): string | null {
     const day = monthNameMatch[1].padStart(2, "0");
     const monthName = monthNameMatch[2].toLowerCase();
     const month = String(GERMAN_MONTHS[monthName] || 1).padStart(2, "0");
-    let year = monthNameMatch[3] || today.getFullYear().toString();
+    let year = monthNameMatch[3] || today.slice(0, 4);
     if (year.length === 2) year = "20" + year;
     return `${year}-${month}-${day}`;
   }
@@ -326,12 +360,4 @@ export function mergeVariables(
     }
   }
   return merged;
-}
-
-// Helper function to format date as YYYY-MM-DD
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }

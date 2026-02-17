@@ -236,6 +236,12 @@ export default function IntegrationsClient() {
 
   const handleDisconnect = useCallback(async () => {
     try {
+      const confirmed = window.confirm(
+        "Möchtest du Instagram wirklich trennen? Automatisierungen laufen dann nicht mehr."
+      );
+      if (!confirmed) {
+        return;
+      }
       setDisconnecting(true);
       setError(null);
       const token = await getAccessToken();

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { requireAccountMember, isRoleAtLeast } from "../../../lib/apiAuth";
-import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import {
   Reservation,
   ReservationListResponse,
@@ -23,7 +22,7 @@ import { sendReviewRequestForReservation } from "../../../lib/reviews/reviewSend
  */
 export async function GET(request: Request) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { accountId, supabase } = await requireAccountMember(request);
 
     // Rate limiting
     const rateLimit = await checkRateLimit(`reservations:${accountId}`, RATE_LIMITS.generous);
@@ -55,8 +54,6 @@ export async function GET(request: Request) {
     }
 
     const { status, date, dateFrom, dateTo, limit, offset } = parseResult.data;
-
-    const supabase = createSupabaseServerClient();
 
     // Build query
     let query = supabase
@@ -117,7 +114,7 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const { user, accountId, role } = await requireAccountMember(request);
+    const { user, accountId, role, supabase } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -151,8 +148,6 @@ export async function POST(request: Request) {
       email,
       special_requests,
     } = parseResult.data;
-
-    const supabase = createSupabaseServerClient();
 
     const { data, error } = await supabase
       .from("reservations")
@@ -195,7 +190,7 @@ export async function POST(request: Request) {
  */
 export async function PATCH(request: Request) {
   try {
-    const { user, accountId, role } = await requireAccountMember(request);
+    const { accountId, role, supabase } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -221,8 +216,6 @@ export async function PATCH(request: Request) {
     }
 
     const { id, status, ...updates } = parseResult.data;
-
-    const supabase = createSupabaseServerClient();
 
     const { data: existingReservation, error: loadError } = await supabase
       .from("reservations")
@@ -364,7 +357,7 @@ export async function PATCH(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
-    const { user, accountId, role } = await requireAccountMember(request);
+    const { accountId, role, supabase } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -397,8 +390,6 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const supabase = createSupabaseServerClient();
-
     const { data: existingReservation, error: loadError } = await supabase
       .from("reservations")
       .select("id, google_event_id, google_calendar_id")
@@ -410,6 +401,28 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Reservierung nicht gefunden" }, { status: 404 });
     }
 
+    if (existingReservation.google_event_id) {
+      try {
+        const cancelled = await cancelGoogleCalendarEvent({
+          accountId,
+          eventId: existingReservation.google_event_id,
+          calendarId: existingReservation.google_calendar_id ?? undefined,
+        });
+        if (!cancelled) {
+          return NextResponse.json(
+            { error: "Kalendertermin konnte nicht gelöscht werden." },
+            { status: 502 },
+          );
+        }
+      } catch (error) {
+        console.error("Calendar cancel failed:", error);
+        return NextResponse.json(
+          { error: "Kalendertermin konnte nicht gelöscht werden." },
+          { status: 502 },
+        );
+      }
+    }
+
     const { error } = await supabase
       .from("reservations")
       .delete()
@@ -419,14 +432,6 @@ export async function DELETE(request: Request) {
     if (error) {
       console.error("Reservation DELETE error:", error);
       return NextResponse.json({ error: "Fehler beim Löschen der Reservierung" }, { status: 500 });
-    }
-
-    if (existingReservation.google_event_id) {
-      await cancelGoogleCalendarEvent({
-        accountId,
-        eventId: existingReservation.google_event_id,
-        calendarId: existingReservation.google_calendar_id ?? undefined,
-      });
     }
 
     return NextResponse.json({ success: true });

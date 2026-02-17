@@ -1,13 +1,19 @@
-import { createSupabaseServerClient } from "./supabaseServerClient";
-import { User } from "@supabase/supabase-js";
+import { createSupabaseUserClient } from "./supabaseServerClient";
+import { SupabaseClient, User } from "@supabase/supabase-js";
 
-export async function requireUser(request: Request) {
+export type AuthenticatedUser = {
+  user: User;
+  token: string;
+  supabase: SupabaseClient;
+};
+
+export async function requireUser(request: Request): Promise<AuthenticatedUser> {
   const authorization = request.headers.get("authorization");
   if (!authorization || !authorization.startsWith("Bearer ")) {
     throw new Error("Unauthorized");
   }
   const token = authorization.split(" ")[1];
-  const supabase = createSupabaseServerClient();
+  const supabase = createSupabaseUserClient(token);
   const {
     data: { user },
     error,
@@ -15,11 +21,13 @@ export async function requireUser(request: Request) {
   if (error || !user) {
     throw new Error("Unauthorized");
   }
-  return user;
+  return { user, token, supabase };
 }
 
 export type AccountMemberResult = {
   user: User;
+  token: string;
+  supabase: SupabaseClient;
   accountId: string;
   role: "owner" | "admin" | "member" | "viewer";
 };
@@ -66,8 +74,7 @@ export async function requireAccountMember(
   request: Request,
   options: RequireAccountOptions = {}
 ): Promise<AccountMemberResult> {
-  const user = await requireUser(request);
-  const supabase = createSupabaseServerClient();
+  const { user, token, supabase } = await requireUser(request);
   const requestedAccountId =
     options.accountId ?? resolveAccountIdFromRequest(request);
 
@@ -105,6 +112,8 @@ export async function requireAccountMember(
 
   return {
     user,
+    token,
+    supabase,
     accountId: membership.account_id,
     role: membership.role as AccountMemberResult["role"],
   };

@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import { requireAccountMember } from "../../../lib/apiAuth";
 
 export async function GET(request: Request) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
-    const supabaseAdmin = createSupabaseServerClient();
+    const { accountId, supabase } = await requireAccountMember(request);
 
     const { searchParams } = new URL(request.url);
     const level = searchParams.get("level");
@@ -13,7 +11,7 @@ export async function GET(request: Request) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 200);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
-    let query = supabaseAdmin
+    let query = supabase
       .from("logs")
       .select("*", { count: "exact" })
       .eq("account_id", accountId)

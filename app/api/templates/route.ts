@@ -31,7 +31,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireUser(request);
+    const { user, supabase } = await requireUser(request);
     const body = await request.json();
     const flowId = body.flowId as string | undefined;
     if (!flowId) {
@@ -41,7 +41,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createSupabaseServerClient();
     const { data: flow, error: flowError } = await supabase
       .from("flows")
       .select("id, name, user_id, nodes, edges, triggers, metadata")
@@ -65,7 +64,8 @@ export async function POST(request: Request) {
     const slugBase = slugify(templateName) || "flow-template";
     const slug = `${slugBase}-${Math.random().toString(36).slice(2, 6)}`;
 
-    const { data, error } = await supabase
+    const supabaseAdmin = createSupabaseServerClient();
+    const { data, error } = await supabaseAdmin
       .from("flow_templates")
       .insert({
         slug,

@@ -2,8 +2,16 @@ import { createSupabaseServerClient } from "../supabaseServerClient";
 import { GOOGLE_CALENDAR_BASE, GOOGLE_TOKEN_URL } from "./types";
 import { logger } from "../logger";
 import { decryptToken, encryptToken, isEncryptedToken } from "../security/tokenEncryption";
+import { Redis } from "@upstash/redis";
+import crypto from "crypto";
 
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+const TOKEN_REFRESH_LOCK_MS = 15 * 1000;
+
+const hasRedisEnv = Boolean(
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+);
+const redis = hasRedisEnv ? Redis.fromEnv() : null;
 
 type GoogleIntegrationRow = {
   id: string;
@@ -19,8 +27,16 @@ type AccessTokenResult = {
   calendarTimeZone: string | null;
 };
 
-export async function getGoogleAccessToken(accountId: string): Promise<AccessTokenResult> {
-  const supabase = createSupabaseServerClient();
+type IntegrationRow = {
+  id: string;
+  access_token: string | null;
+  refresh_token: string | null;
+  expires_at: string | null;
+  calendar_id?: string | null;
+  calendar_time_zone?: string | null;
+};
+
+async function loadIntegration(supabase: ReturnType<typeof createSupabaseServerClient>, accountId: string) {
   const { data: integration, error } = await supabase
     .from("integrations")
     .select("id, access_token, refresh_token, expires_at, calendar_id, calendar_time_zone")
@@ -31,6 +47,41 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
   if (error) {
     throw new Error("Integration konnte nicht geladen werden.");
   }
+
+  return integration as IntegrationRow | null;
+}
+
+function buildAccessTokenResult(integration: IntegrationRow, accessToken: string): AccessTokenResult {
+  return {
+    accessToken,
+    integrationId: integration.id,
+    calendarId: integration.calendar_id ?? null,
+    calendarTimeZone: integration.calendar_time_zone ?? null,
+  };
+}
+
+async function acquireRefreshLock(integrationId: string) {
+  if (!redis) {
+    return { acquired: true, token: null };
+  }
+  const token = crypto.randomUUID();
+  const key = `lock:google_refresh:${integrationId}`;
+  const result = await redis.set(key, token, { nx: true, px: TOKEN_REFRESH_LOCK_MS });
+  return { acquired: result === "OK", token };
+}
+
+async function releaseRefreshLock(integrationId: string, token: string | null) {
+  if (!redis || !token) return;
+  const key = `lock:google_refresh:${integrationId}`;
+  const current = await redis.get<string>(key);
+  if (current === token) {
+    await redis.del(key);
+  }
+}
+
+export async function getGoogleAccessToken(accountId: string): Promise<AccessTokenResult> {
+  const supabase = createSupabaseServerClient();
+  const integration = await loadIntegration(supabase, accountId);
 
   if (!integration?.access_token) {
     throw new Error("Google Kalender ist nicht verbunden.");
@@ -61,82 +112,95 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
   const needsRefresh = !expiresAt || Date.now() + TOKEN_REFRESH_BUFFER_MS >= expiresAt;
 
   if (!needsRefresh) {
-    return {
-      accessToken: decryptedAccessToken,
-      integrationId: integration.id,
-      calendarId: integration.calendar_id ?? null,
-      calendarTimeZone: integration.calendar_time_zone ?? null,
+    return buildAccessTokenResult(integration, decryptedAccessToken);
+  }
+
+  let lockToken: string | null = null;
+  try {
+    const lock = await acquireRefreshLock(integration.id);
+    lockToken = lock.token;
+
+    if (!lock.acquired) {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const latest = await loadIntegration(supabase, accountId);
+        if (latest?.access_token) {
+          const latestAccessToken = decryptToken(latest.access_token);
+          const latestExpiresAt = latest.expires_at ? new Date(latest.expires_at).getTime() : 0;
+          const latestNeedsRefresh = !latestExpiresAt || Date.now() + TOKEN_REFRESH_BUFFER_MS >= latestExpiresAt;
+          if (latestAccessToken && !latestNeedsRefresh) {
+            return buildAccessTokenResult(latest, latestAccessToken);
+          }
+        }
+      }
+    }
+
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!googleClientId || !googleClientSecret) {
+      throw new Error("Google OAuth ist nicht korrekt konfiguriert.");
+    }
+
+    if (!decryptedRefreshToken) {
+      throw new Error("Refresh-Token fehlt. Bitte Google Kalender erneut verbinden.");
+    }
+
+    const refreshResponse = await fetch(GOOGLE_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: googleClientId,
+        client_secret: googleClientSecret,
+        refresh_token: decryptedRefreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    const refreshBody = (await refreshResponse.json()) as {
+      access_token?: string;
+      expires_in?: number;
+      error?: string;
+      error_description?: string;
     };
+
+    if (!refreshResponse.ok || !refreshBody.access_token) {
+      await logger.warn("oauth", "Google token refresh failed", {
+        metadata: {
+          httpStatus: refreshResponse.status,
+          error: refreshBody.error ?? "unknown_error",
+          errorDescription: refreshBody.error_description,
+        },
+      });
+      throw new Error("Token-Erneuerung fehlgeschlagen. Bitte erneut verbinden.");
+    }
+
+    const expiresInSeconds =
+      typeof refreshBody.expires_in === "number" && refreshBody.expires_in > 0
+        ? refreshBody.expires_in
+        : 3600;
+    const expiresAtIso = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+
+    const encryptedAccessToken = encryptToken(refreshBody.access_token);
+    const { error: updateError } = await supabase
+      .from("integrations")
+      .update({
+        access_token: encryptedAccessToken,
+        expires_at: expiresAtIso,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", integration.id);
+
+    if (updateError) {
+      await logger.warn("oauth", "Failed to store refreshed Google token", {
+        metadata: { error: updateError.message },
+      });
+    }
+
+    return buildAccessTokenResult(integration, refreshBody.access_token);
+  } finally {
+    await releaseRefreshLock(integration.id, lockToken);
   }
-
-  const googleClientId = process.env.GOOGLE_CLIENT_ID;
-  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-  if (!googleClientId || !googleClientSecret) {
-    throw new Error("Google OAuth ist nicht korrekt konfiguriert.");
-  }
-
-  if (!decryptedRefreshToken) {
-    throw new Error("Refresh-Token fehlt. Bitte Google Kalender erneut verbinden.");
-  }
-
-  const refreshResponse = await fetch(GOOGLE_TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: googleClientId,
-      client_secret: googleClientSecret,
-      refresh_token: decryptedRefreshToken,
-      grant_type: "refresh_token",
-    }),
-  });
-
-  const refreshBody = (await refreshResponse.json()) as {
-    access_token?: string;
-    expires_in?: number;
-    error?: string;
-    error_description?: string;
-  };
-
-  if (!refreshResponse.ok || !refreshBody.access_token) {
-    await logger.warn("oauth", "Google token refresh failed", {
-      metadata: {
-        httpStatus: refreshResponse.status,
-        error: refreshBody.error ?? "unknown_error",
-        errorDescription: refreshBody.error_description,
-      },
-    });
-    throw new Error("Token-Erneuerung fehlgeschlagen. Bitte erneut verbinden.");
-  }
-
-  const expiresInSeconds =
-    typeof refreshBody.expires_in === "number" && refreshBody.expires_in > 0
-      ? refreshBody.expires_in
-      : 3600;
-  const expiresAtIso = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
-
-  const encryptedAccessToken = encryptToken(refreshBody.access_token);
-  const { error: updateError } = await supabase
-    .from("integrations")
-    .update({
-      access_token: encryptedAccessToken,
-      expires_at: expiresAtIso,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", integration.id);
-
-  if (updateError) {
-    await logger.warn("oauth", "Failed to store refreshed Google token", {
-      metadata: { error: updateError.message },
-    });
-  }
-
-  return {
-    accessToken: refreshBody.access_token,
-    integrationId: integration.id,
-    calendarId: integration.calendar_id ?? null,
-    calendarTimeZone: integration.calendar_time_zone ?? null,
-  };
 }
 
 type CalendarEventInput = {
@@ -299,7 +363,7 @@ type CalendarEventCancelInput = {
 
 export async function cancelGoogleCalendarEvent(
   params: CalendarEventCancelInput,
-): Promise<void> {
+): Promise<boolean> {
   const { accountId, eventId, calendarId } = params;
   const { accessToken, calendarId: integrationCalendarId } = await getGoogleAccessToken(accountId);
   const resolvedCalendarId = calendarId ?? integrationCalendarId ?? "primary";
@@ -324,7 +388,10 @@ export async function cancelGoogleCalendarEvent(
         error: cancelBody?.error ?? cancelBody,
       },
     });
+    return false;
   }
+
+  return true;
 }
 
 export type GoogleCalendarListItem = {

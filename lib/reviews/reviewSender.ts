@@ -155,7 +155,7 @@ export async function sendReviewRequestForReservation(
 
   const { data: conversation, error: conversationError } = await supabase
     .from("conversations")
-    .select("id, integration_id, metadata")
+    .select("id, integration_id, metadata, current_flow_id, status")
     .eq("id", conversationId)
     .single();
 
@@ -236,6 +236,32 @@ export async function sendReviewRequestForReservation(
       metadata: { reservationId, reviewRequestId: existingRequest.id, status: existingRequest.status },
     });
     return { success: true, status: "already_sent", reviewRequestId: existingRequest.id };
+  }
+
+  const isConversationActive =
+    conversation.status === "active" && Boolean(conversation.current_flow_id);
+
+  if (isConversationActive) {
+    const pendingRequest = await upsertReviewRequest({
+      supabase,
+      reservationId: reservation.id,
+      userId: reservation.user_id,
+      conversationId: conversation.id,
+      integrationId: integration.id,
+      flowId: null,
+      status: "pending",
+    });
+
+    await logger.info("system", "Review request deferred: conversation still active", {
+      metadata: {
+        reservationId,
+        reviewRequestId: pendingRequest.id,
+        reason,
+        conversationId: conversation.id,
+      },
+    });
+
+    return { success: true, status: "pending", reviewRequestId: pendingRequest.id };
   }
 
   const reviewFlow = await ensureReviewFlow(reservation.user_id, integration.account_id);

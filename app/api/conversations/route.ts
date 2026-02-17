@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { requireAccountMember } from "../../../lib/apiAuth";
-import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +10,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { accountId, supabase } = await requireAccountMember(request);
 
     // Rate limiting
     const rateLimit = await checkRateLimit(`conversations:${accountId}`, RATE_LIMITS.generous);
@@ -26,8 +25,6 @@ export async function GET(request: Request) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
     const status = searchParams.get("status"); // active, closed
-
-    const supabase = createSupabaseServerClient();
 
     let query = supabase
       .from("conversations")

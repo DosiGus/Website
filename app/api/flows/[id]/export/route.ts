@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "../../../../../lib/supabaseServerClient";
 import { requireUser } from "../../../../../lib/apiAuth";
 import { defaultMetadata } from "../../../../../lib/defaultFlow";
 
@@ -8,8 +7,7 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
-    const user = await requireUser(request);
-    const supabase = createSupabaseServerClient();
+    const { user, supabase } = await requireUser(request);
     const { data, error } = await supabase
       .from("flows")
       .select("*")

@@ -119,6 +119,42 @@ function formatDisplayDate(dateStr: string): string {
   return dateStr;
 }
 
+const NAME_INPUT_BLACKLIST = [
+  "ich weiß nicht",
+  "ich weiss nicht",
+  "weiß ich nicht",
+  "weiss ich nicht",
+  "keine ahnung",
+  "keine idee",
+];
+
+const NAME_STOP_WORDS = new Set([
+  "ich",
+  "bin",
+  "weiß",
+  "weiss",
+  "nicht",
+  "keine",
+  "kein",
+  "mein",
+  "meine",
+  "name",
+  "ja",
+  "nein",
+]);
+
+function looksLikeNameInput(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 60) return false;
+  const lower = trimmed.toLowerCase();
+  if (NAME_INPUT_BLACKLIST.some((phrase) => lower.includes(phrase))) return false;
+  if (/[0-9@]/.test(trimmed)) return false;
+  const words = trimmed.split(/\s+/);
+  if (words.length > 4) return false;
+  if (words.some((word) => NAME_STOP_WORDS.has(word.toLowerCase()))) return false;
+  return words.every((word) => /^[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß'\.-]*$/.test(word));
+}
+
 async function findTimeNodeId(
   supabase: ReturnType<typeof createSupabaseServerClient>,
   flowId: string
@@ -794,9 +830,7 @@ async function processMessagingEvent(
       const extractedName = extractName(trimmedMessage);
       if (extractedName) {
         overrideVariables.name = extractedName;
-      } else if (trimmedMessage.length > 0 && trimmedMessage.length < 100) {
-        // If no structured name found, use the whole message as name
-        // (as long as it's reasonable length)
+      } else if (looksLikeNameInput(trimmedMessage)) {
         overrideVariables.name = trimmedMessage;
       }
     }
@@ -965,6 +999,16 @@ async function processMessagingEvent(
         matchedFlowId = parsed.flowId;
         matchedNodeId = parsed.nodeId;
         matchedFlowMetadata = (flow.metadata as FlowMetadata) ?? null;
+
+        if (!flowResponse) {
+          flowResponse = {
+            text: "Diese Auswahl ist nicht mehr verfügbar. Bitte starte den Ablauf erneut.",
+            quickReplies: [],
+            nextNodeId: null,
+            isEndOfFlow: true,
+          };
+          matchedNodeId = null;
+        }
       }
     }
   }
@@ -1237,7 +1281,12 @@ async function processMessagingEvent(
       }
     }
 
-    const matchedFlow = await findMatchingFlow(accountId, messageText);
+    const canStartNewFlow =
+      !conversation.current_flow_id || !conversation.current_node_id || forceNewReservation;
+
+    const matchedFlow = canStartNewFlow
+      ? await findMatchingFlow(accountId, messageText)
+      : null;
 
     if (matchedFlow) {
       // Reset variables and reservationId when starting a NEW flow
@@ -1649,6 +1698,52 @@ async function processMessagingEvent(
               }
 
               await reqLogger.warn("webhook", "Availability check failed, reservation skipped", {
+                metadata: {
+                  flowId: matchedFlowId,
+                  variables: reservationVariables,
+                },
+              });
+              return;
+            }
+
+            if (reservationResult.error === "calendar_error") {
+              const calendarErrorMessage =
+                "⚠️ Wir konnten den Termin im Kalender nicht speichern. Bitte versuche es gleich noch einmal.";
+
+              const calendarSendResult = await sendInstagramMessage({
+                recipientId: senderId,
+                text: calendarErrorMessage,
+                quickReplies: [],
+                accessToken,
+              });
+              if (!calendarSendResult.success) {
+                await reqLogger.warn("webhook", "Failed to send calendar error message", {
+                  metadata: { error: calendarSendResult.error, code: calendarSendResult.code },
+                });
+                try {
+                  await recordMessageFailure({
+                    integrationId: integration.id,
+                    conversationId: conversation.id,
+                    recipientId: senderId,
+                    messageType: "text",
+                    content: calendarErrorMessage,
+                    errorCode: calendarSendResult.code,
+                    errorMessage: calendarSendResult.error,
+                    retryable: calendarSendResult.retryable,
+                    attempts: calendarSendResult.attempts,
+                  });
+                } catch (error) {
+                  await reqLogger.warn("webhook", "Failed to record message failure", {
+                    metadata: { error: String(error) },
+                  });
+                }
+              }
+
+              if (calendarSendResult.success) {
+                responseSent = true;
+              }
+
+              await reqLogger.warn("webhook", "Calendar event failed, reservation skipped", {
                 metadata: {
                   flowId: matchedFlowId,
                   variables: reservationVariables,

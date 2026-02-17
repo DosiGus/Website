@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { requireAccountMember, isRoleAtLeast } from "../../../../lib/apiAuth";
-import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../lib/rateLimit";
 import {
   normalizeCalendarSettings,
@@ -10,7 +9,7 @@ import { isVerticalKey, type VerticalKey } from "../../../../lib/verticals";
 
 export async function GET(request: Request) {
   try {
-    const { accountId } = await requireAccountMember(request);
+    const { accountId, supabase } = await requireAccountMember(request);
     const rateLimit = await checkRateLimit(`account_settings:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
@@ -19,7 +18,6 @@ export async function GET(request: Request) {
       );
     }
 
-    const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from("accounts")
       .select("settings, vertical")
@@ -39,7 +37,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { accountId, role } = await requireAccountMember(request);
+    const { accountId, role, supabase } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -64,7 +62,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Ungültige Branche." }, { status: 400 });
     }
 
-    const supabase = createSupabaseServerClient();
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };

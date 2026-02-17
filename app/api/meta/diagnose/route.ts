@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
 import { requireAccountMember } from "../../../../lib/apiAuth";
 import { META_GRAPH_BASE } from "../../../../lib/meta/types";
 import { decryptToken } from "../../../../lib/security/tokenEncryption";
@@ -10,8 +9,7 @@ import { decryptToken } from "../../../../lib/security/tokenEncryption";
  */
 export async function GET(request: Request) {
   try {
-    const { accountId } = await requireAccountMember(request);
-    const supabase = createSupabaseServerClient();
+    const { accountId, supabase } = await requireAccountMember(request);
 
     const metaAppId = process.env.META_APP_ID;
     const metaAppSecret = process.env.META_APP_SECRET;

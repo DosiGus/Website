@@ -11,7 +11,7 @@ import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rate
 
 export async function GET(request: Request) {
   try {
-    const { user, accountId } = await requireAccountMember(request);
+    const { accountId, supabase } = await requireAccountMember(request);
 
     // Rate limiting
     const rateLimit = await checkRateLimit(`flows:${accountId}`, RATE_LIMITS.generous);
@@ -22,7 +22,6 @@ export async function GET(request: Request) {
       );
     }
 
-    const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from("flows")
       .select("id, name, status, updated_at, nodes, edges, triggers, metadata")
@@ -41,7 +40,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { user, accountId, role } = await requireAccountMember(request);
+    const { user, accountId, role, supabase } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -62,7 +61,7 @@ export async function POST(request: Request) {
     const customEdges = body.edges;
     const customTriggers = body.triggers;
     const customMetadata = body.metadata;
-    const supabase = createSupabaseServerClient();
+    const supabaseAdmin = createSupabaseServerClient();
     const { data: account } = await supabase
       .from("accounts")
       .select("vertical")
@@ -87,7 +86,7 @@ export async function POST(request: Request) {
         metadataToUse = codeTemplate.metadata ?? defaultMetadata;
       } else {
         // Only check DB for custom/user-created templates
-        const { data: template, error: templateError } = await supabase
+        const { data: template, error: templateError } = await supabaseAdmin
           .from("flow_templates")
           .select("*")
           .eq("id", templateId)
