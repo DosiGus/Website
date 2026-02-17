@@ -93,6 +93,10 @@ export async function requireAccountMember(
       ? memberships.find((row) => row.account_id === requestedAccountId)
       : null;
 
+  if (requestedAccountId && !membership) {
+    throw new Error("Forbidden");
+  }
+
   if (!membership) {
     const sorted = [...memberships].sort((a, b) => {
       const roleDelta =

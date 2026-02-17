@@ -102,6 +102,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: `${META_OAUTH_BASE}?${params.toString()}` });
   } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     await log.logError("oauth", error, "OAuth start failed", { requestId });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

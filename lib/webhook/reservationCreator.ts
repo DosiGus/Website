@@ -189,11 +189,22 @@ export async function createReservationFromVariables(
           },
         });
         if (event.id) {
-          await cancelGoogleCalendarEvent({
-            accountId,
-            eventId: event.id,
-            calendarId: event.calendarId ?? undefined,
-          });
+          try {
+            await cancelGoogleCalendarEvent({
+              accountId,
+              eventId: event.id,
+              calendarId: event.calendarId ?? undefined,
+            });
+          } catch (cancelError) {
+            await logger.warn("integration", "Failed to rollback calendar event", {
+              userId,
+              metadata: {
+                reservationId,
+                eventId: event.id,
+                error: cancelError instanceof Error ? cancelError.message : "Unknown error",
+              },
+            });
+          }
         }
         return { success: false, missingFields: [], error: error?.message ?? "calendar_store_failed" };
       }

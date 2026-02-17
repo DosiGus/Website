@@ -70,7 +70,10 @@ export async function GET(request: Request) {
       currentUserRole: role,
       canManage: role === "owner" || role === "admin",
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
@@ -149,7 +152,10 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json({ member: updated });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

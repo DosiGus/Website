@@ -97,6 +97,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(response);
   } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
@@ -173,6 +176,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
@@ -252,6 +258,31 @@ export async function PATCH(request: Request) {
       }
     }
 
+    const statusChanged = status && status !== existingReservation.status;
+    const isCancelled = statusChanged && (status === "cancelled" || status === "no_show");
+
+    if (isCancelled && existingReservation.google_event_id) {
+      try {
+        const cancelled = await cancelGoogleCalendarEvent({
+          accountId,
+          eventId: existingReservation.google_event_id,
+          calendarId: existingReservation.google_calendar_id ?? undefined,
+        });
+        if (!cancelled) {
+          return NextResponse.json(
+            { error: "Kalendertermin konnte nicht gelöscht werden." },
+            { status: 502 },
+          );
+        }
+      } catch (error) {
+        console.error("Calendar cancel failed:", error);
+        return NextResponse.json(
+          { error: "Kalendertermin konnte nicht gelöscht werden." },
+          { status: 502 },
+        );
+      }
+    }
+
     const { data, error } = await supabase
       .from("reservations")
       .update(updateData)
@@ -272,8 +303,6 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const statusChanged = status && status !== existingReservation.status;
-    const isCancelled = statusChanged && (status === "cancelled" || status === "no_show");
     const dateChanged = updateData.reservation_date !== undefined;
     const timeChanged = updateData.reservation_time !== undefined;
     const detailsChanged =
@@ -340,6 +369,9 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ reservation: data, review: reviewResult });
   } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
@@ -436,6 +468,9 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }

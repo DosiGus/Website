@@ -4,6 +4,7 @@ const hasRedisEnv = Boolean(
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
 );
 const redis = hasRedisEnv ? Redis.fromEnv() : null;
+let warnedMissingRedis = false;
 
 export interface RateLimitConfig {
   /** Maximum number of requests allowed in the window */
@@ -33,6 +34,12 @@ export async function checkRateLimit(
   const now = Date.now();
 
   if (!redis) {
+    if (!warnedMissingRedis) {
+      console.warn(
+        "Rate limiting disabled: UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN missing."
+      );
+      warnedMissingRedis = true;
+    }
     return {
       success: true,
       limit: config.limit,

@@ -77,6 +77,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: `${GOOGLE_OAUTH_BASE}?${params.toString()}` });
   } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     await log.logError("oauth", error, "Google OAuth start failed", { requestId });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

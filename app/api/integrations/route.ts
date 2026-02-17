@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { requireAccountMember, isRoleAtLeast } from "../../../lib/apiAuth";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
+
+const integrationsPatchSchema = z.object({
+  provider: z.enum(["meta", "google_calendar"]),
+  google_review_url: z.string().max(2048).nullable().optional(),
+  calendar_id: z.string().max(512).nullable().optional(),
+  calendar_time_zone: z.string().max(128).nullable().optional(),
+}).strict();
 
 export async function GET(request: Request) {
   try {
@@ -27,7 +35,10 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ integrations: data ?? [] });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
@@ -76,7 +87,10 @@ export async function DELETE(request: Request) {
     }
 
     return NextResponse.json({ status: "disconnected" });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
@@ -97,19 +111,21 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const body = (await request.json()) as {
-      provider?: string;
-      google_review_url?: string | null;
-      calendar_id?: string | null;
-      calendar_time_zone?: string | null;
-    };
-    const provider = body?.provider;
+    const parseResult = integrationsPatchSchema.safeParse(await request.json());
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Ungültige Eingabe", details: parseResult.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const body = parseResult.data;
+    const provider = body.provider;
 
     if (!provider) {
       return NextResponse.json({ error: "Provider fehlt." }, { status: 400 });
     }
 
-    if (!("google_review_url" in body) && !("calendar_id" in body) && !("calendar_time_zone" in body)) {
+    if (body.google_review_url === undefined && body.calendar_id === undefined && body.calendar_time_zone === undefined) {
       return NextResponse.json({ error: "Kein Feld zum Aktualisieren angegeben." }, { status: 400 });
     }
 
@@ -148,7 +164,10 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json({ integration: data });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

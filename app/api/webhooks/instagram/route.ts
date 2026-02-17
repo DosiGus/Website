@@ -728,6 +728,18 @@ async function processMessagingEvent(
     messageType = "quick_reply";
   }
 
+  if (!instagramMessageId && event.postback) {
+    const payloadPart = (quickReplyPayload ?? "").slice(0, 120);
+    const timestampPart = event.timestamp ?? Date.now();
+    instagramMessageId = `postback:${senderId}:${recipientId}:${timestampPart}:${payloadPart}`;
+  }
+
+  let incomingMessageRowId: string | null = null;
+  let shouldMarkProcessed = false;
+  const processingStartedAt = new Date().toISOString();
+  const processingTimeoutMs = 30 * 1000;
+  const processingCutoff = new Date(Date.now() - processingTimeoutMs).toISOString();
+
   // Idempotency gate: record the incoming message first (duplicate webhooks are common).
   const incomingMessageRecord = {
     conversation_id: conversation.id,
@@ -739,28 +751,78 @@ async function processMessagingEvent(
     channel_message_id: instagramMessageId,
     flow_id: conversation.current_flow_id,
     node_id: conversation.current_node_id,
+    processing_started_at: processingStartedAt,
+    processed_at: null,
   };
 
   if (instagramMessageId) {
-    const { error: incomingInsertError } = await supabase
+    const { data: incomingMessage, error: incomingInsertError } = await supabase
       .from("messages")
-      .insert(incomingMessageRecord);
+      .insert(incomingMessageRecord)
+      .select("id, processed_at, processing_started_at")
+      .single();
+
+    if (!incomingInsertError && incomingMessage) {
+      incomingMessageRowId = incomingMessage.id;
+      shouldMarkProcessed = true;
+    }
 
     if (incomingInsertError) {
       const isDuplicate =
         incomingInsertError.code === "23505" ||
         incomingInsertError.message.toLowerCase().includes("duplicate");
       if (isDuplicate) {
-        await reqLogger.info("webhook", "Duplicate message, skipping", {
+        const { data: existingMessage } = await supabase
+          .from("messages")
+          .select("id, processed_at, processing_started_at")
+          .eq("instagram_message_id", instagramMessageId)
+          .maybeSingle();
+
+        if (existingMessage?.processed_at) {
+          await reqLogger.info("webhook", "Duplicate message already processed, skipping", {
+            metadata: { instagramMessageId },
+          });
+          return;
+        }
+
+        const inFlight =
+          existingMessage?.processing_started_at &&
+          existingMessage.processing_started_at > processingCutoff;
+
+        if (inFlight) {
+          await reqLogger.info("webhook", "Duplicate message still processing, skipping", {
+            metadata: { instagramMessageId },
+          });
+          return;
+        }
+
+        const { data: claimedMessage } = await supabase
+          .from("messages")
+          .update({ processing_started_at: processingStartedAt })
+          .eq("instagram_message_id", instagramMessageId)
+          .is("processed_at", null)
+          .or(`processing_started_at.is.null,processing_started_at.lt.${processingCutoff}`)
+          .select("id")
+          .maybeSingle();
+
+        if (!claimedMessage) {
+          await reqLogger.info("webhook", "Duplicate message claimed by another worker", {
+            metadata: { instagramMessageId },
+          });
+          return;
+        }
+
+        incomingMessageRowId = claimedMessage.id;
+        shouldMarkProcessed = true;
+        await reqLogger.info("webhook", "Duplicate message reclaimed for processing", {
           metadata: { instagramMessageId },
         });
-        return;
+      } else {
+        await reqLogger.error(
+          "webhook",
+          `Failed to save incoming message: ${incomingInsertError.message}`,
+        );
       }
-
-      await reqLogger.error(
-        "webhook",
-        `Failed to save incoming message: ${incomingInsertError.message}`,
-      );
     }
   } else {
     const { error: incomingInsertError } = await supabase
@@ -775,6 +837,16 @@ async function processMessagingEvent(
     }
   }
 
+  const markMessageProcessed = async () => {
+    if (!shouldMarkProcessed || !incomingMessageRowId) return;
+    await supabase
+      .from("messages")
+      .update({ processed_at: new Date().toISOString() })
+      .eq("id", incomingMessageRowId);
+  };
+
+  let allowMarkProcessed = true;
+  try {
   // Extract and merge variables from the incoming message
   // NOTE: This is mutable because it may be reset when a new flow starts
   let existingMetadata = (conversation.metadata || {}) as ConversationMetadata;
@@ -914,10 +986,13 @@ async function processMessagingEvent(
       variables: mergedVariables,
     };
 
-    await updateConversationState(
+    const metadataUpdated = await updateConversationState(
       { metadata: updatedMetadata },
       "Failed to update conversation metadata"
     );
+    if (!metadataUpdated) {
+      await reqLogger.warn("webhook", "Conversation metadata update skipped due to version conflict");
+    }
 
     await reqLogger.info("webhook", "Variables extracted from message", {
       metadata: { newVariables, overrideVariables, mergedVariables },
@@ -1199,10 +1274,14 @@ async function processMessagingEvent(
         reviewFlowId: undefined,
         reviewRequestId: undefined,
       };
-      await updateConversationState(
+      const resetUpdated = await updateConversationState(
         { metadata: existingMetadata, current_flow_id: null, current_node_id: null },
         "Failed to reset conversation for new reservation"
       );
+      if (!resetUpdated) {
+        await reqLogger.warn("webhook", "Conversation reset skipped due to version conflict");
+        return;
+      }
 
       await reqLogger.info("webhook", "User requested new reservation, metadata cleared", {
         metadata: { previousReservationId: existingMetadata.reservationId },
@@ -1301,10 +1380,14 @@ async function processMessagingEvent(
         reviewFlowId: undefined,
         reviewRequestId: undefined,
       };
-      await updateConversationState(
+      const resetUpdated = await updateConversationState(
         { metadata: existingMetadata, current_flow_id: null, current_node_id: null },
         "Failed to reset conversation for new flow"
       );
+      if (!resetUpdated) {
+        await reqLogger.warn("webhook", "Conversation reset skipped due to version conflict");
+        return;
+      }
 
       await reqLogger.info("webhook", "New flow started, metadata reset", {
         metadata: {
@@ -1404,7 +1487,7 @@ async function processMessagingEvent(
       // Update conversation state
       responseSent = true;
       const storedNodeId = flowResponse.isEndOfFlow ? null : matchedNodeId;
-      await updateConversationState(
+      const stateUpdated = await updateConversationState(
         {
           current_flow_id: matchedFlowId,
           current_node_id: storedNodeId,
@@ -1413,6 +1496,10 @@ async function processMessagingEvent(
         },
         "Failed to update conversation state"
       );
+      if (!stateUpdated) {
+        await reqLogger.warn("webhook", "Conversation state update skipped due to version conflict");
+        return;
+      }
 
       await reqLogger.info("webhook", "Response sent successfully", {
         metadata: {
@@ -1471,10 +1558,13 @@ async function processMessagingEvent(
               reservationId: undefined,
               flowCompleted: undefined,
             };
-            await updateConversationState(
+            const cleanupUpdated = await updateConversationState(
               { metadata: cleanedMetadata },
               "Failed to cleanup orphaned metadata"
             );
+            if (!cleanupUpdated) {
+              await reqLogger.warn("webhook", "Metadata cleanup skipped due to version conflict");
+            }
           }
         }
 
@@ -1652,10 +1742,13 @@ async function processMessagingEvent(
               flowCompleted: true,
             };
 
-            await updateConversationState(
+            const finalUpdated = await updateConversationState(
               { metadata: finalMetadata },
               "Failed to update final metadata"
             );
+            if (!finalUpdated) {
+              await reqLogger.warn("webhook", "Final metadata update skipped due to version conflict");
+            }
 
             await reqLogger.info("webhook", "Reservation created from flow", {
               metadata: {
@@ -1806,7 +1899,7 @@ async function processMessagingEvent(
                 ? await findTimeNodeId(supabase, matchedFlowId)
                 : null;
 
-              await updateConversationState(
+              const resetUpdated = await updateConversationState(
                 {
                   metadata: resetMetadata,
                   current_flow_id: matchedFlowId,
@@ -1815,6 +1908,9 @@ async function processMessagingEvent(
                 },
                 "Failed to reset conversation after slot unavailable"
               );
+              if (!resetUpdated) {
+                await reqLogger.warn("webhook", "Slot reset skipped due to version conflict");
+              }
 
               await reqLogger.info("webhook", "Slot unavailable, user prompted for new time", {
                 metadata: {
@@ -1892,9 +1988,22 @@ async function processMessagingEvent(
     }
 
     // Update last_message_at even without response
-    await updateConversationState(
+    const lastSeenUpdated = await updateConversationState(
       { last_message_at: new Date().toISOString() },
       "Failed to update last_message_at"
     );
+    if (!lastSeenUpdated) {
+      await reqLogger.warn("webhook", "last_message_at update skipped due to version conflict");
+    }
+  }
+  } catch (error) {
+    if (error instanceof ConversationStateConflictError) {
+      allowMarkProcessed = false;
+    }
+    throw error;
+  } finally {
+    if (allowMarkProcessed) {
+      await markMessageProcessed();
+    }
   }
 }

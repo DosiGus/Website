@@ -8,6 +8,16 @@ import { type VerticalKey } from "../../../lib/verticals";
 import { requireAccountMember, isRoleAtLeast } from "../../../lib/apiAuth";
 import { fallbackTemplates } from "../../../lib/flowTemplates";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
+import { z } from "zod";
+
+const flowPostSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  templateId: z.string().min(1).optional(),
+  nodes: z.array(z.any()).optional(),
+  edges: z.array(z.any()).optional(),
+  triggers: z.array(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+}).strict();
 
 export async function GET(request: Request) {
   try {
@@ -33,7 +43,10 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(data ?? []);
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
@@ -54,9 +67,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
+    const parseResult = flowPostSchema.safeParse(await request.json());
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Ungültige Eingabe", details: parseResult.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const body = parseResult.data;
     const name = body.name ?? "Neuer Flow";
-    const templateId: string | undefined = body.templateId;
+    const templateId = body.templateId;
     const customNodes = body.nodes;
     const customEdges = body.edges;
     const customTriggers = body.triggers;
@@ -111,7 +131,7 @@ export async function POST(request: Request) {
         triggersToUse = customTriggers;
       }
       if (customMetadata) {
-        metadataToUse = customMetadata;
+        metadataToUse = customMetadata as typeof metadataToUse;
       }
     }
 
@@ -135,7 +155,10 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(data, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

@@ -28,7 +28,10 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ status: "disconnected" });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

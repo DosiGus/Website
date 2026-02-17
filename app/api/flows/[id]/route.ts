@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAccountMember, isRoleAtLeast } from "../../../../lib/apiAuth";
 import { defaultMetadata } from "../../../../lib/defaultFlow";
+import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../lib/rateLimit";
 
 export async function GET(
   request: Request,
@@ -8,6 +9,13 @@ export async function GET(
 ) {
   try {
     const { accountId, supabase } = await requireAccountMember(request);
+    const rateLimit = await checkRateLimit(`flows:${accountId}`, RATE_LIMITS.generous);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
     const { data, error } = await supabase
       .from("flows")
       .select("*")
@@ -20,7 +28,10 @@ export async function GET(
     }
 
     return NextResponse.json(data);
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
@@ -33,6 +44,13 @@ export async function PUT(
     const { accountId, role, supabase } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
+    const rateLimit = await checkRateLimit(`flows:${accountId}`, RATE_LIMITS.standard);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
     }
     const body = await request.json();
     const { error } = await supabase
@@ -54,7 +72,10 @@ export async function PUT(
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
@@ -68,6 +89,13 @@ export async function DELETE(
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
+    const rateLimit = await checkRateLimit(`flows:${accountId}`, RATE_LIMITS.standard);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
     const { error } = await supabase
       .from("flows")
       .delete()
@@ -79,7 +107,10 @@ export async function DELETE(
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

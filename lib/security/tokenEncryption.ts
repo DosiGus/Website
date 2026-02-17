@@ -4,6 +4,7 @@ const TOKEN_PREFIX = "enc:v1:";
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 const KEY_LENGTH = 32;
+let warnedMissingKey = false;
 
 function loadEncryptionKey(): Buffer {
   const rawKey = process.env.TOKEN_ENCRYPTION_KEY;
@@ -26,6 +27,13 @@ export function isEncryptedToken(value?: string | null): boolean {
 export function encryptToken(value: string): string {
   if (!value) return value;
   if (isEncryptedToken(value)) return value;
+  if (!process.env.TOKEN_ENCRYPTION_KEY) {
+    if (!warnedMissingKey) {
+      console.warn("TOKEN_ENCRYPTION_KEY missing; storing token in plaintext.");
+      warnedMissingKey = true;
+    }
+    return value;
+  }
 
   const key = loadEncryptionKey();
   const iv = randomBytes(IV_LENGTH);

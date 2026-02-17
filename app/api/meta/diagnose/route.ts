@@ -149,6 +149,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(results, { status: 200 });
   } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unauthorized" },
       { status: 401 },

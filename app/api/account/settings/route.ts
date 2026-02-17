@@ -30,7 +30,10 @@ export async function GET(request: Request) {
 
     const calendar = normalizeCalendarSettings((data?.settings as any)?.calendar ?? null);
     return NextResponse.json({ calendar, vertical: data?.vertical ?? null });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
@@ -104,7 +107,10 @@ export async function PATCH(request: Request) {
       calendar: nextCalendar ?? undefined,
       vertical: wantsVertical ? body.vertical : undefined,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

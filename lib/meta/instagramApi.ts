@@ -142,7 +142,7 @@ async function sendToInstagramApi(
   body: InstagramSendMessageRequest,
   accessToken: string
 ): Promise<ApiResult<InstagramSendMessageResponse>> {
-  const url = `${META_GRAPH_BASE}/me/messages?access_token=${accessToken}`;
+  const url = `${META_GRAPH_BASE}/me/messages`;
 
   for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
     try {
@@ -150,6 +150,7 @@ async function sendToInstagramApi(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(body),
       });

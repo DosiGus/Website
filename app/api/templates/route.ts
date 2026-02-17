@@ -1,18 +1,29 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 import { fallbackTemplates } from "../../../lib/flowTemplates";
-import { requireUser } from "../../../lib/apiAuth";
+import { requireAccountMember, isRoleAtLeast } from "../../../lib/apiAuth";
 import { slugify } from "../../../lib/slugify";
 import { defaultMetadata } from "../../../lib/defaultFlow";
+import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../lib/rateLimit";
 
-export async function GET() {
-  const supabase = createSupabaseServerClient();
+export async function GET(request: Request) {
+  try {
+    const { accountId } = await requireAccountMember(request);
+    const rateLimit = await checkRateLimit(`templates:${accountId}`, RATE_LIMITS.generous);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
 
-  // Load custom templates from database
-  const { data: dbTemplates } = await supabase
-    .from("flow_templates")
-    .select("*")
-    .order("name", { ascending: true });
+    const supabase = createSupabaseServerClient();
+
+    // Load custom templates from database
+    const { data: dbTemplates } = await supabase
+      .from("flow_templates")
+      .select("*")
+      .order("name", { ascending: true });
 
   // Code templates always take priority (they are always up-to-date)
   // Only add DB templates that are NOT in the code templates (custom user templates)
@@ -23,15 +34,24 @@ export async function GET() {
     (t) => !codeTemplateIds.has(t.id) && !codeTemplateSlugs.has(t.slug)
   );
 
-  // Return code templates first, then custom templates
-  const allTemplates = [...fallbackTemplates, ...customTemplates];
+    // Return code templates first, then custom templates
+    const allTemplates = [...fallbackTemplates, ...customTemplates];
 
-  return NextResponse.json(allTemplates);
+    return NextResponse.json(allTemplates);
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 }
 
 export async function POST(request: Request) {
   try {
-    const { user, supabase } = await requireUser(request);
+    const { accountId, role, supabase } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "member")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     const body = await request.json();
     const flowId = body.flowId as string | undefined;
     if (!flowId) {
@@ -45,9 +65,10 @@ export async function POST(request: Request) {
       .from("flows")
       .select("id, name, user_id, nodes, edges, triggers, metadata")
       .eq("id", flowId)
+      .eq("account_id", accountId)
       .single();
 
-    if (flowError || !flow || flow.user_id !== user.id) {
+    if (flowError || !flow) {
       return NextResponse.json(
         { error: "Flow konnte nicht geladen werden oder du hast keinen Zugriff." },
         { status: 404 },
@@ -85,7 +106,10 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(data, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

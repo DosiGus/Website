@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "../../../../../lib/apiAuth";
 import { defaultMetadata } from "../../../../../lib/defaultFlow";
+import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../../lib/rateLimit";
 
 export async function GET(
   request: Request,
@@ -8,6 +9,13 @@ export async function GET(
 ) {
   try {
     const { user, supabase } = await requireUser(request);
+    const rateLimit = await checkRateLimit(`flows_export:${user.id}`, RATE_LIMITS.standard);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
     const { data, error } = await supabase
       .from("flows")
       .select("*")

@@ -297,6 +297,12 @@ export default function IntegrationsClient() {
 
   const handleGoogleDisconnect = useCallback(async () => {
     try {
+      const confirmed = window.confirm(
+        "Möchtest du Google Kalender wirklich trennen? Automatisierungen laufen dann nicht mehr."
+      );
+      if (!confirmed) {
+        return;
+      }
       setGoogleDisconnecting(true);
       setGoogleError(null);
       const token = await getAccessToken();
