@@ -1070,9 +1070,10 @@ async function processMessagingEvent(
       "ask-date-custom", "ask-time-custom", "ask-guests-large",
       "special-allergy", "special-occasion"
     ];
-    const isDataCollectionNode = matchedNodeId
-      ? dataCollectionNodes.some(n => matchedNodeId.toLowerCase().includes(n.toLowerCase().replace("ask-", "")))
-      : false;
+    const matchedNodeIdLower = matchedNodeId?.toLowerCase() ?? "";
+    const isDataCollectionNode = dataCollectionNodes.some((n) =>
+      matchedNodeIdLower.includes(n.toLowerCase().replace("ask-", ""))
+    );
 
     const confirmationNodeIds = [
       "confirmed",
@@ -1093,11 +1094,9 @@ async function processMessagingEvent(
       "success",
       "erfolgreich",
     ];
-    const isConfirmationNode = matchedNodeId
-      ? confirmationNodeIds.some(id =>
-          matchedNodeId.toLowerCase().includes(id.toLowerCase())
-        )
-      : false;
+    const isConfirmationNode = confirmationNodeIds.some((id) =>
+      matchedNodeIdLower.includes(id.toLowerCase())
+    );
 
     const confirmationPayloads = [
       "confirm",
