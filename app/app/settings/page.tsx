@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock, Building2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../lib/supabaseBrowserClient";
 import { getDefaultCalendarSettings, type CalendarSettings } from "../../../lib/google/settings";
-import { VERTICAL_OPTIONS, type VerticalKey } from "../../../lib/verticals";
+import { VERTICAL_OPTIONS, type VerticalKey, getBookingLabels } from "../../../lib/verticals";
 
 export default function SettingsPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -34,6 +34,7 @@ export default function SettingsPage() {
   const [verticalSaving, setVerticalSaving] = useState(false);
   const [verticalNotice, setVerticalNotice] = useState<string | null>(null);
   const [verticalError, setVerticalError] = useState<string | null>(null);
+  const labels = useMemo(() => getBookingLabels(vertical), [vertical]);
 
   type TeamRole = "owner" | "admin" | "member" | "viewer";
   type TeamMember = {
@@ -484,7 +485,7 @@ export default function SettingsPage() {
             <label className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10">
               <div>
                 <span className="text-sm font-medium text-white">Neue Leads per E-Mail</span>
-                <p className="text-xs text-zinc-500">Erhalte eine E-Mail bei neuen Reservierungen</p>
+                <p className="text-xs text-zinc-500">Erhalte eine E-Mail bei neuen {labels.bookingPlural}</p>
               </div>
               <input
                 type="checkbox"

@@ -8,6 +8,8 @@ import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { lintFlow } from "../../lib/flowLint";
 import type { Edge, Node as FlowNode } from "reactflow";
 import type { FlowTrigger } from "../../lib/flowTypes";
+import useAccountVertical from "../../lib/useAccountVertical";
+import { getBookingLabels } from "../../lib/verticals";
 
 type NotificationItem = {
   id: string;
@@ -28,6 +30,8 @@ export default function AppTopbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const { vertical } = useAccountVertical();
+  const labels = useMemo(() => getBookingLabels(vertical), [vertical]);
 
   useEffect(() => {
     async function loadUser() {
@@ -42,7 +46,7 @@ export default function AppTopbar() {
       }
     }
     loadUser();
-  }, [supabase]);
+  }, [supabase, labels.bookingPlural, labels.bookingSingular]);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,7 +121,9 @@ export default function AppTopbar() {
         if (pendingCount > 0) {
           items.push({
             id: "pending-reservations",
-            title: `${pendingCount} ausstehende Reservierung${pendingCount > 1 ? "en" : ""}`,
+            title: pendingCount === 1
+              ? `1 ${labels.bookingSingular} offen`
+              : `${pendingCount} ${labels.bookingPlural} offen`,
             description: "Warten auf Bestätigung.",
             href: "/app/reservations?status=pending",
             tone: "info",
@@ -134,7 +140,7 @@ export default function AppTopbar() {
     return () => {
       cancelled = true;
     };
-  }, [supabase]);
+  }, [supabase, labels.bookingPlural, labels.bookingSingular]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -170,7 +176,7 @@ export default function AppTopbar() {
         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
         <input
           className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-11 pr-4 text-sm text-white placeholder-zinc-500 transition-all focus:border-indigo-500/50 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          placeholder="Flows, Reservierungen durchsuchen …"
+          placeholder={`Flows, ${labels.bookingPlural} durchsuchen …`}
         />
       </div>
 

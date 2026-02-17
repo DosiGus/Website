@@ -49,6 +49,8 @@ import {
 } from "../../lib/defaultFlow";
 import { lintFlow, FlowLintWarning } from "../../lib/flowLint";
 import type { FlowMetadata, FlowTrigger, FlowQuickReply } from "../../lib/flowTypes";
+import useAccountVertical from "../../lib/useAccountVertical";
+import { getBookingLabels } from "../../lib/verticals";
 
 type FlowResponse = {
   id: string;
@@ -237,6 +239,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [builderMode, setBuilderMode] = useState<BuilderMode>("simple");
   const [isInspectorOpen, setInspectorOpen] = useState(false);
   const [isAddMenuOpen, setAddMenuOpen] = useState(false);
+  const { vertical } = useAccountVertical();
+  const labels = getBookingLabels(vertical);
   const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
@@ -252,11 +256,11 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         text: "Du findest uns in der Musterstraße 5, Berlin-Mitte. Hier der Maps-Link: https://maps.google.com/?q=Musterstraße+5+Berlin",
       },
       {
-        label: "Reservierung (Standard)",
-        text: "Ich benötige Name, Datum, Uhrzeit und Personenanzahl, um die Reservierung einzutragen.",
+        label: `${labels.bookingSingular} (Standard)`,
+        text: `Ich benötige Name, Datum, Uhrzeit und ${labels.participantsCountLabel}, um ${labels.bookingAccusativeArticle} ${labels.bookingSingular} einzutragen.`,
       },
     ],
-    [],
+    [labels.bookingAccusativeArticle, labels.bookingSingular, labels.participantsCountLabel],
   );
 
   const startNodeIds = useMemo(

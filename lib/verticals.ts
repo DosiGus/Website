@@ -142,10 +142,13 @@ export const getWizardCopy = (vertical?: VerticalKey | null): WizardCopy =>
 export type BookingLabels = {
   bookingSingular: string;
   bookingPlural: string;
+  bookingIndefiniteArticle: string;
+  bookingAccusativeArticle: string;
   bookingDetails: string;
   bookingCreateTitle: string;
   bookingCreateAction: string;
   contactLabel: string;
+  contactPlural: string;
   contactNameLabel: string;
   contactSearchPlaceholder: string;
   participantsLabel: string;
@@ -157,17 +160,23 @@ export const getBookingLabels = (vertical?: VerticalKey | null): BookingLabels =
   const isGastro = !vertical || vertical === "gastro";
   const bookingSingular = isGastro ? "Reservierung" : "Termin";
   const bookingPlural = isGastro ? "Reservierungen" : "Termine";
+  const bookingIndefiniteArticle = isGastro ? "eine" : "ein";
+  const bookingAccusativeArticle = isGastro ? "die" : "den";
   const contactLabel = isGastro ? "Gast" : "Kunde";
+  const contactPlural = isGastro ? "Gäste" : "Kunden";
   const participantsLabel = isGastro ? "Personen" : "Teilnehmer";
   const participantsCountLabel = isGastro ? "Personenanzahl" : "Teilnehmerzahl";
 
   return {
     bookingSingular,
     bookingPlural,
+    bookingIndefiniteArticle,
+    bookingAccusativeArticle,
     bookingDetails: isGastro ? "Reservierungsdetails" : "Termindetails",
     bookingCreateTitle: isGastro ? "Neue Reservierung" : "Neuer Termin",
     bookingCreateAction: `${bookingSingular} erstellen`,
     contactLabel,
+    contactPlural,
     contactNameLabel: isGastro ? "Gastname" : "Kundenname",
     contactSearchPlaceholder: isGastro ? "Gastname suchen..." : "Kundenname suchen...",
     participantsLabel,

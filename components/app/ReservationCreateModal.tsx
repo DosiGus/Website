@@ -36,7 +36,7 @@ export default function ReservationCreateModal({ onClose, onSuccess, labels }: P
 
     // Validate required fields
     if (!guestName.trim()) {
-      setError(`Bitte geben Sie einen ${labels.contactNameLabel.toLowerCase()} ein`);
+      setError("Bitte geben Sie einen Namen ein");
       setLoading(false);
       return;
     }
@@ -51,7 +51,7 @@ export default function ReservationCreateModal({ onClose, onSuccess, labels }: P
       return;
     }
     if (!guestCount || parseInt(guestCount) < 1) {
-      setError(`Bitte geben Sie die ${labels.participantsCountLabel.toLowerCase()} ein`);
+      setError(`Bitte geben Sie die ${labels.participantsCountLabel} ein`);
       setLoading(false);
       return;
     }
@@ -82,7 +82,7 @@ export default function ReservationCreateModal({ onClose, onSuccess, labels }: P
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Fehler beim Erstellen der Reservierung");
+        throw new Error(data.error || "Fehler beim Erstellen.");
       }
 
       onSuccess();
@@ -208,7 +208,7 @@ export default function ReservationCreateModal({ onClose, onSuccess, labels }: P
             <textarea
               value={specialRequests}
               onChange={(e) => setSpecialRequests(e.target.value)}
-              placeholder="z.B. Allergien, Kinderstuhl, Geburtstag..."
+              placeholder="z.B. Hinweise, Ziele, Allergien..."
               rows={3}
               className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
             />

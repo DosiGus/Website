@@ -14,6 +14,8 @@ import type { FlowQuickReply } from '../../lib/flowTypes';
 import type { FlowLintWarning } from '../../lib/flowLint';
 import FlowSimulator from './FlowSimulator';
 import type { FlowTrigger } from '../../lib/flowTypes';
+import useAccountVertical from '../../lib/useAccountVertical';
+import { getBookingLabels, getWizardCopy } from '../../lib/verticals';
 
 type InspectorTab = 'content' | 'logic' | 'variables' | 'preview';
 type EdgeTone = 'neutral' | 'positive' | 'negative';
@@ -116,6 +118,9 @@ export default function InspectorSlideOver({
   saveState,
   hidePayloadField = false,
 }: InspectorSlideOverProps) {
+  const { vertical } = useAccountVertical();
+  const labels = getBookingLabels(vertical);
+  const wizardCopy = getWizardCopy(vertical);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Handle click outside to close
@@ -250,7 +255,7 @@ export default function InspectorSlideOver({
                     </div>
                     {selectedInputMode === 'free_text' && (
                       <p className="mt-2 text-xs text-zinc-500">
-                        Der Kunde schreibt hier frei. Du bestimmst, wohin es danach weitergeht.
+                        Der {labels.contactLabel} schreibt hier frei. Du bestimmst, wohin es danach weitergeht.
                       </p>
                     )}
                   </div>
@@ -278,7 +283,7 @@ export default function InspectorSlideOver({
                           <option value="name">Name</option>
                           <option value="date">Datum</option>
                           <option value="time">Uhrzeit</option>
-                          <option value="guestCount">Personen</option>
+                          <option value="guestCount">{labels.participantsLabel}</option>
                           <option value="phone">Telefon</option>
                           <option value="email">E-Mail</option>
                           <option value="specialRequests">Wünsche</option>
@@ -412,7 +417,7 @@ export default function InspectorSlideOver({
                 <textarea
                   className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none resize-none"
                   rows={3}
-                  placeholder="z. B. 'Erzeuge eine freundliche Begrüßung für ein italienisches Restaurant...'"
+                  placeholder={`z. B. 'Erzeuge eine freundliche Begrüßung für ein ${wizardCopy.businessTypeLabel.toLowerCase()}...'`}
                   value={smartPrompt}
                   onChange={(e) => onSmartPromptChange(e.target.value)}
                 />

@@ -20,6 +20,8 @@ import {
   Zap,
 } from "lucide-react";
 import type { FlowQuickReply, FlowTrigger } from "../../lib/flowTypes";
+import useAccountVertical from "../../lib/useAccountVertical";
+import { getBookingLabels, type BookingLabels } from "../../lib/verticals";
 
 type FlowListBuilderProps = {
   nodes: Node[];
@@ -108,7 +110,7 @@ const deriveInputMode = (node: Node, edges: Edge[]) => {
   return hasFreeTextEdge ? "free_text" : "buttons";
 };
 
-const buildFreeTextDefaults = (label?: string) => {
+const buildFreeTextDefaults = (label: string | undefined, labels: BookingLabels) => {
   const lower = (label ?? "").toLowerCase();
   if (lower.includes("datum")) {
     return { text: "Bitte gib dein Wunschdatum ein.", collects: "date", placeholder: "z. B. 14. Februar" };
@@ -126,20 +128,20 @@ const buildFreeTextDefaults = (label?: string) => {
     return { text: "Wie lautet deine E-Mail-Adresse?", collects: "email", placeholder: "z. B. maria@example.com" };
   }
   if (lower.includes("person") || lower.includes("gäste") || lower.includes("gast")) {
-    return { text: "Für wie viele Personen?", collects: "guestCount", placeholder: "z. B. 4" };
+    return { text: `Für wie viele ${labels.participantsLabel.toLowerCase()}?`, collects: "guestCount", placeholder: "z. B. 4" };
   }
   return { text: "Bitte gib deine Antwort ein.", collects: "", placeholder: "Antwort eingeben..." };
 };
 
-const COLLECTS_LABELS: Record<string, string> = {
+const getCollectsLabels = (labels: BookingLabels): Record<string, string> => ({
   name: "Name",
   date: "Datum",
   time: "Uhrzeit",
-  guestCount: "Personen",
+  guestCount: labels.participantsLabel,
   phone: "Telefon",
   email: "E-Mail",
   specialRequests: "Wünsche",
-};
+});
 
 export default function FlowListBuilder({
   nodes,
@@ -154,6 +156,9 @@ export default function FlowListBuilder({
   onAddNode,
   onDeleteNode,
 }: FlowListBuilderProps) {
+  const { vertical } = useAccountVertical();
+  const labels = getBookingLabels(vertical);
+  const collectsLabels = useMemo(() => getCollectsLabels(labels), [labels]);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -209,7 +214,7 @@ export default function FlowListBuilder({
               ...node.data,
               inputMode: mode,
               ...(mode === "free_text" ? (() => {
-                const defaults = buildFreeTextDefaults((node.data?.label as string) ?? "");
+                const defaults = buildFreeTextDefaults((node.data?.label as string) ?? "", labels);
                 return {
                   placeholder: (node.data as any)?.placeholder || defaults.placeholder,
                   collects: (node.data as any)?.collects || defaults.collects,
@@ -220,7 +225,7 @@ export default function FlowListBuilder({
         : node
     );
     onNodesChange(updatedNodes);
-  }, [nodes, onNodesChange]);
+  }, [labels, nodes, onNodesChange]);
 
   const updateFreeTextMeta = useCallback((nodeId: string, field: "placeholder" | "collects", value: string) => {
     const updatedNodes = nodes.map(node =>
@@ -230,7 +235,7 @@ export default function FlowListBuilder({
   }, [nodes, onNodesChange]);
 
   const buildFreeTextNode = useCallback((label?: string) => {
-    const defaults = buildFreeTextDefaults(label);
+    const defaults = buildFreeTextDefaults(label, labels);
     return {
       id: `ft-${Date.now()}`,
       type: "wesponde",
@@ -245,7 +250,7 @@ export default function FlowListBuilder({
         collects: defaults.collects,
       },
     } as Node;
-  }, [nodes.length]);
+  }, [labels, nodes.length]);
 
   const syncEdgesForNode = useCallback((nodeId: string, replies: FlowQuickReply[]) => {
     let next = edges
@@ -448,7 +453,7 @@ export default function FlowListBuilder({
                   </span>
                 </div>
                 <p className="mt-0.5 text-sm text-zinc-500">
-                  Startpunkt der Unterhaltung – definiert, womit Gäste beginnen.
+                  Startpunkt der Unterhaltung – definiert, womit {labels.contactPlural} beginnen.
                 </p>
                 {triggerKeywords.length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -549,7 +554,7 @@ export default function FlowListBuilder({
                       )}
                       {inputMode === 'free_text' && (
                         <span className="shrink-0 rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-xs font-semibold text-amber-400">
-                          {(node.data as any)?.collects ? COLLECTS_LABELS[(node.data as any).collects] || 'Freitext' : 'Freitext'}
+                          {(node.data as any)?.collects ? collectsLabels[(node.data as any).collects] || 'Freitext' : 'Freitext'}
                         </span>
                       )}
                       {issue && (
@@ -587,7 +592,7 @@ export default function FlowListBuilder({
                     {/* Response Type Toggle */}
                     <div>
                       <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                        Wie antwortet der Kunde?
+                        Wie antwortet der {labels.contactLabel}?
                       </label>
                       <div className="flex rounded-xl bg-white/5 p-1 border border-white/10">
                         <button
@@ -619,7 +624,7 @@ export default function FlowListBuilder({
                     {inputMode === "free_text" && (
                       <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-4 space-y-3">
                         <p className="text-sm text-amber-400">
-                          Der Kunde tippt seine Antwort frei ein.
+                          Der {labels.contactLabel} tippt seine Antwort frei ein.
                         </p>
 
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -636,7 +641,7 @@ export default function FlowListBuilder({
                               <option value="name">Name</option>
                               <option value="date">Datum</option>
                               <option value="time">Uhrzeit</option>
-                              <option value="guestCount">Personenanzahl</option>
+                              <option value="guestCount">{labels.participantsCountLabel}</option>
                               <option value="phone">Telefonnummer</option>
                               <option value="email">E-Mail-Adresse</option>
                               <option value="specialRequests">Besondere Wünsche</option>
@@ -689,7 +694,7 @@ export default function FlowListBuilder({
                         {quickReplies.length === 0 ? (
                           <div className="rounded-xl border-2 border-dashed border-white/20 p-6 text-center">
                             <p className="text-sm text-zinc-500">
-                              Noch keine Buttons. Füge Buttons hinzu, damit der Kunde antworten kann.
+                              Noch keine Buttons. Füge Buttons hinzu, damit der {labels.contactLabel} antworten kann.
                             </p>
                             <button
                               onClick={() => addQuickReply(node.id)}

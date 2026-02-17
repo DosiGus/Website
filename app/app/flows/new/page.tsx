@@ -9,7 +9,7 @@ import FlowSetupWizard from "../../../../components/app/FlowSetupWizard";
 import FlowSimulator from "../../../../components/app/FlowSimulator";
 import type { Node, Edge } from "reactflow";
 import type { FlowMetadata, FlowTrigger } from "../../../../lib/flowTypes";
-import { getDefaultTemplateVertical } from "../../../../lib/verticals";
+import { getBookingLabels, getDefaultTemplateVertical } from "../../../../lib/verticals";
 import useAccountVertical from "../../../../lib/useAccountVertical";
 
 type CreationMode = "choose" | "wizard" | "empty" | "template";
@@ -25,6 +25,7 @@ export default function NewFlowPage() {
   const [templateSearch, setTemplateSearch] = useState("");
   const [verticalFilter, setVerticalFilter] = useState<string>("alle");
   const { vertical: accountVertical } = useAccountVertical();
+  const labels = getBookingLabels(accountVertical);
   const [previewTemplate, setPreviewTemplate] = useState<FlowTemplate | null>(null);
   const [creationMode, setCreationMode] = useState<CreationMode>("choose");
 
@@ -227,7 +228,7 @@ export default function NewFlowPage() {
             </div>
             <h3 className="mt-4 text-lg font-semibold text-white">Setup-Assistent</h3>
             <p className="mt-2 text-sm text-zinc-400">
-              Beantworte 5 einfache Fragen und wir erstellen deinen Reservierungs-Flow automatisch.
+              Beantworte 5 einfache Fragen und wir erstellen deinen {labels.bookingSingular}-Flow automatisch.
             </p>
             <span className="mt-4 text-sm font-semibold text-indigo-400 transition-colors group-hover:text-indigo-300">
               Assistent starten →
@@ -244,7 +245,7 @@ export default function NewFlowPage() {
             </div>
             <h3 className="mt-4 text-lg font-semibold text-white">Aus Template</h3>
             <p className="mt-2 text-sm text-zinc-400">
-              Wähle ein fertiges Template für Restaurant, Salon oder Praxis und passe es an.
+              Wähle ein fertiges Template für deine Branche und passe es an.
             </p>
             <span className="mt-4 text-sm font-semibold text-indigo-400 transition-colors group-hover:text-indigo-300">
               Templates ansehen →

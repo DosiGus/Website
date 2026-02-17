@@ -55,7 +55,6 @@ export default function ReservationsClient({ vertical }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const labels = getBookingLabels(vertical);
-  const bookingPluralLower = labels.bookingPlural.toLowerCase();
 
   const [userId, setUserId] = useState<string | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -164,7 +163,7 @@ export default function ReservationsClient({ vertical }: Props) {
       });
 
       if (!response.ok) {
-        throw new Error(`Fehler beim Laden der ${bookingPluralLower}`);
+        throw new Error(`Fehler beim Laden der ${labels.bookingPlural}`);
       }
 
       const data: ReservationListResponse = await response.json();
@@ -289,11 +288,11 @@ export default function ReservationsClient({ vertical }: Props) {
       if (status === "completed" && payload?.review) {
         const reviewStatus = payload.review.status as string | undefined;
         if (payload.review.success) {
-          setNotice(`✅ Bewertungs-Flow wurde an den ${labels.contactLabel.toLowerCase()} gesendet.`);
+          setNotice("✅ Bewertungs-Flow wurde gesendet.");
         } else if (reviewStatus === "missing_review_url") {
           setNotice("⚠️ Kein Google-Bewertungslink hinterlegt. Bitte in Integrationen speichern.");
         } else if (reviewStatus === "missing_sender") {
-          setNotice(`⚠️ Diese ${labels.bookingSingular.toLowerCase()} hat keinen Instagram-Kontakt (nur IG-Reservierungen).`);
+          setNotice(`⚠️ Instagram-Kontakt fehlt (${labels.bookingSingular}).`);
         } else if (reviewStatus === "missing_integration") {
           setNotice("⚠️ Integration nicht verbunden. Bitte Meta/Instagram verbinden.");
         } else if (reviewStatus === "already_sent") {
@@ -612,7 +611,7 @@ export default function ReservationsClient({ vertical }: Props) {
           </div>
         ) : filteredReservations.length === 0 ? (
           <div className="p-6 text-sm text-zinc-400">
-            Keine {bookingPluralLower} gefunden.
+            Keine {labels.bookingPlural} gefunden.
           </div>
         ) : (
           <>

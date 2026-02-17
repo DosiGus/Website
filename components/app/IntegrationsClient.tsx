@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import type { IntegrationStatus } from "../../lib/meta/types";
+import { getBookingLabels } from "../../lib/verticals";
+import useAccountVertical from "../../lib/useAccountVertical";
 
 type IntegrationsResponse = {
   integrations: IntegrationStatus[];
@@ -30,6 +32,12 @@ type GoogleCalendarOption = {
 
 export default function IntegrationsClient() {
   const searchParams = useSearchParams();
+  const { vertical } = useAccountVertical();
+  const labels = useMemo(() => getBookingLabels(vertical), [vertical]);
+  const testBookingLabel = useMemo(
+    () => `Test${labels.bookingSingular.toLowerCase()}`,
+    [labels.bookingSingular],
+  );
   const [metaIntegration, setMetaIntegration] = useState<IntegrationStatus | null>(null);
   const [googleIntegration, setGoogleIntegration] = useState<IntegrationStatus | null>(null);
   const [status, setStatus] = useState<"loading" | "ready">("loading");
@@ -626,7 +634,7 @@ export default function IntegrationsClient() {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">Google Kalender</h3>
-              <p className="text-sm text-zinc-400">Termine automatisch eintragen</p>
+              <p className="text-sm text-zinc-400">{labels.bookingPlural} automatisch eintragen</p>
             </div>
           </div>
           <span
@@ -704,7 +712,7 @@ export default function IntegrationsClient() {
               onClick={handleGoogleTest}
               disabled={googleTestStatus === "running"}
             >
-              {googleTestStatus === "running" ? "Testtermin..." : "Testtermin erstellen"}
+              {googleTestStatus === "running" ? `${testBookingLabel}...` : `${testBookingLabel} erstellen`}
             </button>
           )}
         </div>
@@ -766,7 +774,7 @@ export default function IntegrationsClient() {
                 target="_blank"
                 rel="noreferrer"
               >
-                Testtermin ansehen
+                {testBookingLabel} ansehen
                 <ExternalLink className="h-4 w-4" />
               </a>
             ) : (
@@ -821,7 +829,7 @@ export default function IntegrationsClient() {
             Google-Bewertungslink
           </div>
           <p className="mt-1 text-xs text-zinc-500">
-            Dieser Link wird automatisch an Gäste gesendet, wenn eine Reservierung abgeschlossen wird.
+            Dieser Link wird automatisch an {labels.contactPlural} gesendet, wenn {labels.bookingIndefiniteArticle} {labels.bookingSingular} abgeschlossen wird.
           </p>
           <input
             className="mt-3 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50"
@@ -860,7 +868,7 @@ export default function IntegrationsClient() {
 
         <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
           <p className="text-xs text-zinc-400">
-            <strong className="text-zinc-300">So funktioniert es:</strong> Wenn du eine Reservierung in Wesponde als &bdquo;Abgeschlossen&ldquo; markierst, erhält der Gast automatisch eine Nachricht mit deinem Bewertungslink.
+            <strong className="text-zinc-300">So funktioniert es:</strong> Wenn du {labels.bookingIndefiniteArticle} {labels.bookingSingular} in Wesponde als &bdquo;Abgeschlossen&ldquo; markierst, erhält der {labels.contactLabel} automatisch eine Nachricht mit deinem Bewertungslink.
           </p>
         </div>
 
@@ -925,7 +933,7 @@ export default function IntegrationsClient() {
           </span>
         </div>
         <p className="mt-4 text-sm text-zinc-400">
-          Verbinde dein Kassensystem, um Reservierungen mit deinen echten Verfügbarkeiten abzugleichen.
+          Verbinde dein Kassensystem, um {labels.bookingPlural} mit deinen echten Verfügbarkeiten abzugleichen.
         </p>
         <button className="mt-6 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-400 transition-all hover:border-white/20 hover:text-white">
           Mehr erfahren

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { MessageCircle, User, Clock, ChevronRight, X, Bot, ArrowLeft } from "lucide-react";
+import { getBookingLabels } from "../../lib/verticals";
+import useAccountVertical from "../../lib/useAccountVertical";
 
 interface Conversation {
   id: string;
@@ -42,6 +44,8 @@ interface Message {
 }
 
 export default function ConversationsClient() {
+  const { vertical } = useAccountVertical();
+  const labels = getBookingLabels(vertical);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -292,7 +296,7 @@ export default function ConversationsClient() {
           <MessageCircle className="mx-auto mb-4 h-12 w-12 text-zinc-600" />
           <p className="text-white">Noch keine Konversationen</p>
           <p className="mt-2 text-sm">
-            Konversationen erscheinen hier, sobald Kunden über Instagram schreiben.
+            Konversationen erscheinen hier, sobald {labels.contactPlural} über Instagram schreiben.
           </p>
         </div>
       ) : (
