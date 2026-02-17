@@ -138,3 +138,40 @@ export const WIZARD_COPY: Record<VerticalKey, WizardCopy> = {
 
 export const getWizardCopy = (vertical?: VerticalKey | null): WizardCopy =>
   WIZARD_COPY[vertical ?? "gastro"];
+
+export type BookingLabels = {
+  bookingSingular: string;
+  bookingPlural: string;
+  bookingDetails: string;
+  bookingCreateTitle: string;
+  bookingCreateAction: string;
+  contactLabel: string;
+  contactNameLabel: string;
+  contactSearchPlaceholder: string;
+  participantsLabel: string;
+  participantsCountLabel: string;
+  participantsTodayLabel: string;
+};
+
+export const getBookingLabels = (vertical?: VerticalKey | null): BookingLabels => {
+  const isGastro = !vertical || vertical === "gastro";
+  const bookingSingular = isGastro ? "Reservierung" : "Termin";
+  const bookingPlural = isGastro ? "Reservierungen" : "Termine";
+  const contactLabel = isGastro ? "Gast" : "Kunde";
+  const participantsLabel = isGastro ? "Personen" : "Teilnehmer";
+  const participantsCountLabel = isGastro ? "Personenanzahl" : "Teilnehmerzahl";
+
+  return {
+    bookingSingular,
+    bookingPlural,
+    bookingDetails: isGastro ? "Reservierungsdetails" : "Termindetails",
+    bookingCreateTitle: isGastro ? "Neue Reservierung" : "Neuer Termin",
+    bookingCreateAction: `${bookingSingular} erstellen`,
+    contactLabel,
+    contactNameLabel: isGastro ? "Gastname" : "Kundenname",
+    contactSearchPlaceholder: isGastro ? "Gastname suchen..." : "Kundenname suchen...",
+    participantsLabel,
+    participantsCountLabel,
+    participantsTodayLabel: isGastro ? "Gäste heute" : "Teilnehmer heute",
+  };
+};

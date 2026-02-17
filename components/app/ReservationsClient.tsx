@@ -19,6 +19,7 @@ import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import type { Reservation, ReservationStatus, ReservationListResponse } from "../../lib/reservationTypes";
 import ReservationDetailModal from "./ReservationDetailModal";
 import ReservationCreateModal from "./ReservationCreateModal";
+import { getBookingLabels, type VerticalKey } from "../../lib/verticals";
 
 type StatusBadgeConfig = {
   label: string;
@@ -45,10 +46,16 @@ const STATUS_OPTIONS: { value: ReservationStatus | "all"; label: string }[] = [
 
 const ITEMS_PER_PAGE = 20;
 
-export default function ReservationsClient() {
+type Props = {
+  vertical?: VerticalKey | null;
+};
+
+export default function ReservationsClient({ vertical }: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const labels = getBookingLabels(vertical);
+  const bookingPluralLower = labels.bookingPlural.toLowerCase();
 
   const [userId, setUserId] = useState<string | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -157,7 +164,7 @@ export default function ReservationsClient() {
       });
 
       if (!response.ok) {
-        throw new Error("Fehler beim Laden der Reservierungen");
+        throw new Error(`Fehler beim Laden der ${bookingPluralLower}`);
       }
 
       const data: ReservationListResponse = await response.json();
@@ -236,7 +243,7 @@ export default function ReservationsClient() {
   const getReservationSecondaryName = (reservation: Reservation) => {
     const contactName = reservation.contacts?.display_name;
     if (contactName && contactName !== reservation.guest_name) {
-      return `Reservierung: ${reservation.guest_name}`;
+      return `${labels.bookingSingular}: ${reservation.guest_name}`;
     }
     return null;
   };
@@ -282,11 +289,11 @@ export default function ReservationsClient() {
       if (status === "completed" && payload?.review) {
         const reviewStatus = payload.review.status as string | undefined;
         if (payload.review.success) {
-          setNotice("✅ Bewertungs-Flow wurde an den Gast gesendet.");
+          setNotice(`✅ Bewertungs-Flow wurde an den ${labels.contactLabel.toLowerCase()} gesendet.`);
         } else if (reviewStatus === "missing_review_url") {
           setNotice("⚠️ Kein Google-Bewertungslink hinterlegt. Bitte in Integrationen speichern.");
         } else if (reviewStatus === "missing_sender") {
-          setNotice("⚠️ Diese Reservierung hat keinen Instagram-Kontakt (nur IG-Reservierungen).");
+          setNotice(`⚠️ Diese ${labels.bookingSingular.toLowerCase()} hat keinen Instagram-Kontakt (nur IG-Reservierungen).`);
         } else if (reviewStatus === "missing_integration") {
           setNotice("⚠️ Integration nicht verbunden. Bitte Meta/Instagram verbinden.");
         } else if (reviewStatus === "already_sent") {
@@ -502,7 +509,7 @@ export default function ReservationsClient() {
             </div>
             <div>
               <p className="text-2xl font-bold text-white">{stats.guestsToday}</p>
-              <p className="text-sm text-zinc-400">Gäste heute</p>
+              <p className="text-sm text-zinc-400">{labels.participantsTodayLabel}</p>
             </div>
           </div>
         </div>
@@ -515,7 +522,7 @@ export default function ReservationsClient() {
           className="flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40"
         >
           <Plus className="h-4 w-4" />
-          Reservierung erstellen
+          {labels.bookingCreateAction}
         </button>
       </div>
 
@@ -527,7 +534,7 @@ export default function ReservationsClient() {
             <Filter className="h-4 w-4 text-zinc-400" />
             <input
               className="w-full bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
-              placeholder="Gastname suchen..."
+              placeholder={labels.contactSearchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -601,11 +608,11 @@ export default function ReservationsClient() {
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-xl">
         {loading ? (
           <div className="p-6 text-sm text-zinc-400">
-            Reservierungen werden geladen...
+            {labels.bookingPlural} werden geladen...
           </div>
         ) : filteredReservations.length === 0 ? (
           <div className="p-6 text-sm text-zinc-400">
-            Keine Reservierungen gefunden.
+            Keine {bookingPluralLower} gefunden.
           </div>
         ) : (
           <>
@@ -613,10 +620,10 @@ export default function ReservationsClient() {
               <table className="min-w-full divide-y divide-white/10 text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Gast</th>
+                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">{labels.contactLabel}</th>
                     <th className="px-6 py-3 text-left font-semibold text-zinc-400">Datum</th>
                     <th className="px-6 py-3 text-left font-semibold text-zinc-400">Uhrzeit</th>
-                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Personen</th>
+                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">{labels.participantsLabel}</th>
                     <th className="px-6 py-3 text-left font-semibold text-zinc-400">Status</th>
                     <th className="px-6 py-3 text-left font-semibold text-zinc-400">Aktionen</th>
                   </tr>
@@ -687,6 +694,7 @@ export default function ReservationsClient() {
       {detailModalReservation && (
         <ReservationDetailModal
           reservation={detailModalReservation}
+          labels={labels}
           onClose={() => setDetailModalReservation(null)}
         />
       )}
@@ -696,6 +704,7 @@ export default function ReservationsClient() {
         <ReservationCreateModal
           onClose={() => setCreateModalOpen(false)}
           onSuccess={handleCreateSuccess}
+          labels={labels}
         />
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { X, User, Calendar, Clock, Users, Phone, Mail, MessageSquare, Instagram, Edit3 } from "lucide-react";
 import type { Reservation, ReservationStatus } from "../../lib/reservationTypes";
+import type { BookingLabels } from "../../lib/verticals";
 
 type StatusBadgeConfig = {
   label: string;
@@ -20,9 +21,10 @@ const STATUS_CONFIG: Record<ReservationStatus, StatusBadgeConfig> = {
 type Props = {
   reservation: Reservation;
   onClose: () => void;
+  labels: BookingLabels;
 };
 
-export default function ReservationDetailModal({ reservation, onClose }: Props) {
+export default function ReservationDetailModal({ reservation, onClose, labels }: Props) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("de-DE", {
@@ -72,7 +74,7 @@ export default function ReservationDetailModal({ reservation, onClose }: Props) 
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <h2 className="text-xl font-semibold text-white">Reservierungsdetails</h2>
+          <h2 className="text-xl font-semibold text-white">{labels.bookingDetails}</h2>
           <button
             onClick={onClose}
             className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
@@ -102,11 +104,11 @@ export default function ReservationDetailModal({ reservation, onClose }: Props) 
                 <User className="h-5 w-5 text-violet-400" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wider text-zinc-500">Gast</p>
+                <p className="text-xs uppercase tracking-wider text-zinc-500">{labels.contactLabel}</p>
                 <p className="font-medium text-white">{contactName || reservation.guest_name}</p>
                 {contactName && contactName !== reservation.guest_name && (
                   <p className="text-xs text-zinc-500">
-                    Reservierung: {reservation.guest_name}
+                    {labels.bookingSingular}: {reservation.guest_name}
                   </p>
                 )}
               </div>
@@ -118,7 +120,7 @@ export default function ReservationDetailModal({ reservation, onClose }: Props) 
                 <Users className="h-5 w-5 text-indigo-400" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wider text-zinc-500">Personen</p>
+                <p className="text-xs uppercase tracking-wider text-zinc-500">{labels.participantsLabel}</p>
                 <p className="font-medium text-white">{reservation.guest_count}</p>
               </div>
             </div>

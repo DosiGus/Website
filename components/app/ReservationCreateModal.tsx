@@ -4,13 +4,15 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
+import type { BookingLabels } from "../../lib/verticals";
 
 type Props = {
   onClose: () => void;
   onSuccess: () => void;
+  labels: BookingLabels;
 };
 
-export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
+export default function ReservationCreateModal({ onClose, onSuccess, labels }: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
 
@@ -25,6 +27,7 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
+  const emailPlaceholder = labels.contactLabel === "Gast" ? "gast@example.com" : "kunde@example.com";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +36,7 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
 
     // Validate required fields
     if (!guestName.trim()) {
-      setError("Bitte geben Sie einen Gastnamen ein");
+      setError(`Bitte geben Sie einen ${labels.contactNameLabel.toLowerCase()} ein`);
       setLoading(false);
       return;
     }
@@ -48,7 +51,7 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
       return;
     }
     if (!guestCount || parseInt(guestCount) < 1) {
-      setError("Bitte geben Sie die Personenanzahl ein");
+      setError(`Bitte geben Sie die ${labels.participantsCountLabel.toLowerCase()} ein`);
       setLoading(false);
       return;
     }
@@ -98,7 +101,7 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <h2 className="text-xl font-semibold text-white">Neue Reservierung</h2>
+          <h2 className="text-xl font-semibold text-white">{labels.bookingCreateTitle}</h2>
           <button
             onClick={onClose}
             className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
@@ -112,7 +115,7 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
           {/* Guest Name */}
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-300">
-              Gastname <span className="text-rose-400">*</span>
+              {labels.contactNameLabel} <span className="text-rose-400">*</span>
             </label>
             <input
               type="text"
@@ -156,7 +159,7 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
           {/* Guest Count */}
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-300">
-              Personenanzahl <span className="text-rose-400">*</span>
+              {labels.participantsCountLabel} <span className="text-rose-400">*</span>
             </label>
             <input
               type="number"
@@ -191,7 +194,7 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="gast@example.com"
+                placeholder={emailPlaceholder}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
               />
             </div>
@@ -232,7 +235,7 @@ export default function ReservationCreateModal({ onClose, onSuccess }: Props) {
               disabled={loading}
               className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 disabled:opacity-50"
             >
-              {loading ? "Erstelle..." : "Reservierung erstellen"}
+              {loading ? "Erstelle..." : labels.bookingCreateAction}
             </button>
           </div>
         </form>
