@@ -11,6 +11,39 @@ export type MatchedFlow = {
   metadata?: Record<string, unknown> | null;
 };
 
+function deriveFallbackStartNodeId(nodes: any[], edges: any[]): string | null {
+  const targets = new Set(
+    edges.map((edge) => String(edge?.target ?? "")).filter(Boolean),
+  );
+  const rootNodes = nodes.filter((node) => !targets.has(String(node?.id ?? "")));
+  if (rootNodes.length === 1) {
+    return String(rootNodes[0].id);
+  }
+
+  const startNode = nodes.find(
+    (node) => String(node?.id ?? "").toLowerCase() === "start",
+  );
+  if (startNode) {
+    return String(startNode.id);
+  }
+
+  const welcomeNode = nodes.find(
+    (node) => String(node?.id ?? "").toLowerCase() === "welcome",
+  );
+  if (welcomeNode) {
+    return String(welcomeNode.id);
+  }
+
+  const inputNode = nodes.find(
+    (node) => String(node?.type ?? "").toLowerCase() === "input",
+  );
+  if (inputNode) {
+    return String(inputNode.id);
+  }
+
+  return null;
+}
+
 /**
  * Finds an active flow that matches the incoming message text.
  * Returns the first matching flow or null if no match.
@@ -43,6 +76,10 @@ export async function findMatchingFlow(
   // Check each flow's triggers and score matches
   for (const flow of flows) {
     const triggers = flow.triggers as FlowTrigger[];
+    const fallbackStartNodeId = deriveFallbackStartNodeId(
+      (flow.nodes as any[]) ?? [],
+      (flow.edges as any[]) ?? [],
+    );
 
     if (!triggers || triggers.length === 0) {
       continue;
@@ -55,15 +92,20 @@ export async function findMatchingFlow(
 
       const keywords = trigger.config?.keywords || [];
       const matchType = trigger.config?.matchType || "CONTAINS";
+      const startNodeId = trigger.startNodeId ?? fallbackStartNodeId;
+
+      if (!startNodeId) {
+        continue;
+      }
 
       const matchScore = scoreKeywords(normalizedMessage, keywords, matchType);
 
-      if (matchScore > 0 && trigger.startNodeId) {
+      if (matchScore > 0) {
         matches.push({
           flowId: flow.id,
           flowName: flow.name,
           triggerId: trigger.id,
-          startNodeId: trigger.startNodeId,
+          startNodeId,
           nodes: flow.nodes,
           edges: flow.edges,
           metadata: flow.metadata ?? null,
@@ -97,7 +139,7 @@ export async function listTriggerKeywords(
   const supabase = createSupabaseServerClient();
   const { data: flows, error } = await supabase
     .from("flows")
-    .select("triggers")
+    .select("triggers, nodes, edges")
     .eq("account_id", accountId)
     .eq("status", "Aktiv");
 
@@ -111,9 +153,15 @@ export async function listTriggerKeywords(
   for (const flow of flows) {
     const triggers = flow.triggers as FlowTrigger[];
     if (!triggers || triggers.length === 0) continue;
+    const fallbackStartNodeId = deriveFallbackStartNodeId(
+      (flow.nodes as any[]) ?? [],
+      (flow.edges as any[]) ?? [],
+    );
 
     for (const trigger of triggers) {
       if (trigger.type !== "KEYWORD") continue;
+      const startNodeId = trigger.startNodeId ?? fallbackStartNodeId;
+      if (!startNodeId) continue;
       const triggerKeywords = trigger.config?.keywords || [];
       for (const keyword of triggerKeywords) {
         const normalized = String(keyword).trim();
