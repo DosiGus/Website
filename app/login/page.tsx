@@ -13,7 +13,7 @@ const loginFeatures = [
   {
     icon: Shield,
     title: "Sicher",
-    description: "OAuth 2.0 mit Meta Business, verschlüsselte Verbindungen",
+    description: "OAuth 2.0 mit Google, verschlüsselte Verbindungen",
   },
   {
     icon: Zap,
@@ -94,7 +94,7 @@ export default function LoginPage({ searchParams }: { searchParams: { view?: str
             ) : (
               <>
                 <p className="mt-4 text-lg text-zinc-400">
-                  Verwende deine Geschäfts‑E‑Mail oder verbinde deinen Meta‑Business‑Account via OAuth.
+                  Verwende deine Geschäfts‑E‑Mail oder melde dich direkt mit deinem Google‑Konto an.
                   Nach dem Login wirst du zur App weitergeleitet.{" "}
                   <Link href="/login?view=signup" className="text-indigo-400 underline underline-offset-4 hover:text-indigo-300">
                     Noch kein Zugang? Jetzt testen
