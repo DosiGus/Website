@@ -18,7 +18,7 @@ const bodyFont = Manrope({
 
 export const metadata: Metadata = {
   verification: {
-    google: "Dc3Gl9wymIuJAZz-LoaXaAcesjyuA4Mc66zGTJ-lIU0",
+    google: "t8FmDZWa1jcsmCyAG4JoWBSRgLVadnybGtu353e7M-Q",
   },
   title: "Wesponde – Messenger Automation for Service Brands",
   description:
