@@ -24,6 +24,77 @@ export type SlotAvailabilityResult = {
   error?: string;
 };
 
+/**
+ * Returns all available time slots for a given date based on Google Calendar
+ * free/busy data and the account's configured opening hours.
+ * Returns an empty array on error (caller should fall back to static options).
+ */
+export async function getAvailableSlotsForDate(
+  accountId: string,
+  date: string, // YYYY-MM-DD
+): Promise<string[]> {
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data: account } = await supabase
+      .from("accounts")
+      .select("settings")
+      .eq("id", accountId)
+      .single();
+
+    const settings = normalizeCalendarSettings((account?.settings as any)?.calendar ?? null);
+    const { accessToken, calendarId, calendarTimeZone } = await getGoogleAccessToken(accountId);
+    const resolvedCalendarId = calendarId ?? "primary";
+    const resolvedTimeZone = calendarTimeZone ?? settings.timeZone;
+
+    const timeMin = zonedTimeToUtc(date, "00:00", resolvedTimeZone).toISOString();
+    const timeMax = zonedTimeToUtc(date, "23:59", resolvedTimeZone).toISOString();
+
+    const busyIntervals = await getBusyIntervals({
+      accountId,
+      accessToken,
+      calendarId: resolvedCalendarId,
+      timeMin,
+      timeMax,
+      timeZone: resolvedTimeZone,
+    });
+
+    const weekdayKey = getWeekdayKey(date, resolvedTimeZone);
+    const ranges = settings.hours[weekdayKey] ?? [];
+    const slots: string[] = [];
+    const slotMinutes = settings.slotDurationMinutes;
+    const now = new Date();
+
+    for (const range of ranges) {
+      const [startStr, endStr] = range.split("-");
+      if (!startStr || !endStr) continue;
+
+      const rangeStart = parseTimeToMinutes(startStr);
+      const rangeEnd = parseTimeToMinutes(endStr);
+
+      for (let minutes = rangeStart; minutes + slotMinutes <= rangeEnd; minutes += slotMinutes) {
+        const slotTime = formatMinutes(minutes);
+        const slotStart = zonedTimeToUtc(date, slotTime, resolvedTimeZone);
+        if (slotStart <= now) continue;
+        const slotEnd = new Date(slotStart.getTime() + slotMinutes * 60 * 1000);
+        if (!hasOverlap(slotStart, slotEnd, busyIntervals)) {
+          slots.push(slotTime);
+        }
+      }
+    }
+
+    return slots;
+  } catch (error) {
+    await logger.warn("integration", "getAvailableSlotsForDate failed", {
+      accountId,
+      metadata: {
+        date,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+    });
+    return [];
+  }
+}
+
 export async function checkSlotAvailability(
   accountId: string,
   date: string,

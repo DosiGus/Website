@@ -35,7 +35,7 @@ import {
   getMissingReservationFields,
 } from "../../../../lib/webhook/reservationCreator";
 import { cancelGoogleCalendarEvent } from "../../../../lib/google/calendar";
-import { type SlotSuggestion } from "../../../../lib/google/availability";
+import { type SlotSuggestion, getAvailableSlotsForDate } from "../../../../lib/google/availability";
 import { decryptToken, encryptToken, isEncryptedToken } from "../../../../lib/security/tokenEncryption";
 import {
   findOrCreateContact,
@@ -527,6 +527,22 @@ async function changeToMessagingEvent(
     },
     instagramAccountId: recipientId,
   };
+}
+
+const CONFIRMATION_NODE_KEYWORDS = [
+  "confirm", "confirmed", "bestätig", "bestaetigt",
+  "gebucht", "abschluss", "abgeschlossen", "fertig", "done",
+  "reservation-done", "booking-done",
+];
+
+function nodeIsConfirmation(nodeId: string, nodeLabel: string, nodeVariant: string): boolean {
+  const idLower = nodeId.toLowerCase();
+  const labelLower = nodeLabel.toLowerCase();
+  const variantLower = nodeVariant.toLowerCase();
+  return (
+    variantLower === "confirmed" ||
+    CONFIRMATION_NODE_KEYWORDS.some((k) => idLower.includes(k) || labelLower.includes(k))
+  );
 }
 
 /**
@@ -1098,6 +1114,8 @@ async function processMessagingEvent(
   let matchedFlowId: string | null = conversation.current_flow_id;
   let matchedNodeId: string | null = null;
   let matchedFlowMetadata: FlowMetadata | null = null;
+  // True when the executed node is the confirmation/end step of a reservation flow
+  let executedNodeIsConfirmation = false;
 
   // Handle quick reply continuation
   if (quickReplyPayload && conversation.current_flow_id) {
@@ -1122,6 +1140,16 @@ async function processMessagingEvent(
         matchedFlowId = parsed.flowId;
         matchedNodeId = parsed.nodeId;
         matchedFlowMetadata = (flow.metadata as FlowMetadata) ?? null;
+
+        // Detect if the target node is the confirmation/final step
+        const targetNode = (flow.nodes as any[]).find((n: any) => n.id === parsed.nodeId);
+        if (targetNode) {
+          executedNodeIsConfirmation = nodeIsConfirmation(
+            parsed.nodeId,
+            String(targetNode.data?.label ?? ""),
+            String(targetNode.data?.variant ?? ""),
+          );
+        }
 
         if (!flowResponse) {
           flowResponse = {
@@ -1174,6 +1202,16 @@ async function processMessagingEvent(
         matchedFlowId = conversation.current_flow_id;
         matchedNodeId = freeTextResult.executedNodeId;
         matchedFlowMetadata = (currentFlow.metadata as FlowMetadata) ?? null;
+
+        // Detect if the executed node is a confirmation node
+        const ftTargetNode = (currentFlow.nodes as any[]).find((n: any) => n.id === freeTextResult.executedNodeId);
+        if (ftTargetNode) {
+          executedNodeIsConfirmation = nodeIsConfirmation(
+            freeTextResult.executedNodeId,
+            String(ftTargetNode.data?.label ?? ""),
+            String(ftTargetNode.data?.variant ?? ""),
+          );
+        }
 
         await reqLogger.info("webhook", "Free text input processed, continuing flow", {
           metadata: {
@@ -1505,6 +1543,66 @@ async function processMessagingEvent(
     }
   }
 
+  // Inject available time slots when transitioning to a time-collection node
+  if (
+    flowResponse &&
+    matchedNodeId &&
+    typeof mergedVariables.date === "string" &&
+    mergedVariables.date &&
+    !executedNodeIsConfirmation
+  ) {
+    const nodeIdLower = matchedNodeId.toLowerCase();
+    const isTimeAskNode =
+      (nodeIdLower.includes("time") || nodeIdLower.includes("uhrzeit")) &&
+      !nodeIdLower.includes("custom");
+
+    if (isTimeAskNode) {
+      try {
+        const availableSlots = await getAvailableSlotsForDate(accountId, mergedVariables.date);
+        if (availableSlots.length > 0 && flowResponse.quickReplies.length > 0) {
+          // Find the payload used by standard time buttons (pointing to the next step)
+          const nextPayload = flowResponse.quickReplies.find(
+            (qr) => !qr.label.toLowerCase().includes("andere"),
+          )?.payload;
+
+          if (nextPayload) {
+            const slotReplies = availableSlots.slice(0, 3).map((time) => ({
+              label: `${time} Uhr`,
+              payload: nextPayload,
+            }));
+
+            // Keep "Andere Uhrzeit" as last option
+            const customOption = flowResponse.quickReplies.find((qr) =>
+              qr.label.toLowerCase().includes("andere"),
+            );
+            if (customOption) slotReplies.push(customOption);
+
+            const [y, m, d] = mergedVariables.date.split("-");
+            const formattedDate = `${d}.${m}.${y}`;
+
+            flowResponse = {
+              ...flowResponse,
+              text: `⏰ Für ${formattedDate} sind folgende Zeiten frei:\n\n${availableSlots.slice(0, 3).map((t) => `• ${t} Uhr`).join("\n")}\n\nBitte wähle eine Zeit:`,
+              quickReplies: slotReplies,
+            };
+
+            await reqLogger.info("webhook", "Injected available slots for time selection", {
+              metadata: { date: mergedVariables.date, slots: availableSlots.slice(0, 3) },
+            });
+          }
+        } else if (availableSlots.length === 0) {
+          // No slots available — keep original quick replies, just add info to text
+          flowResponse = {
+            ...flowResponse,
+            text: `${flowResponse.text}\n\n⚠️ Hinweis: Für dieses Datum sind momentan keine freien Zeiten im Kalender verfügbar. Bitte wähle eine Zeit oder nenne ein anderes Datum.`,
+          };
+        }
+      } catch (_slotError) {
+        // On any error: silently fall through with original quick replies
+      }
+    }
+  }
+
   // Send response if we have one
   if (flowResponse) {
     let sendResult;
@@ -1725,6 +1823,7 @@ async function processMessagingEvent(
           flowResponse.isEndOfFlow ||
           isConfirmationPayload ||
           isConfirmationNode ||
+          executedNodeIsConfirmation ||
           looksLikeFinalStep;
 
         const shouldCreateReservation =
@@ -1739,10 +1838,13 @@ async function processMessagingEvent(
             reservationAlreadyExists,
             isEndOfFlow: flowResponse.isEndOfFlow,
             isConfirmationPayload,
+            isConfirmationNode,
+            executedNodeIsConfirmation,
             looksLikeFinalStep,
             hasAllReservationData,
             matchedNodeId,
             hasQuickReplyPayload: Boolean(quickReplyPayload),
+            shouldStoreSubmission,
             shouldCreateReservation,
             outputType,
             outputRequiredFields: outputConfig.requiredFields,
