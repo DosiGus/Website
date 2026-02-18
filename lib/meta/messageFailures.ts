@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "../supabaseServerClient";
+import { logger } from "../logger";
 
 type FailureInsert = {
   integrationId: string | null;
@@ -32,7 +33,7 @@ export async function recordMessageFailure(input: FailureInsert) {
     nodeId,
   } = input;
 
-  await supabase.from("message_failures").insert({
+  const { error } = await supabase.from("message_failures").insert({
     integration_id: integrationId,
     conversation_id: conversationId,
     recipient_id: recipientId,
@@ -48,4 +49,14 @@ export async function recordMessageFailure(input: FailureInsert) {
     flow_id: flowId ?? null,
     node_id: nodeId ?? null,
   });
+
+  if (error) {
+    await logger.warn("system", "Failed to record message failure", {
+      metadata: {
+        integrationId,
+        conversationId,
+        error: error.message,
+      },
+    });
+  }
 }

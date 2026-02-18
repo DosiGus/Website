@@ -1,10 +1,18 @@
 // DEPRECATED: Use GET /api/integrations instead
 import { NextResponse } from "next/server";
 import { requireAccountMember } from "../../../../../lib/apiAuth";
+import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../../lib/rateLimit";
 
 export async function GET(request: Request) {
   try {
     const { accountId, supabase } = await requireAccountMember(request);
+    const rateLimit = await checkRateLimit(`integrations_meta_status:${accountId}`, RATE_LIMITS.standard);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
 
     const { data, error } = await supabase
       .from("integrations")
