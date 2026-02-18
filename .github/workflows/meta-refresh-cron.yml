@@ -1,0 +1,19 @@
+name: Meta Token Refresh
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call refresh endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: https://wesponde.com
+        run: |
+          curl -fsS --retry 3 --retry-delay 5 --retry-all-errors \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${BASE_URL}/api/cron/meta/refresh"
