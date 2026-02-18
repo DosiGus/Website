@@ -17,6 +17,9 @@ const bodyFont = Manrope({
 });
 
 export const metadata: Metadata = {
+  verification: {
+    google: "Dc3Gl9wymIuJAZz-LoaXaAcesjyuA4Mc66zGTJ-lIU0",
+  },
   title: "Wesponde – Messenger Automation for Service Brands",
   description:
     "Automatisiere Reservierungen, Kundenchats und Buchungen mit Wesponde. Gebaut für Restaurants, Salons und Praxen, die Instagram, Facebook und WhatsApp effizient nutzen wollen.",
