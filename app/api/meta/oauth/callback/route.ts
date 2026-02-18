@@ -195,6 +195,7 @@ export async function GET(request: Request) {
     );
     return NextResponse.redirect(redirectUrl);
   }
+  log.setAccountId(accountId);
 
   // Exchange code for short-lived token
   const tokenResponse = await fetch(

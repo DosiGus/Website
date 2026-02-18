@@ -92,6 +92,7 @@ export async function createReservationFromVariables(
     if (settingsError) {
       await logger.warn("integration", "Failed to load calendar settings", {
         userId,
+        accountId,
         metadata: { error: settingsError.message },
       });
     }
@@ -158,6 +159,7 @@ export async function createReservationFromVariables(
 
       await logger.info("integration", "Google calendar event created", {
         userId,
+        accountId,
         metadata: {
           reservationId,
           eventId: event.id,
@@ -183,6 +185,7 @@ export async function createReservationFromVariables(
       if (error || !data) {
         await logger.warn("integration", "Failed to store reservation after calendar event", {
           userId,
+          accountId,
           metadata: {
             reservationId,
             error: error?.message ?? "Unknown error",
@@ -198,6 +201,7 @@ export async function createReservationFromVariables(
           } catch (cancelError) {
             await logger.warn("integration", "Failed to rollback calendar event", {
               userId,
+              accountId,
               metadata: {
                 reservationId,
                 eventId: event.id,
@@ -215,6 +219,7 @@ export async function createReservationFromVariables(
         calendarError instanceof Error ? calendarError.message : "Unknown error";
       await logger.warn("integration", "Google calendar event failed", {
         userId,
+        accountId,
         metadata: {
           error: errorMessage,
         },
@@ -239,6 +244,7 @@ export async function createReservationFromVariables(
       if (fallbackError || !fallbackReservation) {
         await logger.warn("integration", "Failed to store reservation after calendar error", {
           userId,
+          accountId,
           metadata: { error: fallbackError?.message ?? "Unknown error" },
         });
         return { success: false, missingFields: [], error: "calendar_error" };

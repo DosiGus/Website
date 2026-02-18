@@ -11,6 +11,7 @@ export async function POST(request: Request) {
 
   try {
     const { user, accountId, role } = await requireAccountMember(request);
+    log.setAccountId(accountId);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }

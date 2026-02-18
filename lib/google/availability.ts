@@ -39,6 +39,7 @@ export async function checkSlotAvailability(
 
     if (error) {
       await logger.warn("integration", "Failed to load calendar settings", {
+        accountId,
         metadata: { error: error.message },
       });
     }
@@ -82,6 +83,7 @@ export async function checkSlotAvailability(
     return { available: false, suggestions };
   } catch (error) {
     await logger.warn("integration", "Availability check failed", {
+      accountId,
       metadata: {
         error: error instanceof Error ? error.message : "Unknown error",
       },
@@ -143,6 +145,7 @@ async function getBusyIntervals(params: BusyIntervalParams): Promise<BusyInterva
   }
   if (!response.ok) {
     await logger.warn("integration", "Google freeBusy failed", {
+      accountId,
       metadata: {
         httpStatus: response.status,
         error: payload?.error ?? payload,

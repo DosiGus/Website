@@ -197,7 +197,7 @@ export async function POST(request: Request) {
  */
 export async function PATCH(request: Request) {
   try {
-    const { accountId, role, supabase } = await requireAccountMember(request);
+    const { accountId, role, supabase, user } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -467,7 +467,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Fehler beim Löschen der Reservierung" }, { status: 500 });
     }
 
-    const reqLogger = createRequestLogger("api");
+    const reqLogger = createRequestLogger("api", user.id, accountId);
     await reqLogger.info("api", "Reservation deleted", {
       metadata: { accountId, reservationId: id },
     });

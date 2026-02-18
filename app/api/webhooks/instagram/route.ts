@@ -578,6 +578,7 @@ async function processMessagingEvent(
 
   const userId = integration.user_id;
   const accountId = integration.account_id;
+  reqLogger.setAccountId(accountId);
   if (!integration.access_token) {
     await reqLogger.error("webhook", "Integration has no access token");
     return;
@@ -771,10 +772,11 @@ async function processMessagingEvent(
   }
 
   if (!instagramMessageId && event.postback) {
-    const payloadPart = (quickReplyPayload ?? "").slice(0, 120);
-    const timestampPart = event.timestamp ?? Date.now();
-    const nonce = crypto.randomUUID();
-    instagramMessageId = `postback:${senderId}:${recipientId}:${timestampPart}:${payloadPart}:${nonce}`;
+    const payloadPart = quickReplyPayload ?? "";
+    const timestampPart = event.timestamp ?? 0;
+    const idSource = `${senderId}:${recipientId}:${timestampPart}:${payloadPart}`;
+    const hash = crypto.createHash("sha256").update(idSource).digest("hex");
+    instagramMessageId = `postback:${hash}`;
   }
 
   let incomingMessageRowId: string | null = null;
@@ -1037,8 +1039,11 @@ async function processMessagingEvent(
       await reqLogger.warn("webhook", "Conversation metadata update skipped due to version conflict");
     }
 
+    const newKeys = Object.keys(newVariables);
+    const overrideKeys = Object.keys(overrideVariables);
+    const mergedKeys = Object.keys(mergedVariables);
     await reqLogger.info("webhook", "Variables extracted from message", {
-      metadata: { newVariables, overrideVariables, mergedVariables },
+      metadata: { newKeys, overrideKeys, mergedKeys },
     });
   }
 
@@ -1712,15 +1717,13 @@ async function processMessagingEvent(
             looksLikeFinalStep,
             hasAllReservationData,
             matchedNodeId,
-            quickReplyPayload,
-            responseText: flowResponse.text?.slice(0, 100),
+            hasQuickReplyPayload: Boolean(quickReplyPayload),
             shouldCreateReservation,
             outputType,
             outputRequiredFields: outputConfig.requiredFields,
-            outputDefaults: outputConfig.defaults,
             canCreate: canCreateReservation(reservationVariables, outputConfig.requiredFields),
             missingFields: missingReservationFields,
-            variables: reservationVariables,
+            variableKeys: Object.keys(reservationVariables),
           },
         });
 
@@ -2061,7 +2064,7 @@ async function processMessagingEvent(
     }
   } else {
     await reqLogger.info("webhook", "No matching flow for message", {
-      metadata: { messageText: messageText.slice(0, 100) },
+      metadata: { messageLength: messageText.length },
     });
 
     if (messageType === "text" && messageText.trim().length > 0) {

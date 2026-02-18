@@ -150,6 +150,7 @@ export async function GET(request: Request) {
       ),
     );
   }
+  log.setAccountId(accountId);
 
   const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",

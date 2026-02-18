@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { accountId, role, supabase } = await requireAccountMember(request);
-    if (!isRoleAtLeast(role, "member")) {
+    if (!isRoleAtLeast(role, "admin")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
     const body = await request.json();

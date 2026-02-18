@@ -52,7 +52,7 @@ export async function PUT(
   { params }: { params: { id: string } },
 ) {
   try {
-    const { accountId, role, supabase } = await requireAccountMember(request);
+    const { accountId, role, supabase, user } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -135,7 +135,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Flow konnte nicht gelöscht werden" }, { status: 500 });
     }
 
-    const reqLogger = createRequestLogger("api");
+    const reqLogger = createRequestLogger("api", user.id, accountId);
     await reqLogger.info("api", "Flow deleted", {
       metadata: { accountId, flowId: params.id },
     });

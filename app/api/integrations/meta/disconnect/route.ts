@@ -5,7 +5,7 @@ import { createRequestLogger } from "../../../../../lib/logger";
 
 export async function POST(request: Request) {
   try {
-    const { accountId, role, supabase } = await requireAccountMember(request);
+    const { accountId, role, supabase, user } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -25,14 +25,14 @@ export async function POST(request: Request) {
       .eq("provider", "meta");
 
     if (error) {
-      const reqLogger = createRequestLogger("api");
+      const reqLogger = createRequestLogger("api", user.id, accountId);
       await reqLogger.error("api", "Failed to disconnect meta integration", {
         metadata: { accountId, error: error.message },
       });
       return NextResponse.json({ error: "Integration konnte nicht getrennt werden" }, { status: 500 });
     }
 
-    const reqLogger = createRequestLogger("api");
+    const reqLogger = createRequestLogger("api", user.id, accountId);
     await reqLogger.info("api", "Meta integration disconnected", {
       metadata: { accountId },
     });

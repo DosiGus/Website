@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAccountMember } from "../../../lib/apiAuth";
+import { requireAccountMember, isRoleAtLeast } from "../../../lib/apiAuth";
 
 export async function GET(request: Request) {
   try {
-    const { accountId, supabase } = await requireAccountMember(request);
+    const { accountId, supabase, role } = await requireAccountMember(request);
+    if (!isRoleAtLeast(role, "admin")) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
 
     const { searchParams } = new URL(request.url);
     const level = searchParams.get("level");

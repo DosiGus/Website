@@ -11,7 +11,7 @@ import { createRequestLogger } from "../../../../lib/logger";
 export async function GET(request: Request) {
   try {
     const { accountId, supabase, user } = await requireAccountMember(request);
-    const reqLogger = createRequestLogger("api", user.id);
+    const reqLogger = createRequestLogger("api", user.id, accountId);
     const rateLimit = await checkRateLimit(`account_settings:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { accountId, role, supabase, user } = await requireAccountMember(request);
-    const reqLogger = createRequestLogger("api", user.id);
+    const reqLogger = createRequestLogger("api", user.id, accountId);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }

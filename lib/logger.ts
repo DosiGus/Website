@@ -6,6 +6,7 @@ export type LogSource = "oauth" | "webhook" | "flow" | "api" | "integration" | "
 
 interface LogOptions {
   userId?: string | null;
+  accountId?: string | null;
   metadata?: Record<string, unknown>;
   requestId?: string;
   durationMs?: number;
@@ -16,24 +17,79 @@ interface LogEntry {
   source: LogSource;
   message: string;
   user_id?: string | null;
+  account_id?: string | null;
   metadata: Record<string, unknown>;
   request_id?: string;
   duration_ms?: number;
+}
+
+const REDACTED_VALUE = "[REDACTED]";
+const SENSITIVE_KEY_PATTERNS = [
+  /authorization/i,
+  /token/i,
+  /secret/i,
+  /password/i,
+  /^code$/i,
+  /^state$/i,
+  /signed_request/i,
+  /email/i,
+  /phone/i,
+  /^messageText$/i,
+  /^message_text$/i,
+  /^content$/i,
+  /^quickReplyPayload$/i,
+];
+
+function isSensitiveKey(key: string): boolean {
+  return SENSITIVE_KEY_PATTERNS.some((pattern) => pattern.test(key));
+}
+
+function redactMetadata(value: unknown, depth = 0): unknown {
+  if (depth > 6) {
+    return REDACTED_VALUE;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactMetadata(item, depth + 1));
+  }
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+    for (const [key, entryValue] of Object.entries(obj)) {
+      if (isSensitiveKey(key)) {
+        result[key] = REDACTED_VALUE;
+      } else {
+        result[key] = redactMetadata(entryValue, depth + 1);
+      }
+    }
+    return result;
+  }
+  return value;
 }
 
 class Logger {
   private requestId: string | null = null;
   private source: LogSource = "system";
   private userId: string | null = null;
+  private accountId: string | null = null;
   private startTime: number | null = null;
 
-  withContext(options: { requestId?: string; source?: LogSource; userId?: string | null }): Logger {
+  withContext(options: {
+    requestId?: string;
+    source?: LogSource;
+    userId?: string | null;
+    accountId?: string | null;
+  }): Logger {
     const logger = new Logger();
     logger.requestId = options.requestId || randomUUID();
     logger.source = options.source || this.source;
     logger.userId = options.userId ?? this.userId;
+    logger.accountId = options.accountId ?? this.accountId;
     logger.startTime = Date.now();
     return logger;
+  }
+
+  setAccountId(accountId: string | null): void {
+    this.accountId = accountId;
   }
 
   startTimer(): void {
@@ -50,16 +106,24 @@ class Logger {
     message: string,
     options: LogOptions = {},
   ): Promise<void> {
+    const rawMetadata = {
+      ...options.metadata,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+    };
+    const sanitizedMetadata = redactMetadata(rawMetadata);
+    const metadata =
+      sanitizedMetadata && typeof sanitizedMetadata === "object" && !Array.isArray(sanitizedMetadata)
+        ? (sanitizedMetadata as Record<string, unknown>)
+        : {};
+
     const entry: LogEntry = {
       level,
       source,
       message,
       user_id: options.userId ?? this.userId ?? undefined,
-      metadata: {
-        ...options.metadata,
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV,
-      },
+      account_id: options.accountId ?? this.accountId ?? undefined,
+      metadata,
       request_id: options.requestId ?? this.requestId ?? undefined,
       duration_ms: options.durationMs ?? this.getElapsedMs(),
     };
@@ -180,10 +244,15 @@ class Logger {
 
 export const logger = new Logger();
 
-export function createRequestLogger(source: LogSource, userId?: string | null) {
+export function createRequestLogger(
+  source: LogSource,
+  userId?: string | null,
+  accountId?: string | null,
+) {
   return logger.withContext({
     requestId: randomUUID(),
     source,
     userId,
+    accountId,
   });
 }

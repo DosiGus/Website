@@ -10,9 +10,8 @@ const REFRESH_LOOKAHEAD_DAYS = 10;
 function isAuthorized(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
-  const vercelCron = request.headers.get("x-vercel-cron") === "1";
-  if (!cronSecret) return vercelCron;
-  return authHeader === `Bearer ${cronSecret}` || vercelCron;
+  if (!cronSecret) return false;
+  return authHeader === `Bearer ${cronSecret}`;
 }
 
 export async function GET(request: Request) {

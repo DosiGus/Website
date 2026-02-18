@@ -17,7 +17,7 @@ export async function sendEmail(input: SendEmailInput) {
       metadata: {
         hasApiKey: Boolean(apiKey),
         hasFrom: Boolean(from),
-        to: input.to,
+        recipientCount: input.to.length,
         subject: input.subject,
       },
     });
@@ -40,7 +40,7 @@ export async function sendEmail(input: SendEmailInput) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown email error";
     await logger.error("system", `Email send failed: ${message}`, {
-      metadata: { to: input.to, subject: input.subject },
+      metadata: { recipientCount: input.to.length, subject: input.subject },
     });
     return { success: false, error: message };
   }

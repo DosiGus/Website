@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   try {
     const { user, accountId, role, supabase } = await requireAccountMember(request);
     const supabaseAdmin = createSupabaseServerClient();
-    const reqLogger = createRequestLogger("api", user.id);
+    const reqLogger = createRequestLogger("api", user.id, accountId);
 
     const { data: members, error } = await supabase
       .from("account_members")
@@ -58,6 +58,7 @@ export async function GET(request: Request) {
       }
     }
 
+    const canViewPII = role === "owner" || role === "admin";
     const responseMembers =
       members?.map((member) => {
         const profile = profileMap.get(member.user_id);
@@ -65,8 +66,8 @@ export async function GET(request: Request) {
           userId: member.user_id,
           role: member.role,
           joinedAt: member.joined_at,
-          email: profile?.email ?? null,
-          fullName: profile?.fullName ?? null,
+          email: canViewPII ? profile?.email ?? null : null,
+          fullName: canViewPII ? profile?.fullName ?? null : null,
         };
       }) ?? [];
 
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { user, accountId, role, supabase } = await requireAccountMember(request);
-    const reqLogger = createRequestLogger("api", user.id);
+    const reqLogger = createRequestLogger("api", user.id, accountId);
 
     if (role !== "owner" && role !== "admin") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });

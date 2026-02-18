@@ -13,7 +13,7 @@ const integrationsPatchSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    const { accountId, supabase } = await requireAccountMember(request);
+    const { accountId, supabase, user } = await requireAccountMember(request);
 
     // Rate limiting
     const rateLimit = await checkRateLimit(`integrations:${accountId}`, RATE_LIMITS.generous);
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
       .eq("account_id", accountId);
 
     if (error) {
-      const reqLogger = createRequestLogger("api");
+      const reqLogger = createRequestLogger("api", user.id, accountId);
       await reqLogger.error("api", "Failed to load integrations", {
         metadata: { accountId, error: error.message },
       });
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const { accountId, role, supabase } = await requireAccountMember(request);
+    const { accountId, role, supabase, user } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -88,14 +88,14 @@ export async function DELETE(request: Request) {
       .eq("provider", provider);
 
     if (error) {
-      const reqLogger = createRequestLogger("api");
+      const reqLogger = createRequestLogger("api", user.id, accountId);
       await reqLogger.error("api", "Failed to disconnect integration", {
         metadata: { accountId, provider, error: error.message },
       });
       return NextResponse.json({ error: "Integration konnte nicht getrennt werden" }, { status: 500 });
     }
 
-    const reqLogger = createRequestLogger("api");
+    const reqLogger = createRequestLogger("api", user.id, accountId);
     await reqLogger.info("api", "Integration disconnected", {
       metadata: { accountId, provider },
     });
@@ -111,7 +111,7 @@ export async function DELETE(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { accountId, role, supabase } = await requireAccountMember(request);
+    const { accountId, role, supabase, user } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -170,7 +170,7 @@ export async function PATCH(request: Request) {
       .single();
 
     if (error) {
-      const reqLogger = createRequestLogger("api");
+      const reqLogger = createRequestLogger("api", user.id, accountId);
       await reqLogger.error("api", "Failed to update integration", {
         metadata: { accountId, provider, error: error.message },
       });

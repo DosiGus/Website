@@ -167,6 +167,7 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
 
     if (!refreshResponse.ok || !refreshBody.access_token) {
       await logger.warn("oauth", "Google token refresh failed", {
+        accountId,
         metadata: {
           httpStatus: refreshResponse.status,
           error: refreshBody.error ?? "unknown_error",
@@ -194,6 +195,7 @@ export async function getGoogleAccessToken(accountId: string): Promise<AccessTok
 
     if (updateError) {
       await logger.warn("oauth", "Failed to store refreshed Google token", {
+        accountId,
         metadata: { error: updateError.message },
       });
     }
@@ -266,6 +268,7 @@ export async function createGoogleCalendarEvent(
   const createBody = await createResponse.json();
   if (!createResponse.ok) {
     await logger.warn("integration", "Google event creation failed", {
+      accountId,
       metadata: {
         httpStatus: createResponse.status,
         error: createBody?.error ?? createBody,
@@ -340,6 +343,7 @@ export async function updateGoogleCalendarEvent(
   const updateBody = await updateResponse.json();
   if (!updateResponse.ok) {
     await logger.warn("integration", "Google event update failed", {
+      accountId,
       metadata: {
         httpStatus: updateResponse.status,
         error: updateBody?.error ?? updateBody,
@@ -384,6 +388,7 @@ export async function cancelGoogleCalendarEvent(
   if (!cancelResponse.ok) {
     const cancelBody = await cancelResponse.json();
     await logger.warn("integration", "Google event cancel failed", {
+      accountId,
       metadata: {
         httpStatus: cancelResponse.status,
         error: cancelBody?.error ?? cancelBody,
@@ -412,6 +417,7 @@ export async function listGoogleCalendars(accountId: string): Promise<GoogleCale
   const payload = await response.json();
   if (!response.ok) {
     await logger.warn("integration", "Google calendar list failed", {
+      accountId,
       metadata: {
         httpStatus: response.status,
         error: payload?.error ?? payload,

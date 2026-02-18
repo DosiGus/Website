@@ -28,6 +28,9 @@ export function encryptToken(value: string): string {
   if (!value) return value;
   if (isEncryptedToken(value)) return value;
   if (!process.env.TOKEN_ENCRYPTION_KEY) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("TOKEN_ENCRYPTION_KEY missing in production.");
+    }
     if (!warnedMissingKey) {
       console.warn("TOKEN_ENCRYPTION_KEY missing; storing token in plaintext.");
       warnedMissingKey = true;
