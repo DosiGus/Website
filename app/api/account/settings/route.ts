@@ -6,10 +6,12 @@ import {
   type CalendarSettings,
 } from "../../../../lib/google/settings";
 import { isVerticalKey, type VerticalKey } from "../../../../lib/verticals";
+import { createRequestLogger } from "../../../../lib/logger";
 
 export async function GET(request: Request) {
   try {
-    const { accountId, supabase } = await requireAccountMember(request);
+    const { accountId, supabase, user } = await requireAccountMember(request);
+    const reqLogger = createRequestLogger("api", user.id);
     const rateLimit = await checkRateLimit(`account_settings:${accountId}`, RATE_LIMITS.generous);
     if (!rateLimit.success) {
       return NextResponse.json(
@@ -25,7 +27,13 @@ export async function GET(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: "Einstellungen konnten nicht geladen werden" }, { status: 500 });
+      await reqLogger.error("api", "Failed to load account settings", {
+        metadata: { accountId, error: error.message },
+      });
+      return NextResponse.json(
+        { error: "Einstellungen konnten nicht geladen werden." },
+        { status: 500 },
+      );
     }
 
     const calendar = normalizeCalendarSettings((data?.settings as any)?.calendar ?? null);
@@ -40,7 +48,8 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { accountId, role, supabase } = await requireAccountMember(request);
+    const { accountId, role, supabase, user } = await requireAccountMember(request);
+    const reqLogger = createRequestLogger("api", user.id);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
@@ -78,7 +87,13 @@ export async function PATCH(request: Request) {
         .single();
 
       if (loadError) {
-        return NextResponse.json({ error: loadError.message }, { status: 500 });
+        await reqLogger.error("api", "Failed to load account settings for update", {
+          metadata: { accountId, error: loadError.message },
+        });
+        return NextResponse.json(
+          { error: "Einstellungen konnten nicht geladen werden." },
+          { status: 500 },
+        );
       }
 
       const currentSettings = (account?.settings ?? {}) as Record<string, unknown>;
@@ -100,8 +115,27 @@ export async function PATCH(request: Request) {
       .eq("id", accountId);
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+      await reqLogger.error("api", "Failed to update account settings", {
+        metadata: {
+          accountId,
+          error: updateError.message,
+          updatedFields: Object.keys(updatePayload),
+        },
+      });
+      return NextResponse.json(
+        { error: "Einstellungen konnten nicht gespeichert werden." },
+        { status: 500 },
+      );
     }
+
+    await reqLogger.info("api", "Account settings updated", {
+      metadata: {
+        accountId,
+        updatedFields: Object.keys(updatePayload),
+        vertical: wantsVertical ? body.vertical : undefined,
+        calendarUpdated: wantsCalendar,
+      },
+    });
 
     return NextResponse.json({
       calendar: nextCalendar ?? undefined,

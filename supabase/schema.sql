@@ -56,6 +56,10 @@ create policy "Owner duerfen Account bearbeiten"
   using (exists (
     select 1 from public.account_members
     where account_id = id and user_id = auth.uid() and role = 'owner'
+  ))
+  with check (exists (
+    select 1 from public.account_members
+    where account_id = id and user_id = auth.uid() and role = 'owner'
   ));
 
 create policy "Authentifizierte User erstellen Accounts"
@@ -446,6 +450,8 @@ create table if not exists public.messages (
   flow_id uuid references public.flows(id) on delete set null,
   node_id text,
   sent_at timestamptz default now(),
+  processing_started_at timestamptz,
+  processed_at timestamptz,
   created_at timestamptz default now()
 );
 
@@ -677,17 +683,6 @@ create index if not exists flow_submissions_contact_id_idx on public.flow_submis
 
 alter table public.flow_submissions enable row level security;
 
--- Legacy user_id policies
-create policy "Flow Submissions sind nur fuer Besitzer sichtbar"
-  on public.flow_submissions for select using (auth.uid() = user_id);
-create policy "Besitzer duerfen Flow Submissions bearbeiten"
-  on public.flow_submissions for update using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-create policy "Besitzer duerfen Flow Submissions erstellen"
-  on public.flow_submissions for insert with check (auth.uid() = user_id);
-create policy "Besitzer duerfen Flow Submissions loeschen"
-  on public.flow_submissions for delete using (auth.uid() = user_id);
-
 -- Account-based policies
 create policy "Account-Mitglieder sehen Flow Submissions" on public.flow_submissions
   for select using (account_id in (select public.user_account_ids()));
@@ -731,15 +726,6 @@ create index if not exists review_requests_status_idx on public.review_requests(
 create index if not exists review_requests_sent_at_idx on public.review_requests(sent_at);
 
 alter table public.review_requests enable row level security;
-
--- Legacy user_id policies
-create policy "Review Requests sind nur fuer Besitzer sichtbar"
-  on public.review_requests for select using (auth.uid() = user_id);
-create policy "Besitzer duerfen Review Requests erstellen"
-  on public.review_requests for insert with check (auth.uid() = user_id);
-create policy "Besitzer duerfen Review Requests bearbeiten"
-  on public.review_requests for update using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
 
 -- Account-based policies
 create policy "Account-Mitglieder sehen Review Requests" on public.review_requests

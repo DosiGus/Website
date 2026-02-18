@@ -1347,15 +1347,27 @@ async function processMessagingEvent(
     }
 
     if (!forceNewReservation) {
-      const { data: existingReservation } = await supabase
-        .from("reservations")
-        .select("id, guest_name, reservation_date, reservation_time, guest_count, status")
-        .eq("instagram_sender_id", senderId)
-        .eq("account_id", accountId)
-        .in("status", ["pending", "confirmed"])
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+      const buildReservationQuery = () =>
+        supabase
+          .from("reservations")
+          .select("id, guest_name, reservation_date, reservation_time, guest_count, status")
+          .eq("account_id", accountId)
+          .in("status", ["pending", "confirmed"])
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+      let existingReservation = null;
+      if (contactId) {
+        const { data } = await buildReservationQuery().eq("contact_id", contactId).maybeSingle();
+        existingReservation = data ?? null;
+      }
+
+      if (!existingReservation) {
+        const { data } = await buildReservationQuery()
+          .eq("instagram_sender_id", senderId)
+          .maybeSingle();
+        existingReservation = data ?? null;
+      }
 
       if (existingReservation) {
         // Format date for German display
