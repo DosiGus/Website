@@ -166,7 +166,10 @@ export async function createReservationFromVariables(
         },
       });
 
-      const { data, error } = await supabase
+      // Try full insert (including Google Calendar columns).
+      // If the DB schema is missing the calendar columns, fall back to inserting without them
+      // so bookings still succeed. Run the migration to restore full linking.
+      let { data, error } = await supabase
         .from("reservations")
         .insert({
           id: reservationId,
@@ -181,6 +184,34 @@ export async function createReservationFromVariables(
         })
         .select("id")
         .single();
+
+      const isMissingColumnError =
+        error?.message?.includes("google_calendar_id") ||
+        error?.message?.includes("google_event_id") ||
+        error?.message?.includes("google_event_link") ||
+        error?.message?.includes("google_time_zone");
+
+      if (error && isMissingColumnError) {
+        // DB migration not yet applied — insert without calendar columns
+        await logger.warn("integration", "Calendar columns missing from DB, inserting without them", {
+          userId,
+          accountId,
+          metadata: { reservationId, error: error.message },
+        });
+        const fallbackInsert = await supabase
+          .from("reservations")
+          .insert({
+            id: reservationId,
+            user_id: userId,
+            account_id: accountId,
+            contact_id: contactId || null,
+            ...input,
+          })
+          .select("id")
+          .single();
+        data = fallbackInsert.data;
+        error = fallbackInsert.error;
+      }
 
       if (error || !data) {
         console.error("[reservationCreator] DB insert failed after calendar event:", {
