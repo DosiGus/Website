@@ -114,7 +114,7 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    const { accountId, role, supabase } = await requireAccountMember(request);
+    const { accountId, role, supabase, user } = await requireAccountMember(request);
     if (!isRoleAtLeast(role, "member")) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
