@@ -1,5 +1,4 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
 
@@ -10,50 +9,68 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") || "/app";
 
-  const redirectTo = request.nextUrl.clone();
-  redirectTo.pathname = next;
-  redirectTo.searchParams.delete("token_hash");
-  redirectTo.searchParams.delete("type");
-  redirectTo.searchParams.delete("code");
-  redirectTo.searchParams.delete("next");
+  const successUrl = request.nextUrl.clone();
+  successUrl.pathname = next;
+  successUrl.searchParams.delete("token_hash");
+  successUrl.searchParams.delete("type");
+  successUrl.searchParams.delete("code");
+  successUrl.searchParams.delete("next");
 
-  const cookieStore = cookies();
+  const errorUrl = request.nextUrl.clone();
+  errorUrl.pathname = "/login";
+  errorUrl.searchParams.set("error", "auth_callback_failed");
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  // Handle PKCE code exchange (OAuth, magic link)
+  // Handle PKCE code exchange (Google OAuth, other OAuth providers)
   if (code) {
+    const response = NextResponse.redirect(successUrl);
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            // Set cookies on the redirect response so the browser receives them
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
+
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(redirectTo);
-    }
+    if (!error) return response;
   }
 
   // Handle token_hash verification (email confirmation, password recovery)
   if (token_hash && type) {
+    const response = NextResponse.redirect(successUrl);
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
+
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
-    if (!error) {
-      return NextResponse.redirect(redirectTo);
-    }
+    if (!error) return response;
   }
 
   // Fallback: redirect to login with error
-  redirectTo.pathname = "/login";
-  redirectTo.searchParams.set("error", "auth_callback_failed");
-  return NextResponse.redirect(redirectTo);
+  return NextResponse.redirect(errorUrl);
 }
