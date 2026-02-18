@@ -1656,7 +1656,6 @@ async function processMessagingEvent(
 
         const matchedNodeIdLower = matchedNodeId?.toLowerCase() ?? "";
 
-        // Check if the quick reply payload indicates confirmation
         const confirmationPayloads = [
           "confirm",
           "bestätigen",
@@ -1670,10 +1669,24 @@ async function processMessagingEvent(
           "senden",
         ];
         const isConfirmationPayload = quickReplyPayload
-          ? confirmationPayloads.some(p =>
-              quickReplyPayload.toLowerCase().includes(p.toLowerCase())
+          ? confirmationPayloads.some((p) =>
+              quickReplyPayload.toLowerCase().includes(p.toLowerCase()),
             )
           : false;
+
+        const confirmationNodeTokens = [
+          "confirm",
+          "confirmed",
+          "bestätig",
+          "bestaetig",
+          "absenden",
+          "buchen",
+          "final",
+          "done",
+        ];
+        const isConfirmationNode = confirmationNodeTokens.some((token) =>
+          matchedNodeIdLower.includes(token),
+        );
 
         const outputConfig = resolveOutputConfig(matchedFlowMetadata);
         const outputType = outputConfig.type;
@@ -1711,6 +1724,7 @@ async function processMessagingEvent(
         const shouldStoreSubmission =
           flowResponse.isEndOfFlow ||
           isConfirmationPayload ||
+          isConfirmationNode ||
           looksLikeFinalStep;
 
         const shouldCreateReservation =
