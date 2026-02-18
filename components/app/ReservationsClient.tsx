@@ -193,28 +193,28 @@ export default function ReservationsClient({ vertical }: Props) {
 
     try {
       // Get today's reservations
-      const todayResponse = await fetch(`/api/reservations?date=${today}&limit=1000`, {
+      const todayResponse = await fetch(`/api/reservations?date=${today}&limit=200`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const todayData: ReservationListResponse = await todayResponse.json();
+      const todayData: ReservationListResponse = todayResponse.ok ? await todayResponse.json() : { reservations: [], total: 0, limit: 200, offset: 0 };
 
       // Get pending reservations
-      const pendingResponse = await fetch(`/api/reservations?status=pending&limit=1000`, {
+      const pendingResponse = await fetch(`/api/reservations?status=pending&limit=200`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const pendingData: ReservationListResponse = await pendingResponse.json();
+      const pendingData: ReservationListResponse = pendingResponse.ok ? await pendingResponse.json() : { reservations: [], total: 0, limit: 200, offset: 0 };
 
       // Get confirmed reservations
-      const confirmedResponse = await fetch(`/api/reservations?status=confirmed&limit=1000`, {
+      const confirmedResponse = await fetch(`/api/reservations?status=confirmed&limit=200`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const confirmedData: ReservationListResponse = await confirmedResponse.json();
+      const confirmedData: ReservationListResponse = confirmedResponse.ok ? await confirmedResponse.json() : { reservations: [], total: 0, limit: 200, offset: 0 };
 
       setStats({
         today: todayData.total,
         pending: pendingData.total,
         confirmed: confirmedData.total,
-        guestsToday: todayData.reservations.reduce((sum, r) => sum + r.guest_count, 0),
+        guestsToday: (todayData.reservations ?? []).reduce((sum, r) => sum + r.guest_count, 0),
       });
     } catch {
       // Stats loading failed silently
