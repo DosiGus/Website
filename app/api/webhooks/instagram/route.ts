@@ -1435,14 +1435,25 @@ async function processMessagingEvent(
       }
     }
 
+    const matchedFlowCandidate = await findMatchingFlow(accountId, messageText);
     const canStartNewFlow =
-      !conversation.current_flow_id || !conversation.current_node_id || forceNewReservation;
+      !conversation.current_flow_id ||
+      !conversation.current_node_id ||
+      forceNewReservation ||
+      Boolean(matchedFlowCandidate);
 
-    const matchedFlow = canStartNewFlow
-      ? await findMatchingFlow(accountId, messageText)
-      : null;
+    const matchedFlow = canStartNewFlow ? matchedFlowCandidate : null;
 
     if (matchedFlow) {
+      if (conversation.current_flow_id && conversation.current_node_id && !forceNewReservation) {
+        await reqLogger.info("webhook", "Starting new flow despite active conversation", {
+          metadata: {
+            previousFlowId: conversation.current_flow_id,
+            previousNodeId: conversation.current_node_id,
+            newFlowId: matchedFlow.flowId,
+          },
+        });
+      }
       // Reset variables and reservationId when starting a NEW flow
       // This ensures old reservation data doesn't block new reservations
       const previousReservationId = existingMetadata.reservationId;
