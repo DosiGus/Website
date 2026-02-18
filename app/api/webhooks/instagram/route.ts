@@ -592,8 +592,25 @@ async function processMessagingEvent(
     return;
   }
 
-  const userId = integration.user_id;
+  let userId: string | null = integration.user_id;
   const accountId = integration.account_id;
+
+  // Fallback: if the integration row has no user_id (possible after multi-tenant migration),
+  // use the account owner's user_id so the reservations.user_id NOT NULL constraint is satisfied.
+  if (!userId) {
+    const { data: ownerMember } = await supabase
+      .from("account_members")
+      .select("user_id")
+      .eq("account_id", accountId)
+      .eq("role", "owner")
+      .maybeSingle();
+    userId = ownerMember?.user_id ?? null;
+    if (userId) {
+      await reqLogger.info("webhook", "Resolved userId from account owner (integration.user_id was null)", {
+        metadata: { accountId },
+      });
+    }
+  }
   reqLogger.setAccountId(accountId);
   if (!integration.access_token) {
     await reqLogger.error("webhook", "Integration has no access token");
@@ -1566,7 +1583,9 @@ async function processMessagingEvent(
           )?.payload;
 
           if (nextPayload) {
-            const slotReplies = availableSlots.slice(0, 3).map((time) => ({
+            // Instagram allows max 13 quick replies; reserve 1 for "andere Uhrzeit"
+            const MAX_SLOT_BUTTONS = 10;
+            const slotReplies = availableSlots.slice(0, MAX_SLOT_BUTTONS).map((time) => ({
               label: `${time} Uhr`,
               payload: nextPayload,
             }));
@@ -1580,14 +1599,15 @@ async function processMessagingEvent(
             const [y, m, d] = mergedVariables.date.split("-");
             const formattedDate = `${d}.${m}.${y}`;
 
+            const shownSlots = availableSlots.slice(0, MAX_SLOT_BUTTONS);
             flowResponse = {
               ...flowResponse,
-              text: `⏰ Für ${formattedDate} sind folgende Zeiten frei:\n\n${availableSlots.slice(0, 3).map((t) => `• ${t} Uhr`).join("\n")}\n\nBitte wähle eine Zeit:`,
+              text: `⏰ Für ${formattedDate} sind folgende Zeiten frei:\n\n${shownSlots.map((t) => `• ${t} Uhr`).join("\n")}\n\nBitte wähle eine Zeit:`,
               quickReplies: slotReplies,
             };
 
             await reqLogger.info("webhook", "Injected available slots for time selection", {
-              metadata: { date: mergedVariables.date, slots: availableSlots.slice(0, 3) },
+              metadata: { date: mergedVariables.date, slots: shownSlots },
             });
           }
         } else if (availableSlots.length === 0) {

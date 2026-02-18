@@ -67,7 +67,7 @@ export function getMissingReservationFields(
  * Creates a reservation from extracted flow variables.
  */
 export async function createReservationFromVariables(
-  userId: string,
+  userId: string | null,
   accountId: string,
   conversationId: string,
   flowId: string | null,
@@ -183,12 +183,21 @@ export async function createReservationFromVariables(
         .single();
 
       if (error || !data) {
+        console.error("[reservationCreator] DB insert failed after calendar event:", {
+          userId,
+          accountId,
+          reservationId,
+          error: error?.message,
+          code: error?.code,
+          details: error?.details,
+        });
         await logger.warn("integration", "Failed to store reservation after calendar event", {
           userId,
           accountId,
           metadata: {
             reservationId,
             error: error?.message ?? "Unknown error",
+            code: error?.code,
           },
         });
         if (event.id) {
