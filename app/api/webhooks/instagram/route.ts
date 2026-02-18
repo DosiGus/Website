@@ -1252,26 +1252,63 @@ async function processMessagingEvent(
     }
   }
 
-  // If still no response, try to match a new flow
-  if (!flowResponse && messageText) {
-    // Handle special payloads for existing reservation management
-    if (quickReplyPayload === "CANCEL_EXISTING_RESERVATION") {
-      // User wants to cancel their existing reservation
-      let reservationQuery = supabase
+  const resolveExistingReservation = async () => {
+    const reservationContactId = contactId ?? conversation.contact_id ?? null;
+    const buildReservationQuery = () =>
+      supabase
         .from("reservations")
-        .select("id, guest_name, reservation_date, reservation_time, google_event_id, google_calendar_id")
+        .select(
+          "id, guest_name, reservation_date, reservation_time, guest_count, status, google_event_id, google_calendar_id, contact_id",
+        )
         .eq("account_id", accountId)
         .in("status", ["pending", "confirmed"])
         .order("created_at", { ascending: false })
         .limit(1);
 
-      if (contactId) {
-        reservationQuery = reservationQuery.eq("contact_id", contactId);
-      } else {
-        reservationQuery = reservationQuery.eq("instagram_sender_id", senderId);
+    if (reservationContactId) {
+      const { data } = await buildReservationQuery()
+        .eq("contact_id", reservationContactId)
+        .maybeSingle();
+      if (data) {
+        return data;
       }
 
-      const { data: existingRes } = await reservationQuery.single();
+      const { data: legacyReservation } = await buildReservationQuery()
+        .is("contact_id", null)
+        .eq("instagram_sender_id", senderId)
+        .maybeSingle();
+      if (legacyReservation) {
+        const { error: backfillError } = await supabase
+          .from("reservations")
+          .update({ contact_id: reservationContactId })
+          .eq("id", legacyReservation.id)
+          .is("contact_id", null);
+
+        if (backfillError) {
+          await reqLogger.warn("webhook", "Failed to backfill reservation contact_id", {
+            metadata: { reservationId: legacyReservation.id, error: backfillError.message },
+          });
+        }
+
+        return { ...legacyReservation, contact_id: reservationContactId };
+      }
+
+      return null;
+    }
+
+    const { data: legacyReservation } = await buildReservationQuery()
+      .is("contact_id", null)
+      .eq("instagram_sender_id", senderId)
+      .maybeSingle();
+    return legacyReservation ?? null;
+  };
+
+  // If still no response, try to match a new flow
+  if (!flowResponse && messageText) {
+    // Handle special payloads for existing reservation management
+    if (quickReplyPayload === "CANCEL_EXISTING_RESERVATION") {
+      // User wants to cancel their existing reservation
+      const existingRes = await resolveExistingReservation();
 
       if (existingRes) {
         const { error: cancelError } = await supabase
@@ -1407,27 +1444,7 @@ async function processMessagingEvent(
     }
 
     if (!forceNewReservation) {
-      const buildReservationQuery = () =>
-        supabase
-          .from("reservations")
-          .select("id, guest_name, reservation_date, reservation_time, guest_count, status")
-          .eq("account_id", accountId)
-          .in("status", ["pending", "confirmed"])
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-      let existingReservation = null;
-      if (contactId) {
-        const { data } = await buildReservationQuery().eq("contact_id", contactId).maybeSingle();
-        existingReservation = data ?? null;
-      }
-
-      if (!existingReservation) {
-        const { data } = await buildReservationQuery()
-          .eq("instagram_sender_id", senderId)
-          .maybeSingle();
-        existingReservation = data ?? null;
-      }
+      const existingReservation = await resolveExistingReservation();
 
       if (existingReservation) {
         // Format date for German display

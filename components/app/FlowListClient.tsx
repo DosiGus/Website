@@ -63,8 +63,17 @@ export default function FlowListClient({
 
   useEffect(() => {
     const stored = localStorage.getItem("wesponde-flow-favorites");
-    if (stored) {
-      setFavorites(JSON.parse(stored));
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setFavorites(parsed);
+      } else {
+        setFavorites([]);
+      }
+    } catch (error) {
+      console.warn("Invalid flow favorites in localStorage:", error);
+      setFavorites([]);
     }
   }, []);
 

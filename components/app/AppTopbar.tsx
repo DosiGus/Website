@@ -30,7 +30,7 @@ export default function AppTopbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
-  const { vertical } = useAccountVertical();
+  const { vertical, accountId, loading: accountLoading } = useAccountVertical();
   const labels = useMemo(() => getBookingLabels(vertical), [vertical]);
 
   useEffect(() => {
@@ -52,22 +52,25 @@ export default function AppTopbar() {
     let cancelled = false;
 
     async function loadNotifications() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (accountLoading) return;
+      if (!accountId) {
+        setNotifications([]);
+        return;
+      }
 
       const [integrationsRes, flowsRes, pendingReservationsRes] = await Promise.all([
         supabase
           .from("integrations")
           .select("provider,status")
-          .eq("user_id", user.id),
+          .eq("account_id", accountId),
         supabase
           .from("flows")
           .select("id,status,nodes,edges,triggers")
-          .eq("user_id", user.id),
+          .eq("account_id", accountId),
         supabase
           .from("reservations")
           .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
+          .eq("account_id", accountId)
           .eq("status", "pending"),
       ]);
 
@@ -140,7 +143,7 @@ export default function AppTopbar() {
     return () => {
       cancelled = true;
     };
-  }, [supabase, labels.bookingPlural, labels.bookingSingular]);
+  }, [supabase, labels.bookingPlural, labels.bookingSingular, accountId, accountLoading]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

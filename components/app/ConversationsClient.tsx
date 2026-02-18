@@ -55,6 +55,11 @@ export default function ConversationsClient() {
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) return null;
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
   }, []);
@@ -150,7 +155,7 @@ export default function ConversationsClient() {
   const getConversationName = (conv: Conversation) =>
     conv.contacts?.display_name ||
     conv.metadata?.variables?.name ||
-    conv.instagram_sender_id;
+    "Instagram Nutzer";
 
   if (loading) {
     return (
@@ -197,11 +202,6 @@ export default function ConversationsClient() {
                   {getConversationName(selectedConversation)}
                 </span>
               </div>
-              {selectedConversation.contacts?.display_name && (
-                <div className="text-xs text-zinc-500">
-                  IG: {selectedConversation.instagram_sender_id}
-                </div>
-              )}
               {selectedConversation.flows && (
                 <div className="text-xs text-zinc-400">
                   Flow: {selectedConversation.flows.name}
@@ -320,11 +320,6 @@ export default function ConversationsClient() {
                       <span className="flex items-center gap-1">
                         <Bot className="h-3 w-3" />
                         {conv.flows.name}
-                      </span>
-                    )}
-                    {conv.contacts?.display_name && (
-                      <span className="text-zinc-500">
-                        IG: {conv.instagram_sender_id}
                       </span>
                     )}
                     <span className="flex items-center gap-1">

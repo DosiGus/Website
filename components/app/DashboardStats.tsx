@@ -17,39 +17,41 @@ interface DashboardStats {
 export default function DashboardStats() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const { vertical } = useAccountVertical();
+  const { vertical, accountId, loading: accountLoading } = useAccountVertical();
   const labels = getBookingLabels(vertical);
 
   useEffect(() => {
+    if (accountLoading) return;
+    if (!accountId) {
+      setStats(null);
+      setLoading(false);
+      return;
+    }
+
     async function fetchStats() {
       const supabase = createSupabaseBrowserClient();
+      setLoading(true);
 
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          return;
-        }
-
         const [flowsRes, integrationsRes, reservationsRes, pendingRes] = await Promise.all([
           supabase
             .from("flows")
             .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id)
+            .eq("account_id", accountId)
             .eq("status", "Aktiv"),
           supabase
             .from("integrations")
             .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id)
+            .eq("account_id", accountId)
             .eq("status", "connected"),
           supabase
             .from("reservations")
             .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id),
+            .eq("account_id", accountId),
           supabase
             .from("reservations")
             .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id)
+            .eq("account_id", accountId)
             .eq("status", "pending"),
         ]);
 
@@ -67,7 +69,7 @@ export default function DashboardStats() {
     }
 
     fetchStats();
-  }, []);
+  }, [accountId, accountLoading]);
 
   const statItems = [
     {
