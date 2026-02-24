@@ -25,11 +25,11 @@ Wesponde is a B2B SaaS platform for automating customer conversations (Instagram
 ### Authentication & API
 
 - Browser auth: `createBrowserClient` from `@supabase/ssr` (`lib/supabaseBrowserClient.ts`) — singleton, cookie-based sessions
-- Server-side middleware (`middleware.ts`) refreshes auth tokens on every request and protects `/app/*` routes
+- Server-side middleware (`middleware.ts`) protects `/app/*` routes — skips Supabase call entirely for public routes (homepage, marketing pages) so they are always fast
 - SSR server client (`lib/supabaseSSRClient.ts`) for cookie-based auth in Server Components/Route Handlers
 - Auth callback route (`app/auth/callback/route.ts`) handles email confirmation (token_hash) and PKCE code exchange
-- API routes: Bearer token auth via `lib/apiAuth.ts` → `requireAccountMember()` resolves user + account membership. Legacy `requireUser()` still available.
-- Server-side operations use a service-role client (`lib/supabaseServerClient.ts`) for admin access (bypasses RLS)
+- API routes: Bearer token auth via `lib/apiAuth.ts` → `requireAccountMember()` resolves user + account membership (strict: invalid `x-account-id` => 403). Legacy `requireUser()` still available.
+- Most app routes use a user-scoped Supabase client (RLS enforced). Service-role client (`lib/supabaseServerClient.ts`) is reserved for webhooks/cron/diagnostics and auth admin access.
 - Client-side auth gate (`components/AppAuthGate.tsx`) as secondary protection using `getUser()` (server-validated)
 
 ### Database (Supabase PostgreSQL)
@@ -51,7 +51,7 @@ Schema in `supabase/schema.sql`. Multi-tenant model: all data scoped to `account
 | `integrations` | Meta/Instagram OAuth tokens, connection status, `channel` field |
 | `review_requests` | Review follow-up tracking (rating, feedback, sent status) |
 | `oauth_states` | CSRF protection for OAuth flow, carries `account_id` for callback |
-| `messages` | Incoming/outgoing messages, `channel_message_id` for channel-agnostic lookup |
+| `messages` | Incoming/outgoing messages, `channel_message_id`, idempotency (`processing_started_at`, `processed_at`) |
 | `conversations` | Conversation threads with `contact_id`, `channel`, `channel_sender_id` |
 | `reservations` | Bookings/appointments with `contact_id` for guest tracking |
 | `logs` | Webhook/system logs (`account_id` nullable for system logs) |
@@ -86,6 +86,8 @@ Instagram DM received
         ↓
 Verify signature (X-Hub-Signature-256)
         ↓
+Idempotency gate (messages table)
+        ↓
 Find/create conversation for Instagram sender
         ↓
 Extract variables from message (name, date, time, phone, etc.)
@@ -97,7 +99,7 @@ Match message against flow triggers OR continue existing flow
         ↓
 Execute flow node, generate response
         ↓
-At confirmation: Create reservation in DB
+At confirmation: Create reservation (calendar-first, rollback on DB failure)
         ↓
 Send reply via Instagram API
 ```
@@ -118,7 +120,7 @@ Reservations are created automatically when users complete a reservation flow:
 3. **Reservation Creation**: Only at `confirmed` node or explicit confirmation
 4. **Duplicate Prevention**: `reservationId` in metadata prevents duplicate creation
 
-Required reservation fields: `name`, `date`, `time`, `guestCount`
+Required reservation fields: `name`, `date`, `time` (guestCount required only for gastro; otherwise default 1)
 Optional fields: `phone`, `email`, `specialRequests`
 
 Reservations UI: `app/app/reservations/page.tsx` with `components/app/ReservationsClient.tsx`
@@ -128,6 +130,7 @@ Reservations UI: `app/app/reservations/page.tsx` with `components/app/Reservatio
 - Uses a system template (`template-google-review`) with rating quick replies and optional feedback
 - Sends the Google review link stored in `integrations.google_review_url`
 - Tracking stored in `review_requests`
+- Deferred if a conversation is active (does not interrupt live chats)
 
 ## Meta/Instagram Integration
 
@@ -236,6 +239,21 @@ META_APP_SECRET=<from Meta Developer Portal>
 META_REDIRECT_URI=https://wesponde.com/api/meta/oauth/callback
 NEXT_PUBLIC_META_APP_ID=2003432446768451
 
+# Google OAuth
+GOOGLE_CLIENT_ID=<from Google Cloud>
+GOOGLE_CLIENT_SECRET=<from Google Cloud>
+GOOGLE_REDIRECT_URI=https://wesponde.com/api/google/oauth/callback
+
+# Token encryption + background jobs
+TOKEN_ENCRYPTION_KEY=<base64 32 bytes>
+QSTASH_TOKEN=<Upstash QStash token>
+UPSTASH_REDIS_REST_URL=<Upstash Redis REST URL>
+UPSTASH_REDIS_REST_TOKEN=<Upstash Redis REST token>
+
+# Email (token refresh warnings)
+RESEND_API_KEY=<from Resend>
+RESEND_FROM=Wesponde <onboarding@resend.dev>
+
 # Webhooks
 META_WEBHOOK_VERIFY_TOKEN=<random string you define>
 ```
@@ -252,7 +270,7 @@ Auto-deployment: Push to `main` triggers Vercel build.
 ## File Structure
 
 ```
-middleware.ts                # Server-side auth (session refresh + /app/* protection)
+middleware.ts                # Auth protection for /app/* only — public routes bypass Supabase entirely
 
 app/
   auth/
@@ -355,6 +373,7 @@ supabase/
 - **Reservation not created**: Check that all required fields (name, date, time, guestCount) are present
 - **Duplicate reservations**: The system checks `metadata.reservationId` to prevent duplicates
 - **Old reservation blocking new one**: Metadata is reset when a new flow starts
+- **Token refresh not running**: Ensure QStash/Redis/Resend env vars are set for cron + alerts
 
 ## MCP Integration
 

@@ -1,17 +1,30 @@
 # Meta App Review Checklist (Wesponde)
 
-## Ziel
-App Review fuer Instagram Messaging vorbereiten. Fokus: klares Demo-Szenario, minimale Permissions, Data Deletion.
+## Status: App Review bestanden (Standard Access)
+
+## App Details
+- **App-ID:** 2003432446768451
+- **App-Name:** TableDm
+- **Business:** vastfolio (verifiziert)
+- **Tech Provider:** Verifiziert
+- **App-Modus:** Live
+- **OAuth-Methode:** Facebook Login for Business (FLB) mit config_id
 
 ## Permissions (aktuell in Code)
-- instagram_basic
-- instagram_manage_messages
-- pages_show_list
-- pages_read_engagement
-- pages_manage_metadata
-- business_management
+- `instagram_basic` - Standard Access
+- `instagram_manage_messages` - Standard Access
+- `instagram_business_manage_messages` - Standard Access
+- `pages_show_list` - Standard Access
+- `pages_read_engagement` - Standard Access
+- `pages_manage_metadata` - Standard Access
+- `pages_messaging` - Standard Access
 
-Empfehlung: Jede Permission mit 1-2 Saetzen begruenden. Wenn etwas nicht gebraucht wird, entfernen.
+## Meta Products
+- Messenger
+- Instagram
+- WhatsApp
+- Webhooks
+- Facebook Login for Business
 
 ## Pflicht-URLs
 - OAuth Redirect: https://wesponde.com/api/meta/oauth/callback
@@ -28,16 +41,11 @@ Empfehlung: Jede Permission mit 1-2 Saetzen begruenden. Wenn etwas nicht gebrauc
 
 ## Screencast Script (Deutsch)
 1) Login in Wesponde.
-2) Integrationen oeffnen, Instagram verbinden (OAuth).
+2) Integrationen oeffnen, Instagram verbinden (OAuth mit FLB).
 3) Bestands-Flow aktivieren (oder Template erstellen).
 4) Instagram DM senden ("Reservieren").
 5) Bot antwortet, Fragen werden gestellt (Datum/Uhrzeit/Name).
 6) Bestaetigung, Reservierung wird im Dashboard sichtbar.
-
-## Evidence/Notes
-- Zeige in der Aufnahme den kompletten DM-Dialog.
-- Zeige die Reservierung im Dashboard nach Abschluss.
-- Falls benoetigt: zeige die Data Deletion Seite kurz.
 
 ## Data Deletion (intern)
 - Callback validiert signed_request.
