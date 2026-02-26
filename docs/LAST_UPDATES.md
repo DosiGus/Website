@@ -1,7 +1,34 @@
 # Wesponde - Letzte Updates
 
 **Letzte Session:** 26. Februar 2026
-**Status:** Homepage deutlich verbessert (Hero, interaktive Demo, Kalender-Sync), Localhost-Stabilitaet fuer Testing erhoeht
+**Status:** Homepage-Feinschliff (Google Kalender Demo, Flow Builder Demo, Animation-Timing)
+
+---
+
+## Was wurde gemacht (26. Februar 2026) – Homepage Feinschliff
+
+### GoogleCalendarSyncDemo – Komplett ueberarbeitet (`components/GoogleCalendarSyncDemo.tsx`)
+- Linke Seite: Authentische Instagram-DM-Bubble mit Gradient-Avatar + Online-Indikator
+- Linke Seite: Timeline-Connector-Linie zwischen Steps, Badge-Labels pro Step (Instagram DM / Google Calendar API / etc.)
+- Linke Seite: Nummerierte Kreise → Checkmark bei abgeschlossenen Steps, pulsierende Dots beim aktiven Step
+- Rechte Seite: Echte 3-Tage-Ansicht (Fr / Sa / So) statt 7 Spalten → Spalten 3x breiter, kein Text mehr abgeschnitten
+- Rechte Seite: Echter Google-G (4-farbig: blau/gruen/gelb/rot) statt generischem Icon
+- Rechte Seite: Event-Block absolut positioniert via CSS calc(), zeigt Titel + Uhrzeit ("10:00 – 10:30")
+- Rechte Seite: Event-Farbuebergang animiert: hellblau (pruefen) → Google-Blau (bestaetigt) → Gruen (synchronisiert)
+- Rechte Seite: Samstag-Spalte mit Google-Blau-Highlight (Datum-Kreis + Spalten-Hauch)
+- Rechte Seite: Status-Footer mit farbigem Dot-Indikator
+
+### FlowBuilderDemo – Komplett ueberarbeitet (`components/FlowBuilderDemo.tsx`)
+- Canvas-Nodes mit farbigem Left-Accent-Bar (gruen/indigo/violett) statt einfachen Border-Boxen
+- Input/Output-Handles (farbige Dots) an Node-Enden sichtbar
+- SVG-Verbindungspfade werden animiert gezeichnet (stroke-dasharray / drawConn Keyframe)
+- "+" Button zwischen Steps: erscheint animiert an der Output-Handle-Position
+- Linkes Panel: echter Node-Editor mit Typing-Animation (38ms/Zeichen), Fortschrittsleiste (1/4 ... 4/4)
+- Quick Replies auf dem Canvas als violette Pills sichtbar, erscheinen einzeln nacheinander
+- Template-Picker: Emojis durch farbige Indikator-Dots ersetzt (keine Emojis in der gesamten Komponente)
+- Animationsgeschwindigkeit: 25s Gesamtzyklus (vorher 15.5s) fuer entspannte, gut lesbare Darstellung
+- Responsive Hoehe: h-[420px] sm:h-[500px] lg:h-[520px] – kein Abschneiden mehr bei kleineren Viewports
+- Node-Positionen angepasst: confirm bei top=326 fuer ausreichend Platz auch mit QR Pills
 
 ---
 
