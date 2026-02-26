@@ -1,16 +1,16 @@
 import Link from "next/link";
 import BetaWaitlistForm from "../components/BetaWaitlistForm";
-import WatchDemoButton from "../components/WatchDemoButton";
 import PhoneMockup from "../components/PhoneMockup";
 import FlowBuilderDemo from "../components/FlowBuilderDemo";
 import GoogleReviewsFlow from "../components/GoogleReviewsFlow";
 import FaqAccordion from "../components/FaqAccordion";
+import HomeTemplateDemoModal from "../components/HomeTemplateDemoModal";
+import GoogleCalendarSyncDemo from "../components/GoogleCalendarSyncDemo";
 import {
   MessageSquare,
   CalendarCheck,
   Bell,
   Star,
-  Zap,
   Shield,
   BarChart3,
   Users,
@@ -25,9 +25,9 @@ import {
    ======================================== */
 
 const heroStats = [
-  { value: "<30s", label: "Antwortzeit", icon: Zap },
-  { value: "-28%", label: "No-Shows", icon: CalendarCheck },
-  { value: "+41%", label: "Bewertungen", icon: Star },
+  "Kürzere Antwortzeiten",
+  "Weniger No-Shows",
+  "Mehr Bewertungen",
 ];
 
 const outcomes = [
@@ -250,59 +250,28 @@ export default function HomePage() {
             <div className="max-w-2xl">
               {/* Headline */}
               <h1 className="mt-6 font-display text-4xl font-medium tracking-tight sm:mt-8 sm:text-5xl md:text-6xl lg:text-7xl">
-                Gespräche, die zu{" "}
-                <span className="text-emerald-400">
-                  Gästen
-                </span>
-                {" "}werden
+                Premium-Service beginnt bei der ersten Nachricht.
               </h1>
 
               {/* Subheadline */}
               <p className="mt-4 text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg md:text-xl">
-                Automatische Antworten für Gastronomiebetriebe auf Instagram, WhatsApp und Facebook.
+                Wesponde verwandelt Ihren Messenger in einen leistungsstarken Buchungskanal, der Anfragen
+                automatisch in bestätigte Termine überführt.
               </p>
 
               {/* CTA */}
               <div className="mt-10">
-                <Link
-                  href="/login?view=signup"
-                  className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:bg-emerald-500 hover:text-white hover:shadow-emerald-500/30"
-                >
-                  Demo starten
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
+                <HomeTemplateDemoModal />
               </div>
 
-              {/* Stats */}
-              <div className="mt-10 grid grid-cols-3 gap-4 sm:mt-16 sm:gap-8">
+              {/* Hero Benefits */}
+              <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 sm:mt-14 sm:gap-x-8 sm:gap-y-4">
                 {heroStats.map((stat) => (
-                  <div key={stat.label} className="relative">
-                    <div className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500 sm:gap-2 sm:text-xs sm:tracking-widest">
-                      <stat.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                      <span className="hidden sm:inline">{stat.label}</span>
-                      <span className="sm:hidden">{stat.label.split(' ')[0]}</span>
-                    </div>
-                    <div className="mt-1 text-2xl font-semibold tracking-tight text-white sm:mt-2 sm:text-3xl md:text-4xl">
-                      {stat.value}
-                    </div>
-                  </div>
+                  <span key={stat} className="flex items-center gap-1.5 text-sm font-medium text-zinc-200 sm:gap-2 sm:text-base">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 sm:h-5 sm:w-5" />
+                    {stat}
+                  </span>
                 ))}
-              </div>
-
-              {/* Trust Badges */}
-              <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3 text-[11px] text-zinc-500 sm:mt-12 sm:gap-x-8 sm:gap-y-4 sm:text-xs">
-                <span className="flex items-center gap-1.5 sm:gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
-                  In 5 Minuten eingerichtet
-                </span>
-                <span className="flex items-center gap-1.5 sm:gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
-                  Sofort einsatzbereit
-                </span>
-                <span className="flex items-center gap-1.5 sm:gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 sm:h-4 sm:w-4" />
-                  Läuft ab Tag 1
-                </span>
               </div>
             </div>
 
@@ -350,6 +319,34 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ==================== GOOGLE CALENDAR SYNC SECTION ==================== */}
+      <section id="calendar-sync" className="relative overflow-hidden py-16 sm:py-24 lg:py-28">
+        <div className="absolute inset-0 bg-zinc-900/40" />
+        <div className="absolute right-0 top-1/2 hidden h-[520px] w-[520px] -translate-y-1/2 translate-x-1/2 rounded-full bg-cyan-500/10 blur-[100px] sm:block" />
+        <div className="absolute left-0 top-0 hidden h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[90px] sm:block" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 max-w-3xl sm:mb-12">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">
+              Google Kalender Sync
+            </span>
+            <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">
+              Termine werden automatisch{" "}
+              <span className="bg-gradient-to-r from-cyan-300 to-indigo-300 bg-clip-text text-transparent">
+                geprüft und synchronisiert
+              </span>
+            </h2>
+            <p className="mt-4 text-base text-zinc-400 sm:text-lg">
+              Nutzer verbinden ihren Google Kalender einmalig. Bei jeder Anfrage prüft das System freie Slots,
+              bestätigt passende Zeiten direkt oder bietet Alternativen an. Bestätigte Termine landen ohne
+              manuelle Arbeit sofort im Kalender.
+            </p>
+          </div>
+
+          <GoogleCalendarSyncDemo />
         </div>
       </section>
 

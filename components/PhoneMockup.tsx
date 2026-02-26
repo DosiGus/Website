@@ -22,7 +22,7 @@ const conversationFlow: MessageType[] = [
   {
     id: 1,
     type: 'incoming',
-    text: 'Hi! Hätte gern einen Tisch für 2 heute Abend',
+    text: 'Hey! Habt ihr einen Termin frei für nächsten Samstag?',
     delay: 800,
   },
   {
@@ -53,7 +53,7 @@ const conversationFlow: MessageType[] = [
   {
     id: 6,
     type: 'outgoing',
-    text: 'Reserviert! Tisch für 2, 19:00 Uhr. Bis später!',
+    text: 'Ihr Termin ist bestätigt! Samstag, 19:00 Uhr auf den Namen Lisa Müller.',
     quickReplies: ['Danke!', 'Ändern'],
     delay: 12000,
   },
@@ -204,7 +204,7 @@ export default function PhoneMockup() {
                   <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-zinc-950 bg-emerald-500" />
                 </div>
                 <div>
-                  <p className="text-[13px] font-semibold text-white">Ristorante Milano</p>
+                  <p className="text-[13px] font-semibold text-white">Wesponde</p>
                   <p className="text-[10px] text-emerald-400">Online</p>
                 </div>
               </div>

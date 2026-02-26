@@ -1,7 +1,46 @@
 # Wesponde - Letzte Updates
 
-**Letzte Session:** 17. Februar 2026
-**Status:** Pivot vorbereitet, Google Calendar stabil, Webhooks/Flows gehärtet, Audit komplett umgesetzt
+**Letzte Session:** 26. Februar 2026
+**Status:** Homepage deutlich verbessert (Hero, interaktive Demo, Kalender-Sync), Localhost-Stabilitaet fuer Testing erhoeht
+
+---
+
+## Was wurde gemacht (26. Februar 2026)
+
+### Homepage Hero & Positionierung
+- Hero-Copy auf allgemeinen Terminbuchungs-Fokus umgestellt (weg von reinem Restaurant-Wording)
+- Benefit-Leiste unter CTA vereinfacht auf klare Outcomes:
+  - Kuerzere Antwortzeiten
+  - Weniger No-Shows
+  - Mehr Bewertungen
+- iPhone-Mockup-Dialog auf allgemeine Terminbuchung angepasst:
+  - Header: "Wesponde"
+  - Anfrage/Bestätigung ohne Tisch-Reservierungsbezug
+
+### Interaktive Demo ohne Login
+- `Demo starten` auf der Homepage oeffnet jetzt eine interaktive Template-Demo direkt fuer Besucher
+- Neues Demo-Modal mit:
+  - Branchenauswahl
+  - Template-Auswahl
+  - Live-Simulation des Flows
+- Fallback-Route `/demo` hinzugefuegt, damit der Einstieg auch ohne funktionierende Client-Hydration moeglich bleibt
+- Filterlogik verfeinert:
+  - Links nur 4 Branchen
+  - Bei jeder Branche werden passende Templates + Bewertungs-Template angezeigt
+
+### Google Kalender Sektion (neu)
+- Neue Sektion zwischen "Ablauf" und "Ergebnisse" eingefuegt
+- Visualisiert den Prozess:
+  - Anfrage
+  - Verfuegbarkeitspruefung
+  - Terminbestaetigung
+  - automatische Kalender-Synchronisierung
+- Rechte Demo-Karte auf klarere Google-Kalender-Optik umgebaut (Zeitraster + Event-Block)
+- Begriffe wie "Bot/Chatbot" in diesem Bereich entfernt und durch neutrales Wording ersetzt
+
+### Localhost-Stabilitaet
+- Development-Header in `next.config.js` so angepasst, dass lokale Hydration/HMR nicht durch Custom-CSP behindert wird
+- Ziel: zuverlaessiges lokales Testen vor Deployments
 
 ---
 

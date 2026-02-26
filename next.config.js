@@ -22,9 +22,17 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
 ];
 
+const isDevelopment = process.env.NODE_ENV !== "production";
+
 const nextConfig = {
   reactStrictMode: true,
   async headers() {
+    // In local dev we disable custom security headers so Next.js client
+    // hydration/HMR scripts are never blocked by CSP restrictions.
+    if (isDevelopment) {
+      return [];
+    }
+
     return [
       {
         source: "/(.*)",
