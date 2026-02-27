@@ -237,14 +237,14 @@ export default function HomePage() {
       />
 
       {/* ==================== HERO SECTION ==================== */}
-      <section className="relative min-h-screen overflow-hidden">
+      <section className="relative overflow-hidden">
         {/* Background Effects - reduced blur for mobile performance */}
         <div className="absolute inset-0 bg-grid-dark" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/50 to-zinc-950" />
         <div className="absolute left-1/2 top-0 h-[400px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/15 blur-[60px] sm:h-[600px] sm:w-[800px] sm:bg-indigo-500/20 sm:blur-[120px]" />
         <div className="absolute right-0 top-1/2 hidden h-[400px] w-[400px] -translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px] sm:block" />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 sm:pb-24 sm:pt-32 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 pb-12 pt-24 sm:px-6 sm:pb-16 sm:pt-32 lg:px-8">
           <div className="grid items-center gap-12 lg:grid-cols-[1.1fr,0.9fr] lg:gap-20">
             {/* Left Content */}
             <div className="max-w-2xl">
@@ -265,10 +265,13 @@ export default function HomePage() {
               </div>
 
               {/* Hero Benefits */}
-              <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 sm:mt-14 sm:gap-x-8 sm:gap-y-4">
+              <div className="mt-10 flex flex-wrap items-center gap-2 sm:mt-14 sm:gap-3">
                 {heroStats.map((stat) => (
-                  <span key={stat} className="flex items-center gap-1.5 text-sm font-medium text-zinc-200 sm:gap-2 sm:text-base">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 sm:h-5 sm:w-5" />
+                  <span
+                    key={stat}
+                    className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-200 backdrop-blur-sm"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-emerald-400" />
                     {stat}
                   </span>
                 ))}
@@ -284,7 +287,7 @@ export default function HomePage() {
       </section>
 
       {/* ==================== WORKFLOW SECTION ==================== */}
-      <section id="workflow" className="relative py-16 sm:py-24 lg:py-32">
+      <section id="workflow" className="relative py-14 sm:py-20 lg:py-24">
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 to-zinc-900/50" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

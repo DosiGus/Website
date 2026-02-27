@@ -58,9 +58,9 @@ const config: Config = {
         '4xl': '2rem',
       },
       fontFamily: {
-        display: ["'Instrument Serif'", "var(--font-display)", "serif"],
-        sans: ["'Plus Jakarta Sans'", "var(--font-body)", "system-ui", "sans-serif"],
-        body: ["'Plus Jakarta Sans'", "var(--font-body)", "system-ui", "sans-serif"]
+        display: ["'IBM Plex Sans JP'", "var(--font-sans)", "sans-serif"],
+        sans: ["'IBM Plex Sans JP'", "var(--font-sans)", "system-ui", "sans-serif"],
+        body: ["'IBM Plex Sans JP'", "var(--font-sans)", "system-ui", "sans-serif"]
       },
       animation: {
         'fade-in-up': 'fadeInUp 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards',

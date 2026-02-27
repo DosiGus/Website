@@ -85,7 +85,7 @@ export default function Navbar() {
             href="/login?view=signup"
             className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:bg-emerald-500 hover:text-white hover:shadow-emerald-500/30"
           >
-            Jetzt testen
+            Jetzt starten
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
@@ -126,7 +126,7 @@ export default function Navbar() {
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-zinc-900 shadow-lg transition-all hover:bg-emerald-500 hover:text-white"
                 onClick={() => setMenuOpen(false)}
               >
-                Jetzt testen
+                Jetzt starten
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

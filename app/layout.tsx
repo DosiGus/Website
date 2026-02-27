@@ -2,17 +2,12 @@ import "./globals.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import type { Metadata } from "next";
-import { Fraunces, Manrope } from "next/font/google";
+import { IBM_Plex_Sans_JP } from "next/font/google";
 
-const displayFont = Fraunces({
+const ibmPlexSans = IBM_Plex_Sans_JP({
   subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const bodyFont = Manrope({
-  subsets: ["latin"],
-  variable: "--font-body",
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-sans",
   display: "swap",
 });
 
@@ -41,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="privacy-policy" href="https://wesponde.com/privacy" />
       </head>
       <body
-        className={`${displayFont.variable} ${bodyFont.variable} flex min-h-screen flex-col bg-zinc-950 text-white antialiased`}
+        className={`${ibmPlexSans.variable} flex min-h-screen flex-col bg-zinc-950 text-white antialiased`}
       >
         <Navbar />
         <main className="flex-1">{children}</main>
