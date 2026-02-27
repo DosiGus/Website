@@ -100,12 +100,12 @@ export default function BetaWaitlistForm() {
             <option value="" disabled className="bg-zinc-900 text-zinc-500">
               Bitte auswählen
             </option>
-            <option className="bg-zinc-900">Restaurant & Bar</option>
-            <option className="bg-zinc-900">Friseur & Beauty</option>
-            <option className="bg-zinc-900">Spa, Wellness & Massage</option>
-            <option className="bg-zinc-900">Medizin & Praxis</option>
-            <option className="bg-zinc-900">Fitness & Coaching</option>
-            <option className="bg-zinc-900">Andere Dienstleistung</option>
+            <option className="bg-zinc-900">Personal Training</option>
+            <option className="bg-zinc-900">Yoga / Pilates Studio</option>
+            <option className="bg-zinc-900">Padel / Racket Coaching</option>
+            <option className="bg-zinc-900">Run- / Triathlon-Coaching</option>
+            <option className="bg-zinc-900">Fitness Studio</option>
+            <option className="bg-zinc-900">Andere terminbasierte Dienstleistung</option>
           </select>
         </div>
 

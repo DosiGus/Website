@@ -2,6 +2,7 @@ import Link from "next/link";
 import BetaWaitlistForm from "../components/BetaWaitlistForm";
 import PhoneMockup from "../components/PhoneMockup";
 import FlowBuilderDemo from "../components/FlowBuilderDemo";
+import WorkflowStepsStacked from "../components/WorkflowStepsStacked";
 import GoogleReviewsFlow from "../components/GoogleReviewsFlow";
 import FaqAccordion from "../components/FaqAccordion";
 import HomeTemplateDemoModal from "../components/HomeTemplateDemoModal";
@@ -131,23 +132,6 @@ const testimonial = {
   company: "Friseur & Kosmetik",
 };
 
-const steps = [
-  {
-    step: "01",
-    title: "Verbinden",
-    description: "Instagram, Facebook und WhatsApp verbinden – wir übernehmen den Setup.",
-  },
-  {
-    step: "02",
-    title: "Konfigurieren",
-    description: "Vorlagen übernehmen, Sprache & Übergaben an dein Team definieren.",
-  },
-  {
-    step: "03",
-    title: "Live schalten",
-    description: "Antworten, Buchungen und Reviews laufen stabil – mit Reporting.",
-  },
-];
 
 const differentiators = [
   {
@@ -287,42 +271,8 @@ export default function HomePage() {
       </section>
 
       {/* ==================== WORKFLOW SECTION ==================== */}
-      <section id="workflow" className="relative py-14 sm:py-20 lg:py-24">
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 to-zinc-900/50" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
-              Ablauf
-            </span>
-            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              In Minuten live, nicht in Tagen
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
-              Fertige Templates und geführtes Setup bringen dich schnell ans Ziel.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-4 sm:mt-20 sm:gap-8 lg:grid-cols-3">
-            {steps.map((step, index) => (
-              <div
-                key={step.title}
-                className="relative rounded-xl border border-white/10 bg-zinc-900/50 p-5 sm:rounded-2xl sm:p-8"
-              >
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-base font-bold text-white sm:mb-6 sm:h-12 sm:w-12 sm:text-lg">
-                  {step.step}
-                </div>
-                <h3 className="text-lg font-semibold text-white sm:text-xl">{step.title}</h3>
-                <p className="mt-2 text-xs leading-relaxed text-zinc-400 sm:mt-3 sm:text-sm">{step.description}</p>
-                {index < steps.length - 1 && (
-                  <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 lg:block">
-                    <ArrowRight className="h-6 w-6 text-zinc-700" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+      <section id="workflow" className="relative">
+        <WorkflowStepsStacked />
       </section>
 
       {/* ==================== GOOGLE CALENDAR SYNC SECTION ==================== */}
