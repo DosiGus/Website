@@ -7,6 +7,7 @@ import {
 } from "../../../../lib/google/settings";
 import { isVerticalKey, type VerticalKey } from "../../../../lib/verticals";
 import { createRequestLogger } from "../../../../lib/logger";
+import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
 
 export async function GET(request: Request) {
   try {
@@ -114,7 +115,11 @@ export async function PATCH(request: Request) {
       updatePayload.vertical = body.vertical;
     }
 
-    const { error: updateError } = await supabase
+    // Use service role client for the accounts UPDATE — the user-scoped client
+    // is silently blocked by RLS (accounts UPDATE policy requires role = 'owner').
+    // requireAccountMember + isRoleAtLeast already enforced authorization above.
+    const adminSupabase = createSupabaseServerClient();
+    const { error: updateError } = await adminSupabase
       .from("accounts")
       .update(updatePayload)
       .eq("id", accountId);
