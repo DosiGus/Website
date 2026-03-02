@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Font loaded via next/font/google (IBM Plex Sans JP) */
+/* Font loaded via next/font/google (Inter) */
 
 :root {
   /* New Premium Color Palette */
@@ -63,15 +63,15 @@ html, body {
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', var(--font-body), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 .font-display {
-  font-family: 'Instrument Serif', var(--font-display), serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 .font-sans {
-  font-family: 'Plus Jakarta Sans', var(--font-body), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 .text-balance {

@@ -2,9 +2,9 @@ import "./globals.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import type { Metadata } from "next";
-import { IBM_Plex_Sans_JP } from "next/font/google";
+import { Inter } from "next/font/google";
 
-const ibmPlexSans = IBM_Plex_Sans_JP({
+const inter = Inter({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-sans",
@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="privacy-policy" href="https://wesponde.com/privacy" />
       </head>
       <body
-        className={`${ibmPlexSans.variable} flex min-h-screen flex-col bg-zinc-950 text-white antialiased`}
+        className={`${inter.variable} flex min-h-screen flex-col bg-zinc-950 text-white antialiased`}
       >
         <Navbar />
         <main className="flex-1">{children}</main>
