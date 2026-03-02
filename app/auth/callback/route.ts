@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return response;
+    console.error("[auth/callback] exchangeCodeForSession failed:", error.message, error.status);
   }
 
   // Handle token_hash verification (email confirmation, password recovery)
@@ -69,8 +70,10 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
     if (!error) return response;
+    console.error("[auth/callback] verifyOtp failed:", error.message);
   }
 
   // Fallback: redirect to login with error
+  console.error("[auth/callback] fallback – no code and no token_hash, params:", Object.fromEntries(new URL(request.url).searchParams));
   return NextResponse.redirect(errorUrl);
 }
