@@ -192,7 +192,8 @@ export default function IntegrationsClient() {
           if (!token) return;
           const response = await fetch("/api/meta/oauth/start", {
             method: "POST",
-            headers: { authorization: `Bearer ${token}` },
+            headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+            body: JSON.stringify({ isRetry: true }),
           });
           const payload = (await response.json()) as { url?: string; error?: string };
           if (response.ok && payload.url) {

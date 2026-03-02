@@ -45,8 +45,11 @@ export async function POST(request: Request) {
     const supabase = createSupabaseServerClient();
 
     // Encode user_id in state for duplicate callback detection
-    // Format: user_id.random (user_id can be extracted even if state is deleted)
-    const state = `${user.id}.${crypto.randomUUID()}`;
+    // Format: user_id.random (normal) or user_id.random.retry (auto-retry attempt)
+    const body = await request.json().catch(() => ({})) as { isRetry?: boolean };
+    const state = body.isRetry
+      ? `${user.id}.${crypto.randomUUID()}.retry`
+      : `${user.id}.${crypto.randomUUID()}`;
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     const { error } = await supabase.from("oauth_states").insert({

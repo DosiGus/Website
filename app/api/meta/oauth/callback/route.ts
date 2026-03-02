@@ -627,9 +627,12 @@ export async function GET(request: Request) {
       userId: stateRow.user_id,
       metadata: { facebookUserId, isRetry },
     });
+    const noPageError = isRetry
+      ? "Keine Facebook-Seite gefunden. Für Instagram DMs benötigst du: 1) eine Facebook-Seite und 2) ein Instagram Business- oder Creator-Konto, das mit dieser Seite verknüpft ist. Falls du beides hast, entferne die App \"TableDm\" unter Facebook → Einstellungen → Apps und Websites und versuche es erneut."
+      : "Keine Facebook-Seite gefunden. Bitte entferne die App \"TableDm\" in deinen Facebook-Einstellungen (Einstellungen → Apps und Websites → TableDm entfernen) und versuche es dann erneut.";
     return NextResponse.redirect(
       new URL(
-        `/app/integrations?error=${encodeURIComponent("Keine Facebook-Seite gefunden. Bitte entferne die App \"TableDm\" in deinen Facebook-Einstellungen (Einstellungen → Apps und Websites → TableDm entfernen) und versuche es dann erneut.")}`,
+        `/app/integrations?error=${encodeURIComponent(noPageError)}`,
         request.url,
       ),
     );
