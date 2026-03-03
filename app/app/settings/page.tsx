@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock, Building2 } from "lucide-react";
+import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock, Building2, ChevronDown } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../lib/supabaseBrowserClient";
 import { getDefaultCalendarSettings, type CalendarSettings } from "../../../lib/google/settings";
 import { VERTICAL_OPTIONS, type VerticalKey, getBookingLabels } from "../../../lib/verticals";
@@ -76,6 +76,9 @@ export default function SettingsPage() {
     integrationExpiry: true,
     monthlyReport: false,
   });
+
+  const [openCard, setOpenCard] = useState<string | null>(null);
+  const toggleCard = (key: string) => setOpenCard((prev) => (prev === key ? null : key));
 
   useEffect(() => {
     async function loadUser() {
@@ -408,493 +411,513 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Profile Section */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500">
+      <div className="flex flex-col gap-2">
+
+        {/* Profil */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
+          <button
+            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
+            onClick={() => toggleCard("profil")}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500">
               <User className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Profil</h2>
-              <p className="text-sm text-zinc-400">Deine persönlichen Informationen</p>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-white text-sm">Profil</div>
+              <div className="text-xs text-zinc-500 mt-0.5">Deine persönlichen Informationen</div>
             </div>
-          </div>
-
-          <div className="mt-6 space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-300">Name</label>
-              <input
-                type="text"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                placeholder="Dein Name"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-300">E-Mail</label>
-              <input
-                type="email"
-                value={userEmail}
-                disabled
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-zinc-400 focus:outline-none disabled:opacity-60"
-              />
-              <p className="mt-1 text-xs text-zinc-500">E-Mail kann nicht geändert werden.</p>
-            </div>
-          </div>
-
-          {error && (
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
-              <AlertTriangle className="h-4 w-4" />
-              {error}
-            </div>
-          )}
-
-          <div className="mt-6 flex items-center gap-3">
-            <button
-              onClick={handleSaveProfile}
-              disabled={saving}
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? "Speichern..." : "Änderungen speichern"}
-            </button>
-            {saved && (
-              <span className="flex items-center gap-1 text-sm font-medium text-emerald-400">
-                <CheckCircle className="h-4 w-4" />
-                Gespeichert
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Notifications Section */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500">
-              <Bell className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Benachrichtigungen</h2>
-              <p className="text-sm text-zinc-400">Wähle, wann wir dich informieren sollen</p>
-            </div>
-          </div>
-
-          <div className="mt-6 space-y-4">
-            <label className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10">
-              <div>
-                <span className="text-sm font-medium text-white">Neue Leads per E-Mail</span>
-                <p className="text-xs text-zinc-500">Erhalte eine E-Mail bei neuen {labels.bookingPlural}</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={notifications.newLeads}
-                onChange={(e) => setNotifications({ ...notifications, newLeads: e.target.checked })}
-                className="h-5 w-5 rounded border-zinc-600 bg-zinc-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
-              />
-            </label>
-
-            <label className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10">
-              <div>
-                <span className="text-sm font-medium text-white">Bot-Fehler / Fallbacks</span>
-                <p className="text-xs text-zinc-500">Benachrichtigung wenn der Bot nicht antworten konnte</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={notifications.botErrors}
-                onChange={(e) => setNotifications({ ...notifications, botErrors: e.target.checked })}
-                className="h-5 w-5 rounded border-zinc-600 bg-zinc-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
-              />
-            </label>
-
-            <label className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10">
-              <div>
-                <span className="text-sm font-medium text-white">Integration läuft ab</span>
-                <p className="text-xs text-zinc-500">Warnung bevor dein Instagram-Token abläuft</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={notifications.integrationExpiry}
-                onChange={(e) => setNotifications({ ...notifications, integrationExpiry: e.target.checked })}
-                className="h-5 w-5 rounded border-zinc-600 bg-zinc-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
-              />
-            </label>
-
-            <label className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10">
-              <div>
-                <span className="text-sm font-medium text-white">Monatlicher Performance-Report</span>
-                <p className="text-xs text-zinc-500">Zusammenfassung deiner Automation-Statistiken</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={notifications.monthlyReport}
-                onChange={(e) => setNotifications({ ...notifications, monthlyReport: e.target.checked })}
-                className="h-5 w-5 rounded border-zinc-600 bg-zinc-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
-              />
-            </label>
-          </div>
-        </div>
-
-        {/* Industry Section */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Branche</h2>
-              <p className="text-sm text-zinc-400">Wähle, welche Default-Flows wir dir zeigen sollen</p>
-            </div>
-          </div>
-
-          {calendarLoading ? (
-            <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
-              Branchen-Einstellungen werden geladen...
-            </div>
-          ) : (
-            <div className="mt-6 space-y-4">
-              <div className="grid gap-3 sm:grid-cols-3">
-                {VERTICAL_OPTIONS.map((option) => {
-                  const isActive = vertical === option.key;
-                  return (
-                    <button
-                      key={option.key}
-                      type="button"
-                      disabled={verticalSaving || !canEditVertical}
-                      onClick={() => handleVerticalChange(option.key)}
-                      className={`flex h-full flex-col rounded-2xl border px-4 py-3 text-left transition ${
-                        isActive
-                          ? "border-emerald-500/60 bg-emerald-500/10"
-                          : "border-white/10 bg-white/5 hover:border-emerald-400/40 hover:bg-emerald-500/10"
-                      }`}
-                    >
-                      <div className="text-sm font-semibold text-white">{option.label}</div>
-                      <div className="mt-2 text-xs text-zinc-400">{option.description}</div>
-                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-zinc-500">
-                        {option.examples.map((example) => (
-                          <span key={example} className="rounded-full border border-white/10 px-2 py-1">
-                            {example}
-                          </span>
-                        ))}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {!canEditVertical && (
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-                  Nur Owner kann die Branche ändern.
-                </div>
-              )}
-              {verticalNotice && (
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                  {verticalNotice}
-                </div>
-              )}
-              {verticalError && (
-                <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-                  {verticalError}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Calendar Section */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
-              <Clock className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Kalender & Verfügbarkeit</h2>
-              <p className="text-sm text-zinc-400">Arbeitszeiten, Slots und Buchungsfenster</p>
-            </div>
-          </div>
-
-          {calendarLoading ? (
-            <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
-              Kalender-Einstellungen werden geladen...
-            </div>
-          ) : (
-            <div className="mt-6 space-y-5">
-              <div className="grid gap-4 sm:grid-cols-3">
+            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "profil" ? "rotate-180" : ""}`} />
+          </button>
+          {openCard === "profil" && (
+            <div className="px-5 pb-5 border-t border-white/5">
+              <div className="pt-4 space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Zeitzone</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-300">Name</label>
                   <input
                     type="text"
-                    value={calendarForm.timeZone}
-                    onChange={(e) => handleCalendarFieldChange("timeZone", e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                    placeholder="Europe/Berlin"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    placeholder="Dein Name"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Buchungsfenster (Tage)</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-300">E-Mail</label>
                   <input
-                    type="number"
-                    min={1}
-                    max={90}
-                    value={calendarForm.bookingWindowDays}
-                    onChange={(e) => handleCalendarFieldChange("bookingWindowDays", e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    type="email"
+                    value={userEmail}
+                    disabled
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-zinc-400 focus:outline-none disabled:opacity-60"
                   />
+                  <p className="mt-1 text-xs text-zinc-500">E-Mail kann nicht geändert werden.</p>
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Slot-Dauer (Min.)</label>
-                  <input
-                    type="number"
-                    min={15}
-                    max={240}
-                    value={calendarForm.slotDurationMinutes}
-                    onChange={(e) => handleCalendarFieldChange("slotDurationMinutes", e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  />
+                {error && (
+                  <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+                    <AlertTriangle className="h-4 w-4" />
+                    {error}
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={saving}
+                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    {saving ? "Speichern..." : "Änderungen speichern"}
+                  </button>
+                  {saved && (
+                    <span className="flex items-center gap-1 text-sm font-medium text-emerald-400">
+                      <CheckCircle className="h-4 w-4" />
+                      Gespeichert
+                    </span>
+                  )}
                 </div>
               </div>
+            </div>
+          )}
+        </div>
 
-              <div>
-                <div className="text-sm font-medium text-zinc-300">Arbeitszeiten</div>
-                <div className="mt-3 space-y-3">
-                  {CALENDAR_DAYS.map((day) => {
-                    const range = calendarForm.hours?.[day.key]?.[0] ?? "";
-                    const [start, end] = range.split("-");
-                    const isOpen = Boolean(range);
-                    return (
-                      <div
-                        key={day.key}
-                        className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="text-sm font-medium text-white">{day.label}</div>
-                        <div className="flex flex-1 flex-wrap items-center gap-3 sm:justify-end">
-                          <label className="flex items-center gap-2 text-xs text-zinc-400">
-                            <input
-                              type="checkbox"
-                              checked={isOpen}
-                              onChange={() => handleCalendarDayToggle(day.key)}
-                              className="h-4 w-4 rounded border-zinc-600 bg-zinc-700 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0"
-                            />
-                            Offen
-                          </label>
-                          <input
-                            type="time"
-                            value={start || "07:00"}
-                            disabled={!isOpen}
-                            onChange={(e) => handleCalendarDayRangeChange(day.key, e.target.value, end || "21:00")}
-                            className="rounded-lg border border-white/10 bg-zinc-950/40 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-                          />
-                          <span className="text-xs text-zinc-500">bis</span>
-                          <input
-                            type="time"
-                            value={end || "21:00"}
-                            disabled={!isOpen}
-                            onChange={(e) => handleCalendarDayRangeChange(day.key, start || "07:00", e.target.value)}
-                            className="rounded-lg border border-white/10 bg-zinc-950/40 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-                          />
-                        </div>
+        {/* Benachrichtigungen */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
+          <button
+            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
+            onClick={() => toggleCard("notifications")}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500">
+              <Bell className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-white text-sm">Benachrichtigungen</div>
+              <div className="text-xs text-zinc-500 mt-0.5">Wähle, wann wir dich informieren sollen</div>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "notifications" ? "rotate-180" : ""}`} />
+          </button>
+          {openCard === "notifications" && (
+            <div className="px-5 pb-5 border-t border-white/5">
+              <div className="pt-4 space-y-3">
+                {[
+                  { key: "newLeads", label: "Neue Leads per E-Mail", desc: `Erhalte eine E-Mail bei neuen ${labels.bookingPlural}` },
+                  { key: "botErrors", label: "Bot-Fehler / Fallbacks", desc: "Benachrichtigung wenn der Bot nicht antworten konnte" },
+                  { key: "integrationExpiry", label: "Integration läuft ab", desc: "Warnung bevor dein Instagram-Token abläuft" },
+                  { key: "monthlyReport", label: "Monatlicher Performance-Report", desc: "Zusammenfassung deiner Automation-Statistiken" },
+                ].map(({ key, label, desc }) => (
+                  <label key={key} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10 cursor-pointer">
+                    <div>
+                      <span className="text-sm font-medium text-white">{label}</span>
+                      <p className="text-xs text-zinc-500">{desc}</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={notifications[key as keyof typeof notifications]}
+                      onChange={(e) => setNotifications({ ...notifications, [key]: e.target.checked })}
+                      className="h-5 w-5 rounded border-zinc-600 bg-zinc-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Branche */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
+          <button
+            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
+            onClick={() => toggleCard("branche")}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-white text-sm">Branche</div>
+              <div className="text-xs text-zinc-500 mt-0.5">Wähle, welche Default-Flows wir dir zeigen sollen</div>
+            </div>
+            {vertical && (
+              <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400 shrink-0">
+                {VERTICAL_OPTIONS.find((o) => o.key === vertical)?.label ?? vertical}
+              </span>
+            )}
+            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "branche" ? "rotate-180" : ""}`} />
+          </button>
+          {openCard === "branche" && (
+            <div className="px-5 pb-5 border-t border-white/5">
+              <div className="pt-4 space-y-4">
+                {calendarLoading ? (
+                  <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+                    Branchen-Einstellungen werden geladen...
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {VERTICAL_OPTIONS.map((option) => {
+                        const isActive = vertical === option.key;
+                        return (
+                          <button
+                            key={option.key}
+                            type="button"
+                            disabled={verticalSaving || !canEditVertical}
+                            onClick={() => handleVerticalChange(option.key)}
+                            className={`flex h-full flex-col rounded-2xl border px-4 py-3 text-left transition ${
+                              isActive
+                                ? "border-emerald-500/60 bg-emerald-500/10"
+                                : "border-white/10 bg-white/5 hover:border-emerald-400/40 hover:bg-emerald-500/10"
+                            }`}
+                          >
+                            <div className="text-sm font-semibold text-white">{option.label}</div>
+                            <div className="mt-2 text-xs text-zinc-400">{option.description}</div>
+                            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-zinc-500">
+                              {option.examples.map((example) => (
+                                <span key={example} className="rounded-full border border-white/10 px-2 py-1">
+                                  {example}
+                                </span>
+                              ))}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {!canEditVertical && (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                        Nur Owner kann die Branche ändern.
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {calendarError && (
-                <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
-                  <AlertTriangle className="h-4 w-4" />
-                  {calendarError}
-                </div>
-              )}
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleSaveCalendarSettings}
-                  disabled={calendarSaving}
-                  className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 disabled:opacity-50"
-                >
-                  <Save className="h-4 w-4" />
-                  {calendarSaving ? "Speichern..." : "Kalender speichern"}
-                </button>
-                {calendarNotice && (
-                  <span className="flex items-center gap-1 text-sm font-medium text-emerald-400">
-                    <CheckCircle className="h-4 w-4" />
-                    {calendarNotice}
-                  </span>
+                    )}
+                    {verticalNotice && (
+                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                        {verticalNotice}
+                      </div>
+                    )}
+                    {verticalError && (
+                      <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                        {verticalError}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Team Section */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-500">
-              <Users className="h-5 w-5 text-white" />
+        {/* Kalender & Verfügbarkeit */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
+          <button
+            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
+            onClick={() => toggleCard("kalender")}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
+              <Clock className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Team & Rollen</h2>
-              <p className="text-sm text-zinc-400">Verwalte, wer Zugriff hat</p>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-white text-sm">Kalender & Verfügbarkeit</div>
+              <div className="text-xs text-zinc-500 mt-0.5">Arbeitszeiten, Slots und Buchungsfenster</div>
             </div>
-          </div>
-
-          <div className="mt-6 space-y-3">
-            {teamLoading ? (
-              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
-                Team wird geladen...
-              </div>
-            ) : teamError ? (
-              <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
-                {teamError}
-              </div>
-            ) : sortedMembers.length === 0 ? (
-              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
-                Keine Team-Mitglieder gefunden.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {sortedMembers.map((member) => {
-                  const isCurrentUser = member.userId === currentUserId;
-                  const canEditMember =
-                    canManageTeam &&
-                    (currentUserRole === "owner" || member.role !== "owner");
-                  const label = member.fullName || member.email || member.userId;
-                  const secondary =
-                    member.fullName && member.email ? member.email : null;
-                  return (
-                    <div
-                      key={member.userId}
-                      className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-white">
-                            {label}
-                          </span>
-                          {isCurrentUser && (
-                            <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-zinc-300">
-                              Du
-                            </span>
-                          )}
+            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "kalender" ? "rotate-180" : ""}`} />
+          </button>
+          {openCard === "kalender" && (
+            <div className="px-5 pb-5 border-t border-white/5">
+              <div className="pt-4">
+                {calendarLoading ? (
+                  <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+                    Kalender-Einstellungen werden geladen...
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {/* Grundeinstellungen */}
+                    <div className="overflow-hidden rounded-xl border border-white/10 divide-y divide-white/5">
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <div>
+                          <div className="text-sm font-medium text-white">Zeitzone</div>
+                          <div className="text-xs text-zinc-500 mt-0.5">Für Buchungszeiten und Kalender-Events</div>
                         </div>
-                        {secondary && (
-                          <div className="text-xs text-zinc-500">{secondary}</div>
-                        )}
+                        <input
+                          type="text"
+                          value={calendarForm.timeZone}
+                          onChange={(e) => handleCalendarFieldChange("timeZone", e.target.value)}
+                          className="w-36 rounded-lg border border-white/10 bg-zinc-950/40 px-3 py-1.5 text-right text-sm text-white focus:border-emerald-500 focus:outline-none"
+                          placeholder="Europe/Berlin"
+                        />
                       </div>
-                      <div className="flex items-center gap-3">
-                        {canManageTeam ? (
-                          <select
-                            value={member.role}
-                            onChange={(e) =>
-                              updateMemberRole(member.userId, e.target.value as TeamRole)
-                            }
-                            disabled={!canEditMember || teamSavingId === member.userId}
-                            className="app-select disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {ROLE_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className="rounded-lg bg-white/10 px-3 py-1 text-xs font-medium text-zinc-300">
-                            {ROLE_LABELS[member.role]}
-                          </span>
-                        )}
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <div>
+                          <div className="text-sm font-medium text-white">Buchungsfenster</div>
+                          <div className="text-xs text-zinc-500 mt-0.5">Wie weit im Voraus können Kunden buchen?</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            max={90}
+                            value={calendarForm.bookingWindowDays}
+                            onChange={(e) => handleCalendarFieldChange("bookingWindowDays", e.target.value)}
+                            className="w-16 rounded-lg border border-white/10 bg-zinc-950/40 px-3 py-1.5 text-right text-sm text-white focus:border-emerald-500 focus:outline-none"
+                          />
+                          <span className="text-xs text-zinc-500 w-8">Tage</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <div>
+                          <div className="text-sm font-medium text-white">Termindauer</div>
+                          <div className="text-xs text-zinc-500 mt-0.5">Wie lange dauert ein Termin bei dir?</div>
+                        </div>
+                        <select
+                          value={calendarForm.slotDurationMinutes}
+                          onChange={(e) => handleCalendarFieldChange("slotDurationMinutes", e.target.value)}
+                          className="app-select"
+                        >
+                          {[15, 30, 45, 60, 90, 120].map((min) => (
+                            <option key={min} value={min}>{min} Min.</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
-                  );
-                })}
+
+                    {/* Öffnungszeiten */}
+                    <div>
+                      <div className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-2">Öffnungszeiten</div>
+                      <div className="overflow-hidden rounded-xl border border-white/10 divide-y divide-white/5">
+                        {CALENDAR_DAYS.map((day) => {
+                          const range = calendarForm.hours?.[day.key]?.[0] ?? "";
+                          const [start, end] = range.split("-");
+                          const isOpen = Boolean(range);
+                          return (
+                            <div key={day.key} className={`flex items-center gap-3 px-4 py-2.5 ${!isOpen ? "opacity-50" : ""}`}>
+                              <span className="w-24 text-sm font-medium text-white shrink-0">{day.label}</span>
+                              <label className="flex items-center cursor-pointer shrink-0">
+                                <input
+                                  type="checkbox"
+                                  checked={isOpen}
+                                  onChange={() => handleCalendarDayToggle(day.key)}
+                                  className="h-4 w-4 rounded border-zinc-600 bg-zinc-700 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0"
+                                />
+                              </label>
+                              {isOpen ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <input
+                                    type="time"
+                                    value={start || "07:00"}
+                                    onChange={(e) => handleCalendarDayRangeChange(day.key, e.target.value, end || "21:00")}
+                                    className="rounded-lg border border-white/10 bg-zinc-950/40 px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-500"
+                                  />
+                                  <span className="text-zinc-600 text-xs">–</span>
+                                  <input
+                                    type="time"
+                                    value={end || "21:00"}
+                                    onChange={(e) => handleCalendarDayRangeChange(day.key, start || "07:00", e.target.value)}
+                                    className="rounded-lg border border-white/10 bg-zinc-950/40 px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-500"
+                                  />
+                                </div>
+                              ) : (
+                                <span className="text-xs text-zinc-600">Geschlossen</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {calendarError && (
+                      <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+                        <AlertTriangle className="h-4 w-4" />
+                        {calendarError}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={handleSaveCalendarSettings}
+                        disabled={calendarSaving}
+                        className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 disabled:opacity-50"
+                      >
+                        <Save className="h-4 w-4" />
+                        {calendarSaving ? "Speichern..." : "Speichern"}
+                      </button>
+                      {calendarNotice && (
+                        <span className="flex items-center gap-1 text-sm font-medium text-emerald-400">
+                          <CheckCircle className="h-4 w-4" />
+                          {calendarNotice}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-
-            {!teamLoading && !teamError && teamNotice && (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
-                {teamNotice}
-              </div>
-            )}
-
-            {!teamLoading && !teamError && !canManageTeam && (
-              <p className="text-xs text-zinc-500">
-                Rollen können nur von Owner/Admin geändert werden.
-              </p>
-            )}
-
-            {!teamLoading && !teamError && canManageTeam && ownerCount <= 1 && (
-              <p className="text-xs text-zinc-500">
-                Mindestens ein Owner muss bestehen bleiben.
-              </p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* API Access Section */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
+        {/* Team & Rollen */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
+          <button
+            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
+            onClick={() => toggleCard("team")}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-500">
+              <Users className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-white text-sm">Team & Rollen</div>
+              <div className="text-xs text-zinc-500 mt-0.5">Verwalte, wer Zugriff hat</div>
+            </div>
+            {!teamLoading && teamMembers.length > 0 && (
+              <span className="rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-400 shrink-0">
+                {teamMembers.length} {teamMembers.length === 1 ? "Mitglied" : "Mitglieder"}
+              </span>
+            )}
+            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "team" ? "rotate-180" : ""}`} />
+          </button>
+          {openCard === "team" && (
+            <div className="px-5 pb-5 border-t border-white/5">
+              <div className="pt-4 space-y-3">
+                {teamLoading ? (
+                  <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+                    Team wird geladen...
+                  </div>
+                ) : teamError ? (
+                  <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+                    {teamError}
+                  </div>
+                ) : sortedMembers.length === 0 ? (
+                  <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+                    Keine Team-Mitglieder gefunden.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {sortedMembers.map((member) => {
+                      const isCurrentUser = member.userId === currentUserId;
+                      const canEditMember = canManageTeam && (currentUserRole === "owner" || member.role !== "owner");
+                      const label = member.fullName || member.email || member.userId;
+                      const secondary = member.fullName && member.email ? member.email : null;
+                      return (
+                        <div
+                          key={member.userId}
+                          className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-white">{label}</span>
+                              {isCurrentUser && (
+                                <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-zinc-300">Du</span>
+                              )}
+                            </div>
+                            {secondary && <div className="text-xs text-zinc-500">{secondary}</div>}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {canManageTeam ? (
+                              <select
+                                value={member.role}
+                                onChange={(e) => updateMemberRole(member.userId, e.target.value as TeamRole)}
+                                disabled={!canEditMember || teamSavingId === member.userId}
+                                className="app-select disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {ROLE_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className="rounded-lg bg-white/10 px-3 py-1 text-xs font-medium text-zinc-300">
+                                {ROLE_LABELS[member.role]}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {!teamLoading && !teamError && teamNotice && (
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+                    {teamNotice}
+                  </div>
+                )}
+                {!teamLoading && !teamError && !canManageTeam && (
+                  <p className="text-xs text-zinc-500">Rollen können nur von Owner/Admin geändert werden.</p>
+                )}
+                {!teamLoading && !teamError && canManageTeam && ownerCount <= 1 && (
+                  <p className="text-xs text-zinc-500">Mindestens ein Owner muss bestehen bleiben.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* API-Zugriff */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
+          <button
+            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
+            onClick={() => toggleCard("api")}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
               <Key className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">API-Zugriff</h2>
-              <p className="text-sm text-zinc-400">Für Webhooks oder externe Integrationen</p>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-white text-sm">API-Zugriff</div>
+              <div className="text-xs text-zinc-500 mt-0.5">Für Webhooks oder externe Integrationen</div>
             </div>
-          </div>
-
-          <div className="mt-6">
-            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-              <p className="text-xs font-medium text-zinc-400">API-Schlüssel</p>
-              <div className="mt-2 flex items-center gap-2">
-                <code className="flex-1 rounded-lg bg-zinc-800 px-3 py-2 font-mono text-xs text-zinc-300">
-                  wesponde_live_••••••••••••••••
-                </code>
-                <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/10 hover:text-white">
-                  Kopieren
+            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "api" ? "rotate-180" : ""}`} />
+          </button>
+          {openCard === "api" && (
+            <div className="px-5 pb-5 border-t border-white/5">
+              <div className="pt-4 space-y-4">
+                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                  <p className="text-xs font-medium text-zinc-400">API-Schlüssel</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <code className="flex-1 rounded-lg bg-zinc-800 px-3 py-2 font-mono text-xs text-zinc-300">
+                      wesponde_live_••••••••••••••••
+                    </code>
+                    <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/10 hover:text-white">
+                      Kopieren
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-zinc-500">
+                  Verwende diesen Schlüssel, um Wesponde mit anderen Tools zu verbinden. Teile ihn niemals öffentlich.
+                </p>
+                <button className="rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:shadow-lg hover:shadow-indigo-500/25">
+                  Neuen Schlüssel generieren
                 </button>
               </div>
             </div>
-            <p className="mt-3 text-xs text-zinc-500">
-              Verwende diesen Schlüssel, um Wesponde mit anderen Tools zu verbinden. Teile ihn niemals öffentlich.
-            </p>
-            <button className="mt-4 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:shadow-lg hover:shadow-indigo-500/25">
-              Neuen Schlüssel generieren
-            </button>
-          </div>
+          )}
         </div>
 
-        {/* Security Section */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-pink-500">
+        {/* Sicherheit */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
+          <button
+            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
+            onClick={() => toggleCard("sicherheit")}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-pink-500">
               <Shield className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Sicherheit</h2>
-              <p className="text-sm text-zinc-400">Konto-Sicherheit und Abmeldung</p>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-white text-sm">Sicherheit</div>
+              <div className="text-xs text-zinc-500 mt-0.5">Konto-Sicherheit und Abmeldung</div>
             </div>
-          </div>
-
-          <div className="mt-6 space-y-4">
-            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-              <p className="text-sm font-medium text-white">Letzte Anmeldung</p>
-              <p className="mt-1 text-xs text-zinc-400">Heute, von diesem Gerät</p>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-              <p className="text-sm font-medium text-white">Passwort ändern</p>
-              <p className="mt-1 text-xs text-zinc-400">Du kannst dein Passwort über den Login-Bereich zurücksetzen.</p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleLogout}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-400 transition-all hover:bg-rose-500/20"
-          >
-            <LogOut className="h-4 w-4" />
-            Abmelden
+            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "sicherheit" ? "rotate-180" : ""}`} />
           </button>
+          {openCard === "sicherheit" && (
+            <div className="px-5 pb-5 border-t border-white/5">
+              <div className="pt-4 space-y-4">
+                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                  <p className="text-sm font-medium text-white">Letzte Anmeldung</p>
+                  <p className="mt-1 text-xs text-zinc-400">Heute, von diesem Gerät</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                  <p className="text-sm font-medium text-white">Passwort ändern</p>
+                  <p className="mt-1 text-xs text-zinc-400">Du kannst dein Passwort über den Login-Bereich zurücksetzen.</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-400 transition-all hover:bg-rose-500/20"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Abmelden
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
       </div>
     </div>
   );

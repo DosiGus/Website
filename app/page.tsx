@@ -1,5 +1,4 @@
 import Link from "next/link";
-import BetaWaitlistForm from "../components/BetaWaitlistForm";
 import PhoneMockup from "../components/PhoneMockup";
 import FlowBuilderDemo from "../components/FlowBuilderDemo";
 import WorkflowStepsStacked from "../components/WorkflowStepsStacked";
@@ -416,45 +415,6 @@ export default function HomePage() {
 
           <div className="mt-10 sm:mt-16">
             <FaqAccordion faqs={faqs} />
-          </div>
-        </div>
-      </section>
-
-      {/* ==================== BETA SIGNUP SECTION ==================== */}
-      <section id="beta" className="relative py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-zinc-900/50" />
-        <div className="absolute left-0 top-0 hidden h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px] sm:block" />
-        <div className="absolute bottom-0 right-0 hidden h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-            <div>
-              <span className="inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-400 sm:text-xs">
-                Kontakt
-              </span>
-              <h2 className="mt-3 font-display text-3xl font-medium tracking-tight sm:mt-4 sm:text-4xl md:text-5xl">
-                Persönliches Onboarding für Partner
-              </h2>
-              <p className="mt-3 text-sm text-zinc-400 sm:mt-4 sm:text-lg">
-                Persönlicher Setup, geprüfte Abläufe, live in unter zwei Wochen.
-              </p>
-              <ul className="mt-6 space-y-3 sm:mt-8 sm:space-y-4">
-                {[
-                  "Persönliches Onboarding & Ablauf-Setup",
-                  "Integration von Meta & WhatsApp",
-                  "Dashboard-Zugang für dein Team",
-                  "Dedicated Success Manager",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-2 text-sm text-zinc-300 sm:gap-3 sm:text-base">
-                    <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-500 sm:h-5 sm:w-5" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <BetaWaitlistForm />
-            </div>
           </div>
         </div>
       </section>
