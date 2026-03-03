@@ -136,8 +136,8 @@ export const WIZARD_COPY: Record<VerticalKey, WizardCopy> = {
   },
 };
 
-export const getWizardCopy = (vertical?: VerticalKey | null): WizardCopy =>
-  WIZARD_COPY[vertical ?? "gastro"];
+export const getWizardCopy = (vertical?: VerticalKey | null | string): WizardCopy =>
+  WIZARD_COPY[(vertical as VerticalKey)] ?? WIZARD_COPY["gastro"];
 
 export type BookingLabels = {
   bookingSingular: string;

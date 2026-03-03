@@ -101,7 +101,17 @@ export const defaultNodes: Node[] = buildDefaultNodes("gastro");
 export const defaultEdges: Edge[] = buildDefaultEdges("gastro");
 export const defaultTriggers: FlowTrigger[] = buildDefaultTriggers("gastro");
 
-const buildDefaultMetadata = (vertical?: VerticalKey | null): FlowMetadata => {
+const buildDefaultMetadata = (
+  vertical?: VerticalKey | null,
+  flowType?: "reservation" | "custom",
+): FlowMetadata => {
+  if (flowType === "custom") {
+    return {
+      version: "1.0",
+      output_config: { type: "custom", requiredFields: [] },
+    };
+  }
+
   const requiredFields =
     vertical === "gastro" || !vertical
       ? ["name", "date", "time", "guestCount"]
@@ -119,9 +129,37 @@ const buildDefaultMetadata = (vertical?: VerticalKey | null): FlowMetadata => {
 
 export const defaultMetadata: FlowMetadata = buildDefaultMetadata("gastro");
 
-export const getDefaultFlowPreset = (vertical?: VerticalKey | null) => ({
-  nodes: buildDefaultNodes(vertical),
-  edges: buildDefaultEdges(vertical),
-  triggers: buildDefaultTriggers(vertical),
-  metadata: buildDefaultMetadata(vertical),
-});
+const buildCustomDefaultNodes = (): Node[] => [
+  {
+    id: "start",
+    position: { x: 120, y: 80 },
+    type: "wesponde",
+    data: {
+      label: "Hallo! Wie kann ich dir helfen?",
+      text: "Hallo! Wie kann ich dir helfen?",
+      variant: "message",
+      inputMode: "buttons",
+      quickReplies: [],
+    },
+  },
+];
+
+export const getDefaultFlowPreset = (
+  vertical?: VerticalKey | null,
+  flowType?: "reservation" | "custom",
+) => {
+  if (flowType === "custom") {
+    return {
+      nodes: buildCustomDefaultNodes(),
+      edges: [] as Edge[],
+      triggers: [] as FlowTrigger[],
+      metadata: buildDefaultMetadata(vertical, "custom"),
+    };
+  }
+  return {
+    nodes: buildDefaultNodes(vertical),
+    edges: buildDefaultEdges(vertical),
+    triggers: buildDefaultTriggers(vertical),
+    metadata: buildDefaultMetadata(vertical),
+  };
+};

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Loader2, Sparkles, FileText, LayoutTemplate, X, ArrowLeft } from "lucide-react";
+import { Eye, Loader2, Sparkles, FileText, LayoutTemplate, X, ArrowLeft, CalendarCheck, Zap } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../../lib/supabaseBrowserClient";
 import type { FlowTemplate } from "../../../../lib/flowTemplates";
 import FlowSetupWizard from "../../../../components/app/FlowSetupWizard";
@@ -11,6 +11,7 @@ import type { Node, Edge } from "reactflow";
 import type { FlowMetadata, FlowTrigger } from "../../../../lib/flowTypes";
 import { getBookingLabels, getDefaultTemplateVertical } from "../../../../lib/verticals";
 import useAccountVertical from "../../../../lib/useAccountVertical";
+import { getDefaultFlowPreset } from "../../../../lib/defaultFlow";
 
 type CreationMode = "choose" | "wizard" | "empty" | "template";
 
@@ -28,17 +29,33 @@ export default function NewFlowPage() {
   const labels = getBookingLabels(accountVertical);
   const [previewTemplate, setPreviewTemplate] = useState<FlowTemplate | null>(null);
   const [creationMode, setCreationMode] = useState<CreationMode>("choose");
+  const [flowType, setFlowType] = useState<"reservation" | "custom">("reservation");
+
+  const handleFlowTypeChange = (newType: "reservation" | "custom") => {
+    setFlowType(newType);
+    setVerticalFilter("alle");
+  };
 
   useEffect(() => {
     async function loadTemplates() {
       setLoadingTemplates(true);
-      const response = await fetch("/api/templates");
-      const data = await response.json();
-      setTemplates(data);
-      setLoadingTemplates(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const response = await fetch("/api/templates", {
+          headers: session?.access_token
+            ? { authorization: `Bearer ${session.access_token}` }
+            : {},
+        });
+        const data = await response.json();
+        setTemplates(Array.isArray(data) ? data : []);
+      } catch {
+        setTemplates([]);
+      } finally {
+        setLoadingTemplates(false);
+      }
     }
     loadTemplates();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     if (!accountVertical) return;
@@ -48,7 +65,7 @@ export default function NewFlowPage() {
     }
   }, [accountVertical]);
 
-  const createFlow = async (templateId?: string) => {
+  const createFlow = async (templateId?: string, overrideMetadata?: FlowMetadata) => {
     setStatus("creating");
     setError(null);
     const {
@@ -64,7 +81,11 @@ export default function NewFlowPage() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ name: flowName, templateId }),
+      body: JSON.stringify({
+        name: flowName,
+        templateId,
+        ...(overrideMetadata ? { metadata: overrideMetadata } : {}),
+      }),
     });
     if (!response.ok) {
       const message = await response.json();
@@ -118,12 +139,24 @@ export default function NewFlowPage() {
   };
 
   const uniqueVerticals = useMemo(() => {
-    const values = templates.map((template) => template.vertical);
+    const values = templates
+      .filter((t) => {
+        const isFreeTemplate = t.vertical === "Freier Flow";
+        return flowType === "custom" ? isFreeTemplate : !isFreeTemplate;
+      })
+      .map((t) => t.vertical);
     return ["alle", ...Array.from(new Set(values))];
-  }, [templates]);
+  }, [templates, flowType]);
 
   const filteredTemplates = useMemo(() => {
     return templates.filter((template) => {
+      // Filter by flowType
+      const isFreeTemplate = template.vertical === "Freier Flow";
+      if (flowType === "custom" && !isFreeTemplate) return false;
+      if (flowType === "reservation" && isFreeTemplate) return false;
+      // Hide system-only templates from the picker
+      if ((template.metadata as any)?.systemTemplate) return false;
+
       const matchesSearch =
         template.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
         template.description.toLowerCase().includes(templateSearch.toLowerCase());
@@ -135,7 +168,7 @@ export default function NewFlowPage() {
             : template.vertical === verticalFilter || template.vertical === "Bewertungen";
       return matchesSearch && matchesVertical;
     });
-  }, [templates, templateSearch, verticalFilter]);
+  }, [templates, templateSearch, verticalFilter, flowType]);
 
   // Show wizard if in wizard mode
   if (creationMode === "wizard") {
@@ -186,7 +219,20 @@ export default function NewFlowPage() {
             onChange={(event) => setFlowName(event.target.value)}
           />
           <button
-            onClick={() => createFlow()}
+            onClick={() => {
+              if (flowType === "custom") {
+                const preset = getDefaultFlowPreset(accountVertical, "custom");
+                createFlowFromWizard({
+                  name: flowName,
+                  nodes: preset.nodes,
+                  edges: preset.edges,
+                  triggers: preset.triggers,
+                  metadata: preset.metadata,
+                });
+              } else {
+                createFlow();
+              }
+            }}
             disabled={status === "creating"}
             className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 disabled:opacity-70"
           >
@@ -212,28 +258,56 @@ export default function NewFlowPage() {
           <p className="mt-2 text-zinc-400">Wähle eine Option, um deinen Flow zu erstellen.</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {/* Wizard Option */}
+        {/* Flow-Typ Selector */}
+        <div className="flex justify-center gap-2">
           <button
-            onClick={() => setCreationMode("wizard")}
-            className="group relative flex flex-col items-start rounded-2xl border-2 border-indigo-500/50 bg-indigo-500/10 p-6 text-left transition-all hover:border-indigo-500 hover:bg-indigo-500/15"
+            onClick={() => handleFlowTypeChange("reservation")}
+            className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all ${
+              flowType === "reservation"
+                ? "border-indigo-500 bg-indigo-500/20 text-indigo-300"
+                : "border-white/10 bg-zinc-900/50 text-zinc-400 hover:text-white"
+            }`}
           >
-            <div className="absolute -top-3 right-4">
-              <span className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-1 text-xs font-semibold text-white">
-                Empfohlen
-              </span>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <h3 className="mt-4 text-lg font-semibold text-white">Setup-Assistent</h3>
-            <p className="mt-2 text-sm text-zinc-400">
-              Beantworte 5 einfache Fragen und wir erstellen deinen {labels.bookingSingular}-Flow automatisch.
-            </p>
-            <span className="mt-4 text-sm font-semibold text-indigo-400 transition-colors group-hover:text-indigo-300">
-              Assistent starten →
-            </span>
+            <CalendarCheck className="h-4 w-4" />
+            Buchungs-Flow
           </button>
+          <button
+            onClick={() => handleFlowTypeChange("custom")}
+            className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all ${
+              flowType === "custom"
+                ? "border-violet-500 bg-violet-500/20 text-violet-300"
+                : "border-white/10 bg-zinc-900/50 text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Zap className="h-4 w-4" />
+            Freier Flow
+          </button>
+        </div>
+
+        <div className={`grid gap-4 ${flowType === "reservation" ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+          {/* Wizard Option — only for booking flows */}
+          {flowType === "reservation" && (
+            <button
+              onClick={() => setCreationMode("wizard")}
+              className="group relative flex flex-col items-start rounded-2xl border-2 border-indigo-500/50 bg-indigo-500/10 p-6 text-left transition-all hover:border-indigo-500 hover:bg-indigo-500/15"
+            >
+              <div className="absolute -top-3 right-4">
+                <span className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-1 text-xs font-semibold text-white">
+                  Empfohlen
+                </span>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold text-white">Setup-Assistent</h3>
+              <p className="mt-2 text-sm text-zinc-400">
+                Beantworte 5 einfache Fragen und wir erstellen deinen {labels.bookingSingular}-Flow automatisch.
+              </p>
+              <span className="mt-4 text-sm font-semibold text-indigo-400 transition-colors group-hover:text-indigo-300">
+                Assistent starten →
+              </span>
+            </button>
+          )}
 
           {/* Template Option */}
           <button
@@ -245,7 +319,9 @@ export default function NewFlowPage() {
             </div>
             <h3 className="mt-4 text-lg font-semibold text-white">Aus Template</h3>
             <p className="mt-2 text-sm text-zinc-400">
-              Wähle ein fertiges Template für deine Branche und passe es an.
+              {flowType === "custom"
+                ? "Wähle eine fertige Vorlage für deinen Freien Flow."
+                : "Wähle ein fertiges Template für deine Branche und passe es an."}
             </p>
             <span className="mt-4 text-sm font-semibold text-indigo-400 transition-colors group-hover:text-indigo-300">
               Templates ansehen →

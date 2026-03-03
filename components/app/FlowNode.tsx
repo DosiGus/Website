@@ -11,6 +11,8 @@ import {
   CheckCircle,
   GitBranch,
   Image as ImageIcon,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 
 type FlowNodeData = Node["data"] & {
@@ -18,7 +20,7 @@ type FlowNodeData = Node["data"] & {
   imageUrl?: string | null;
   quickReplies?: { id: string; label: string }[];
   isStart?: boolean;
-  variant?: "message" | "choice" | "input" | "confirmation";
+  variant?: "message" | "choice" | "input" | "confirmation" | "link" | "info";
   inputMode?: "buttons" | "free_text";
   collects?: string;
 };
@@ -60,6 +62,20 @@ const nodeStyles = {
     ring: 'ring-pink-500/50',
     label: 'Bestätigung',
   },
+  link: {
+    headerBg: 'bg-gradient-to-r from-cyan-500 to-sky-500',
+    headerText: 'text-white',
+    icon: ExternalLink,
+    ring: 'ring-cyan-500/50',
+    label: 'Link',
+  },
+  info: {
+    headerBg: 'bg-gradient-to-r from-slate-400 to-slate-500',
+    headerText: 'text-white',
+    icon: Info,
+    ring: 'ring-slate-400/50',
+    label: 'Info',
+  },
 };
 
 // Determine node type for styling
@@ -68,6 +84,8 @@ function getNodeType(data: FlowNodeData): keyof typeof nodeStyles {
   if (data.inputMode === 'free_text') return 'input';
   if (data.variant === 'choice') return 'choice';
   if (data.variant === 'confirmation') return 'confirmation';
+  if (data.variant === 'link') return 'link';
+  if (data.variant === 'info') return 'info';
   return 'message';
 }
 

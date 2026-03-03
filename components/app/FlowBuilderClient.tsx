@@ -24,9 +24,12 @@ import {
   ReactFlowInstance,
 } from "reactflow";
 import {
+  CalendarCheck,
   CheckCircle2,
   Edit2,
+  ExternalLink,
   Focus,
+  Info,
   MessageSquare,
   Plus,
   Search,
@@ -36,6 +39,7 @@ import {
   Trash2,
   TriangleAlert,
   X,
+  Zap,
 } from "lucide-react";
 import FlowBuilderCanvas from "./FlowBuilderCanvas";
 import FlowListBuilder from "./FlowListBuilder";
@@ -48,7 +52,7 @@ import {
   defaultMetadata,
 } from "../../lib/defaultFlow";
 import { lintFlow, FlowLintWarning } from "../../lib/flowLint";
-import type { FlowMetadata, FlowTrigger, FlowQuickReply } from "../../lib/flowTypes";
+import type { FlowMetadata, FlowTrigger, FlowQuickReply, FlowOutputConfig } from "../../lib/flowTypes";
 import useAccountVertical from "../../lib/useAccountVertical";
 import { getBookingLabels } from "../../lib/verticals";
 
@@ -239,6 +243,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [builderMode, setBuilderMode] = useState<BuilderMode>("simple");
   const [isInspectorOpen, setInspectorOpen] = useState(false);
   const [isAddMenuOpen, setAddMenuOpen] = useState(false);
+  const [showFlowSettings, setShowFlowSettings] = useState(false);
   const { vertical } = useAccountVertical();
   const labels = getBookingLabels(vertical);
   const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
@@ -277,6 +282,40 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     ],
     [labels.bookingAccusativeArticle, labels.bookingSingular, labels.participantsCountLabel],
   );
+
+  // Derived output config helpers
+  const outputConfig = metadata.output_config as FlowOutputConfig | undefined;
+  const outputType = outputConfig?.type ?? "reservation";
+  const requiredFields = outputConfig?.requiredFields ?? (outputType === "reservation" ? ["name", "date", "time"] : []);
+
+  const handleToggleFlowType = (newType: "reservation" | "custom") => {
+    if (newType === outputType) return;
+    if (newType === "custom") {
+      const confirmed = window.confirm(
+        "Wenn du auf Freier Flow wechselst, wird die automatische Kalender-Buchung für diesen Flow deaktiviert. Fortfahren?"
+      );
+      if (!confirmed) return;
+    }
+    const newRequiredFields =
+      newType === "reservation"
+        ? (vertical === "gastro" || !vertical ? ["name", "date", "time", "guestCount"] : ["name", "date", "time"])
+        : [];
+    setMetadata((prev) => ({
+      ...prev,
+      output_config: { type: newType, requiredFields: newRequiredFields } as FlowOutputConfig,
+    }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleToggleRequiredField = (field: string) => {
+    const current = requiredFields;
+    const next = current.includes(field) ? current.filter((f) => f !== field) : [...current, field];
+    setMetadata((prev) => ({
+      ...prev,
+      output_config: { ...((prev.output_config as FlowOutputConfig) ?? {}), requiredFields: next } as FlowOutputConfig,
+    }));
+    setHasUnsavedChanges(true);
+  };
 
   const startNodeIds = useMemo(
     () =>
@@ -528,17 +567,25 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     return { posX, posY, currentZoom };
   }, [reactFlowInstance, nodes.length]);
 
-  const addNode = useCallback((type: "message" | "choice", presetLabel?: string) => {
+  const addNode = useCallback((type: "message" | "choice" | "link" | "info", presetLabel?: string) => {
     const id = uuid();
     const { posX, posY, currentZoom } = getNewNodePosition();
+
+    const defaultLabels: Record<string, string> = {
+      message: "Neue Nachricht",
+      choice: "Auswahl",
+      link: "URL / Link",
+      info: "Info-Nachricht",
+    };
+    const nodeLabel = presetLabel ?? defaultLabels[type] ?? "Neuer Knoten";
 
     const newNode: Node = {
       id,
       type: "wesponde",
       position: { x: posX, y: posY },
       data: {
-        label: presetLabel ?? (type === "message" ? "Neue Nachricht" : "Auswahl"),
-        text: presetLabel ?? (type === "message" ? "Neue Nachricht" : "Auswahl"),
+        label: nodeLabel,
+        text: nodeLabel,
         variant: type,
         quickReplies: [],
         inputMode: "buttons",
@@ -1378,14 +1425,28 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       <header className="sticky top-0 z-20 border-b border-white/10 bg-zinc-900/80 backdrop-blur-xl">
         <div className="mx-auto max-w-screen-2xl px-6 py-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            {/* Left: Flow Name */}
-            <div className="flex items-center gap-4">
+            {/* Left: Flow Name + Flow-Type Badge */}
+            <div className="flex items-center gap-3">
               <input
                 value={flowName}
                 onChange={(event) => setFlowName(event.target.value)}
                 className="font-display text-2xl font-semibold text-white bg-transparent focus:outline-none focus:ring-0 border-0 p-0"
                 style={{ minWidth: '200px' }}
               />
+              <button
+                onClick={() => setShowFlowSettings(!showFlowSettings)}
+                title="Flow-Einstellungen"
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
+                  outputType === "reservation"
+                    ? "border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:border-indigo-500/50"
+                    : "border-violet-500/30 bg-violet-500/10 text-violet-400 hover:border-violet-500/50"
+                }`}
+              >
+                {outputType === "reservation"
+                  ? <CalendarCheck className="h-3.5 w-3.5" />
+                  : <Zap className="h-3.5 w-3.5" />}
+                {outputType === "reservation" ? "Buchungs-Flow" : "Freier Flow"}
+              </button>
               {warningBadge}
             </div>
 
@@ -1428,6 +1489,80 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               </button>
             </div>
           </div>
+
+          {/* Flow Settings Panel */}
+          {showFlowSettings && (
+            <div className="mt-4 border-t border-white/10 pt-4">
+              <div className="flex flex-wrap items-start gap-8">
+                {/* Flow-Typ */}
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Flow-Typ</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleToggleFlowType("reservation")}
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+                        outputType === "reservation"
+                          ? "border-indigo-500 bg-indigo-500/20 text-indigo-300"
+                          : "border-white/10 bg-white/5 text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      <CalendarCheck className="h-3.5 w-3.5" />
+                      Buchungs-Flow
+                    </button>
+                    <button
+                      onClick={() => handleToggleFlowType("custom")}
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+                        outputType === "custom"
+                          ? "border-violet-500 bg-violet-500/20 text-violet-300"
+                          : "border-white/10 bg-white/5 text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      <Zap className="h-3.5 w-3.5" />
+                      Freier Flow
+                    </button>
+                  </div>
+                  <p className="text-xs text-zinc-500">
+                    {outputType === "reservation"
+                      ? "Erstellt automatisch Buchungen wenn alle Pflichtfelder vorliegen."
+                      : "Keine automatische Buchung — freie Konversation."}
+                  </p>
+                </div>
+
+                {/* Required Fields — only for reservation */}
+                {outputType === "reservation" && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Pflichtfelder</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { key: "name", label: "Name" },
+                        { key: "date", label: "Datum" },
+                        { key: "time", label: "Uhrzeit" },
+                        { key: "guestCount", label: labels.participantsCountLabel },
+                        { key: "phone", label: "Telefon" },
+                        { key: "email", label: "E-Mail" },
+                      ].map(({ key, label }) => (
+                        <button
+                          key={key}
+                          onClick={() => handleToggleRequiredField(key)}
+                          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all ${
+                            requiredFields.includes(key)
+                              ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-300"
+                              : "border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${requiredFields.includes(key) ? "bg-indigo-400" : "bg-zinc-600"}`} />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-zinc-500">
+                      Blau = Pflichtfeld. Buchung wird erst erstellt wenn alle Pflichtfelder vorliegen.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -1642,6 +1777,24 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                       <Shapes className="h-4 w-4 text-white" />
                     </div>
                     Auswahl
+                  </button>
+                  <button
+                    onClick={() => addNode("link")}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-sky-500">
+                      <ExternalLink className="h-4 w-4 text-white" />
+                    </div>
+                    Link
+                  </button>
+                  <button
+                    onClick={() => addNode("info")}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-slate-400 to-slate-500">
+                      <Info className="h-4 w-4 text-white" />
+                    </div>
+                    Info
                   </button>
                 </div>
               )}

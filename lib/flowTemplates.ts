@@ -1460,4 +1460,252 @@ export const fallbackTemplates: FlowTemplate[] = [
       },
     },
   },
+  {
+    id: "template-faq-bot",
+    slug: "faq-bot",
+    name: "FAQ Bot",
+    vertical: "Freier Flow",
+    description: "Beantworte häufige Fragen automatisch — Öffnungszeiten, Preise, Standort und mehr.",
+    nodes: [
+      {
+        id: "faq-welcome",
+        position: { x: 0, y: 160 },
+        type: "wesponde",
+        data: {
+          label: "Willkommen",
+          text: "Hallo! 👋 Womit kann ich dir helfen?",
+          variant: "message",
+          inputMode: "buttons",
+          quickReplies: [
+            { id: "qr-faq-hours", label: "Öffnungszeiten", payload: "öffnungszeiten", targetNodeId: "faq-hours" },
+            { id: "qr-faq-prices", label: "Preise", payload: "preise", targetNodeId: "faq-prices" },
+            { id: "qr-faq-location", label: "Standort", payload: "standort", targetNodeId: "faq-location" },
+            { id: "qr-faq-more", label: "Andere Frage", payload: "andere", targetNodeId: "faq-open" },
+          ],
+        },
+      },
+      {
+        id: "faq-hours",
+        position: { x: 340, y: 0 },
+        type: "wesponde",
+        data: {
+          label: "Öffnungszeiten",
+          text: "Unsere Öffnungszeiten:\n\n📅 Mo–Fr: 10:00 – 18:00 Uhr\n📅 Sa: 10:00 – 14:00 Uhr\n📅 So: geschlossen",
+          variant: "message",
+          inputMode: "buttons",
+          quickReplies: [
+            { id: "qr-faq-hours-back", label: "Weitere Fragen", payload: "zurück", targetNodeId: "faq-welcome" },
+          ],
+        },
+      },
+      {
+        id: "faq-prices",
+        position: { x: 340, y: 200 },
+        type: "wesponde",
+        data: {
+          label: "Preise",
+          text: "Hier findest du unsere aktuellen Preise:\n\n💰 [Preisübersicht einfügen]\n\nFür individuelle Angebote melde dich gerne direkt bei uns.",
+          variant: "message",
+          inputMode: "buttons",
+          quickReplies: [
+            { id: "qr-faq-prices-back", label: "Weitere Fragen", payload: "zurück", targetNodeId: "faq-welcome" },
+          ],
+        },
+      },
+      {
+        id: "faq-location",
+        position: { x: 340, y: 400 },
+        type: "wesponde",
+        data: {
+          label: "Standort",
+          text: "Du findest uns hier:\n\n📍 [Adresse einfügen]\n\n🗺️ [Google Maps Link einfügen]",
+          variant: "message",
+          inputMode: "buttons",
+          quickReplies: [
+            { id: "qr-faq-location-back", label: "Weitere Fragen", payload: "zurück", targetNodeId: "faq-welcome" },
+          ],
+        },
+      },
+      {
+        id: "faq-open",
+        position: { x: 340, y: 580 },
+        type: "wesponde",
+        data: {
+          label: "Offene Frage",
+          text: "Kein Problem! Stelle deine Frage direkt, wir antworten so schnell wie möglich. 😊",
+          variant: "message",
+          inputMode: "free_text",
+          placeholder: "Deine Frage…",
+          collects: "customQuestion",
+          quickReplies: [],
+        },
+      },
+    ],
+    edges: [
+      { id: "e-faq-hours", source: "faq-welcome", target: "faq-hours", data: { condition: "Öffnungszeiten", tone: "neutral" } },
+      { id: "e-faq-prices", source: "faq-welcome", target: "faq-prices", data: { condition: "Preise", tone: "neutral" } },
+      { id: "e-faq-location", source: "faq-welcome", target: "faq-location", data: { condition: "Standort", tone: "neutral" } },
+      { id: "e-faq-open", source: "faq-welcome", target: "faq-open", data: { condition: "Andere Frage", tone: "neutral" } },
+      { id: "e-faq-hours-back", source: "faq-hours", target: "faq-welcome", data: { condition: "Weitere Fragen", tone: "neutral" } },
+      { id: "e-faq-prices-back", source: "faq-prices", target: "faq-welcome", data: { condition: "Weitere Fragen", tone: "neutral" } },
+      { id: "e-faq-location-back", source: "faq-location", target: "faq-welcome", data: { condition: "Weitere Fragen", tone: "neutral" } },
+    ],
+    triggers: [
+      {
+        id: "trigger-faq",
+        type: "KEYWORD",
+        config: { keywords: ["info", "faq", "frage", "hilfe", "help"], matchType: "CONTAINS" },
+        startNodeId: "faq-welcome",
+      },
+    ],
+    metadata: {
+      version: "1.0",
+      output_config: { type: "custom", requiredFields: [] },
+    },
+  },
+  {
+    id: "template-feedback",
+    slug: "feedback-sammeln",
+    name: "Feedback sammeln",
+    vertical: "Freier Flow",
+    description: "Sammle Kundenfeedback nach einem Besuch — mit Bewertung und optionalem Freitext.",
+    nodes: [
+      {
+        id: "fb-start",
+        position: { x: 0, y: 160 },
+        type: "wesponde",
+        data: {
+          label: "Feedback-Anfrage",
+          text: "Danke für deinen Besuch! 😊 Wie war dein Erlebnis?",
+          variant: "message",
+          inputMode: "buttons",
+          quickReplies: [
+            { id: "qr-fb-great", label: "⭐ Sehr gut", payload: "sehr_gut", targetNodeId: "fb-positive" },
+            { id: "qr-fb-good", label: "👍 Gut", payload: "gut", targetNodeId: "fb-positive" },
+            { id: "qr-fb-ok", label: "😐 Ok", payload: "ok", targetNodeId: "fb-improve" },
+            { id: "qr-fb-bad", label: "👎 Verbesserungswürdig", payload: "schlecht", targetNodeId: "fb-improve" },
+          ],
+        },
+      },
+      {
+        id: "fb-positive",
+        position: { x: 340, y: 60 },
+        type: "wesponde",
+        data: {
+          label: "Positives Feedback",
+          text: "Das freut uns sehr! 🎉 Wenn du möchtest, hinterlasse uns gerne eine Bewertung:\n\n⭐ [Bewertungslink einfügen]",
+          variant: "message",
+          inputMode: "buttons",
+          quickReplies: [],
+        },
+      },
+      {
+        id: "fb-improve",
+        position: { x: 340, y: 280 },
+        type: "wesponde",
+        data: {
+          label: "Verbesserungs-Feedback",
+          text: "Das tut uns leid! Was können wir beim nächsten Mal besser machen?",
+          variant: "message",
+          inputMode: "free_text",
+          placeholder: "Dein Feedback…",
+          collects: "feedbackText",
+          quickReplies: [],
+        },
+      },
+      {
+        id: "fb-thanks",
+        position: { x: 680, y: 280 },
+        type: "wesponde",
+        data: {
+          label: "Danke",
+          text: "Vielen Dank für dein Feedback! Wir werden es berücksichtigen und uns verbessern. 🙏",
+          variant: "message",
+          inputMode: "buttons",
+          quickReplies: [],
+        },
+      },
+    ],
+    edges: [
+      { id: "e-fb-pos", source: "fb-start", target: "fb-positive", data: { condition: "Sehr gut / Gut", tone: "positive" } },
+      { id: "e-fb-imp", source: "fb-start", target: "fb-improve", data: { condition: "Ok / Verbesserungswürdig", tone: "negative" } },
+      { id: "e-fb-thanks", source: "fb-improve", target: "fb-thanks", data: { condition: "Feedback erhalten", tone: "neutral" } },
+    ],
+    triggers: [
+      {
+        id: "trigger-feedback",
+        type: "KEYWORD",
+        config: { keywords: ["feedback", "bewertung", "meinung", "erfahrung"], matchType: "CONTAINS" },
+        startNodeId: "fb-start",
+      },
+    ],
+    metadata: {
+      version: "1.0",
+      output_config: { type: "custom", requiredFields: [] },
+    },
+  },
+  {
+    id: "template-rabattaktion",
+    slug: "rabattaktion",
+    name: "Rabattaktion",
+    vertical: "Freier Flow",
+    description: "Teile einen Rabatt-Code mit Kunden, die sich über Instagram melden.",
+    nodes: [
+      {
+        id: "rb-start",
+        position: { x: 0, y: 160 },
+        type: "wesponde",
+        data: {
+          label: "Angebot ankündigen",
+          text: "🎉 Wir haben ein besonderes Angebot für dich! Möchtest du deinen Rabatt-Code erhalten?",
+          variant: "message",
+          inputMode: "buttons",
+          quickReplies: [
+            { id: "qr-rb-yes", label: "Ja, Code zeigen!", payload: "ja", targetNodeId: "rb-coupon" },
+            { id: "qr-rb-no", label: "Nein, danke", payload: "nein", targetNodeId: "rb-decline" },
+          ],
+        },
+      },
+      {
+        id: "rb-coupon",
+        position: { x: 340, y: 60 },
+        type: "wesponde",
+        data: {
+          label: "Rabatt-Code",
+          text: "Super! 🎁 Dein persönlicher Rabatt-Code:\n\n🏷️ SAVE10\n\nZeig diesen Code beim nächsten Besuch vor und erhalte 10% Rabatt. Gültig bis [Datum einfügen].",
+          variant: "message",
+          inputMode: "buttons",
+          quickReplies: [],
+        },
+      },
+      {
+        id: "rb-decline",
+        position: { x: 340, y: 300 },
+        type: "wesponde",
+        data: {
+          label: "Ablehnung",
+          text: "Kein Problem! Wir freuen uns auf deinen nächsten Besuch. 😊",
+          variant: "message",
+          inputMode: "buttons",
+          quickReplies: [],
+        },
+      },
+    ],
+    edges: [
+      { id: "e-rb-yes", source: "rb-start", target: "rb-coupon", data: { condition: "Ja", tone: "positive" } },
+      { id: "e-rb-no", source: "rb-start", target: "rb-decline", data: { condition: "Nein", tone: "negative" } },
+    ],
+    triggers: [
+      {
+        id: "trigger-rabatt",
+        type: "KEYWORD",
+        config: { keywords: ["rabatt", "angebot", "coupon", "deal", "code", "aktion"], matchType: "CONTAINS" },
+        startNodeId: "rb-start",
+      },
+    ],
+    metadata: {
+      version: "1.0",
+      output_config: { type: "custom", requiredFields: [] },
+    },
+  },
 ];
