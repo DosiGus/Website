@@ -19,6 +19,8 @@ type FlowSimulatorProps = {
   edges: Edge[];
   triggers: FlowTrigger[];
   onNodeSelect?: (nodeId: string) => void;
+  startNodeId?: string;
+  autoStart?: boolean;
 };
 
 export default function FlowSimulator({
@@ -26,6 +28,8 @@ export default function FlowSimulator({
   edges,
   triggers,
   onNodeSelect,
+  startNodeId: startNodeIdProp,
+  autoStart,
 }: FlowSimulatorProps) {
   const [messages, setMessages] = useState<SimulatorMessage[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
@@ -38,8 +42,8 @@ export default function FlowSimulator({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Find the start node from triggers or fallback to first node
-  const startNodeId = useMemo(() => {
+  // Derive start node from triggers or fallback to first node
+  const derivedStartNodeId = useMemo(() => {
     if (triggers.length > 0 && triggers[0].startNodeId) {
       return triggers[0].startNodeId;
     }
@@ -47,6 +51,9 @@ export default function FlowSimulator({
     const inputNode = nodes.find((n) => n.type === "input");
     return inputNode?.id || nodes[0]?.id || null;
   }, [triggers, nodes]);
+
+  // Prop override takes precedence over trigger-derived start node
+  const effectiveStartNodeId = startNodeIdProp ?? derivedStartNodeId;
 
   const findNode = useCallback(
     (nodeId: string) => nodes.find((n) => n.id === nodeId),
@@ -123,11 +130,11 @@ export default function FlowSimulator({
   );
 
   const handleStart = useCallback(() => {
-    if (!startNodeId) return;
+    if (!effectiveStartNodeId) return;
     setMessages([]);
     setIsStarted(true);
-    executeNode(startNodeId);
-  }, [startNodeId, executeNode]);
+    executeNode(effectiveStartNodeId);
+  }, [effectiveStartNodeId, executeNode]);
 
   const handleReset = useCallback(() => {
     setMessages([]);
@@ -200,8 +207,15 @@ export default function FlowSimulator({
     );
   }, [currentNodeId, findNode, findOutgoingEdges, deriveInputMode, getEffectiveQuickReplies]);
 
+  // Auto-start (and restart when startNodeId prop changes)
+  useEffect(() => {
+    if (!autoStart) return;
+    handleStart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, startNodeIdProp]);
+
   // Check if flow has no start node
-  const hasNoStartNode = !startNodeId;
+  const hasNoStartNode = !effectiveStartNodeId;
 
   // Check if current node expects free text (no quick replies, has outgoing edge)
   const expectsFreeText = useMemo(() => {

@@ -385,6 +385,11 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setEdges(newEdges);
   }, []);
 
+  const handleOpenInspector = useCallback((nodeId: string) => {
+    setSelectedNodeId(nodeId);
+    setInspectorOpen(true);
+  }, []);
+
   const handleDeleteNode = useCallback((nodeId: string) => {
     setNodes((prev) => prev.filter((n) => n.id !== nodeId));
     setEdges((prev) => prev.filter((e) => e.source !== nodeId && e.target !== nodeId));
@@ -503,12 +508,13 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setLintWarnings(lintFlow(nodes, edges, triggers).warnings);
   }, [nodes, edges, triggers]);
 
-  // Open inspector when node or edge is selected
+  // Open inspector when node or edge is selected — only in canvas (pro) mode
+  // In simple/list mode the inspector opens only via the explicit Inspect button
   useEffect(() => {
-    if (selectedNodeId || selectedEdgeId) {
+    if (builderMode === "pro" && (selectedNodeId || selectedEdgeId)) {
       setInspectorOpen(true);
     }
-  }, [selectedNodeId, selectedEdgeId]);
+  }, [builderMode, selectedNodeId, selectedEdgeId]);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -1698,10 +1704,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                 onNodesChange={handleListNodesChange}
                 onEdgesChange={handleListEdgesChange}
                 selectedNodeId={selectedNodeId}
-                onSelectNode={(id) => {
-                  setSelectedNodeId(id);
-                  setInspectorOpen(true);
-                }}
+                onSelectNode={setSelectedNodeId}
+                onOpenInspector={handleOpenInspector}
                 onAddNode={addNode}
                 onDeleteNode={handleDeleteNode}
               />

@@ -5,12 +5,14 @@ import { Node, Edge } from "reactflow";
 import {
   ArrowDown,
   ChevronRight,
+  Eye,
   Flag,
   GripVertical,
   Keyboard,
   MessageSquare,
   MoreHorizontal,
   Plus,
+  Settings2,
   Sparkles,
   Trash2,
   X,
@@ -19,6 +21,7 @@ import {
   AlertCircle,
   Zap,
 } from "lucide-react";
+import FlowSimulator from "./FlowSimulator";
 import type { FlowQuickReply, FlowTrigger } from "../../lib/flowTypes";
 import useAccountVertical from "../../lib/useAccountVertical";
 import { getBookingLabels, type BookingLabels } from "../../lib/verticals";
@@ -33,6 +36,7 @@ type FlowListBuilderProps = {
   onEdgesChange: (edges: Edge[]) => void;
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string | null) => void;
+  onOpenInspector: (nodeId: string) => void;
   onAddNode: (type: "message" | "choice", label?: string) => void;
   onDeleteNode: (nodeId: string) => void;
 };
@@ -143,6 +147,27 @@ const getCollectsLabels = (labels: BookingLabels): Record<string, string> => ({
   specialRequests: "Wünsche",
 });
 
+function IPhoneMockup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative mx-auto" style={{ width: 260 }}>
+      <div className="relative rounded-[36px] border-[7px] border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden" style={{ height: 520 }}>
+        {/* Notch bar */}
+        <div className="relative flex h-7 items-center justify-center bg-zinc-900">
+          <div className="w-20 h-4 rounded-b-xl bg-zinc-800" />
+        </div>
+        {/* Screen */}
+        <div className="overflow-hidden bg-zinc-950" style={{ height: 'calc(520px - 28px - 16px)' }}>
+          {children}
+        </div>
+        {/* Home indicator */}
+        <div className="flex h-4 items-center justify-center bg-zinc-900">
+          <div className="h-1 w-20 rounded-full bg-zinc-600" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FlowListBuilder({
   nodes,
   edges,
@@ -153,6 +178,7 @@ export default function FlowListBuilder({
   onEdgesChange,
   selectedNodeId,
   onSelectNode,
+  onOpenInspector,
   onAddNode,
   onDeleteNode,
 }: FlowListBuilderProps) {
@@ -160,6 +186,7 @@ export default function FlowListBuilder({
   const labels = getBookingLabels(vertical);
   const collectsLabels = useMemo(() => getCollectsLabels(labels), [labels]);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
+  const [previewNodeId, setPreviewNodeId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Order nodes by flow path
@@ -398,7 +425,9 @@ export default function FlowListBuilder({
   }
 
   return (
-    <div ref={containerRef} className="space-y-0">
+    <div className="flex gap-0 relative">
+      {/* Left: node list — shrinks when preview is open */}
+      <div ref={containerRef} className={`space-y-0 ${previewNodeId ? "flex-1 min-w-0" : "w-full"}`}>
       {/* Flow Header Stats */}
       <div className="mb-6 flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4">
         <div className="flex items-center gap-6">
@@ -521,15 +550,12 @@ export default function FlowListBuilder({
 
                 {/* Card Header - Always Visible */}
                 <div
-                  onClick={() => {
-                    onSelectNode(node.id);
-                    setExpanded(node.id);
-                  }}
+                  onClick={() => setExpanded(node.id)}
                   className="flex cursor-pointer items-center gap-3 p-4"
                 >
                   {/* Node Type Icon */}
                   <div className={`
-                    flex h-10 w-10 items-center justify-center rounded-xl
+                    flex h-10 w-10 items-center justify-center rounded-xl shrink-0
                     ${inputMode === 'free_text'
                       ? 'bg-gradient-to-br from-amber-400 to-orange-500'
                       : 'bg-gradient-to-br from-indigo-500 to-purple-500'
@@ -568,8 +594,31 @@ export default function FlowListBuilder({
                     </p>
                   </div>
 
-                  {/* Expand Arrow */}
-                  <ChevronRight className={`h-5 w-5 text-zinc-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Inspect button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSelectNode(node.id); onOpenInspector(node.id); }}
+                      className="rounded-lg p-1.5 text-zinc-500 hover:bg-white/10 hover:text-white transition-colors"
+                      title="Inspizieren"
+                    >
+                      <Settings2 className="h-4 w-4" />
+                    </button>
+                    {/* Preview button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPreviewNodeId(id => id === node.id ? null : node.id); }}
+                      className={`rounded-lg p-1.5 transition-colors ${
+                        previewNodeId === node.id
+                          ? 'bg-indigo-500/20 text-indigo-400'
+                          : 'text-zinc-500 hover:bg-white/10 hover:text-white'
+                      }`}
+                      title="Vorschau"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    {/* Expand arrow */}
+                    <ChevronRight className={`h-5 w-5 text-zinc-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  </div>
                 </div>
 
                 {/* Expanded Content */}
@@ -789,6 +838,29 @@ export default function FlowListBuilder({
           </button>
         </div>
       </div>
+    </div>
+
+    {/* Right: preview panel */}
+      {previewNodeId && (
+        <div className="sticky top-20 h-fit w-[300px] shrink-0 pl-4">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Vorschau</p>
+            <button onClick={() => setPreviewNodeId(null)}>
+              <X className="h-4 w-4 text-zinc-400 hover:text-white transition-colors" />
+            </button>
+          </div>
+          <IPhoneMockup>
+            <FlowSimulator
+              nodes={nodes}
+              edges={edges}
+              triggers={triggers}
+              startNodeId={previewNodeId}
+              autoStart={true}
+            />
+          </IPhoneMockup>
+        </div>
+      )}
     </div>
   );
 }
