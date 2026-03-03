@@ -1039,6 +1039,28 @@ async function processMessagingEvent(
     }
   }
 
+  // Capture custom collects fields (user-defined keys like "lieblingsfarbe" not handled above)
+  if (messageText && conversation.current_flow_id && conversation.current_node_id) {
+    const { data: flowForCollects } = await supabase
+      .from("flows")
+      .select("nodes")
+      .eq("id", conversation.current_flow_id)
+      .single();
+    if (Array.isArray(flowForCollects?.nodes)) {
+      const curNode = (flowForCollects.nodes as any[]).find(
+        (n: any) => n.id === conversation.current_node_id
+      );
+      const collectsKey = String(curNode?.data?.collects ?? "").trim();
+      const BUILTIN_COLLECTS = new Set([
+        "name", "date", "time", "guestCount", "phone", "email",
+        "specialRequests", "reviewRating", "reviewFeedback", "googleReviewUrl",
+      ]);
+      if (collectsKey && !BUILTIN_COLLECTS.has(collectsKey) && mergedVariables[collectsKey] === undefined) {
+        overrideVariables[collectsKey] = messageText.trim();
+      }
+    }
+  }
+
   const hasOverrides = Object.keys(overrideVariables).length > 0;
   if (hasOverrides) {
     mergedVariables = { ...mergedVariables, ...overrideVariables };

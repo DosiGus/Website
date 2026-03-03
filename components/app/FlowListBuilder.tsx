@@ -147,6 +147,10 @@ const getCollectsLabels = (labels: BookingLabels): Record<string, string> => ({
   specialRequests: "Wünsche",
 });
 
+const PREDEFINED_COLLECTS = ["", "name", "date", "time", "guestCount", "phone", "email", "specialRequests"];
+
+type NodeStatus = { type: "error" | "end" | null; message?: string };
+
 function IPhoneMockup({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mx-auto" style={{ width: 260 }}>
@@ -386,18 +390,18 @@ export default function FlowListBuilder({
     return node?.data?.label || "Ohne Titel";
   }, [nodes]);
 
-  // Check if node has issues (no connections)
-  const nodeHasIssue = useCallback((node: Node) => {
+  // Classify node state: configuration error, intentional end, or ok
+  const getNodeStatus = useCallback((node: Node): NodeStatus => {
     const inputMode = deriveInputMode(node, edges);
     const quickReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
 
     if (inputMode === "buttons" && quickReplies.length === 0) {
-      return "Keine Antwort-Optionen definiert";
+      return { type: "error", message: "Keine Antwort-Buttons definiert" };
     }
     if (inputMode === "free_text" && !getFreeTextTarget(node.id)) {
-      return "Kein nächster Schritt definiert";
+      return { type: "end" };
     }
-    return null;
+    return { type: null };
   }, [edges, getFreeTextTarget]);
 
   // Empty State
@@ -518,7 +522,7 @@ export default function FlowListBuilder({
           const inputMode = deriveInputMode(node, edges);
           const quickReplies = (node.data?.quickReplies ?? []) as FlowQuickReply[];
           const freeTextTarget = getFreeTextTarget(node.id);
-          const issue = nodeHasIssue(node);
+          const status = getNodeStatus(node);
           const isLast = index === orderedNodes.length - 1;
 
           return (
@@ -580,12 +584,19 @@ export default function FlowListBuilder({
                       )}
                       {inputMode === 'free_text' && (
                         <span className="shrink-0 rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-xs font-semibold text-amber-400">
-                          {(node.data as any)?.collects ? collectsLabels[(node.data as any).collects] || 'Freitext' : 'Freitext'}
+                          {(node.data as any)?.collects
+                            ? (collectsLabels[(node.data as any).collects] || (node.data as any).collects)
+                            : 'Freitext'}
                         </span>
                       )}
-                      {issue && (
-                        <span className="shrink-0 text-amber-500" title={issue}>
+                      {status.type === 'error' && (
+                        <span className="shrink-0 text-amber-500" title={status.message}>
                           <AlertCircle className="h-4 w-4" />
+                        </span>
+                      )}
+                      {status.type === 'end' && (
+                        <span className="shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-xs font-semibold text-emerald-400">
+                          Ende
                         </span>
                       )}
                     </div>
@@ -681,20 +692,51 @@ export default function FlowListBuilder({
                             <label className="mb-1 block text-xs font-medium text-amber-300">
                               Dieses Feld sammelt
                             </label>
-                            <select
-                              value={(node.data as any)?.collects ?? ""}
-                              onChange={(e) => updateFreeTextMeta(node.id, "collects", e.target.value)}
-                              className="app-select w-full"
-                            >
-                              <option value="">Keine Zuordnung</option>
-                              <option value="name">Name</option>
-                              <option value="date">Datum</option>
-                              <option value="time">Uhrzeit</option>
-                              <option value="guestCount">{labels.participantsCountLabel}</option>
-                              <option value="phone">Telefonnummer</option>
-                              <option value="email">E-Mail-Adresse</option>
-                              <option value="specialRequests">Besondere Wünsche</option>
-                            </select>
+                            {(() => {
+                              const collectsVal = (node.data as any)?.collects ?? "";
+                              const isCustom = !!collectsVal && !PREDEFINED_COLLECTS.includes(collectsVal);
+                              return isCustom ? (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    value={collectsVal}
+                                    onChange={(e) => updateFreeTextMeta(node.id, "collects", e.target.value)}
+                                    placeholder="z. B. lieblingsfarbe"
+                                    className="flex-1 rounded-lg border border-amber-500/30 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-amber-500/60 focus:outline-none"
+                                  />
+                                  <button
+                                    onClick={() => updateFreeTextMeta(node.id, "collects", "")}
+                                    className="rounded-lg p-2 text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                                    title="Zurück zur Auswahl"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <select
+                                  value={collectsVal}
+                                  onChange={(e) => {
+                                    if (e.target.value === "__custom__") {
+                                      updateFreeTextMeta(node.id, "collects", "custom");
+                                    } else {
+                                      updateFreeTextMeta(node.id, "collects", e.target.value);
+                                    }
+                                  }}
+                                  className="app-select w-full"
+                                >
+                                  <option value="">Keine Zuordnung</option>
+                                  <option value="name">Name</option>
+                                  <option value="date">Datum</option>
+                                  <option value="time">Uhrzeit</option>
+                                  <option value="guestCount">{labels.participantsCountLabel}</option>
+                                  <option value="phone">Telefonnummer</option>
+                                  <option value="email">E-Mail-Adresse</option>
+                                  <option value="specialRequests">Besondere Wünsche</option>
+                                  <option disabled>──────────</option>
+                                  <option value="__custom__">+ Eigenes Feld...</option>
+                                </select>
+                              );
+                            })()}
                           </div>
                           <div>
                             <label className="mb-1 block text-xs font-medium text-amber-300">
@@ -705,7 +747,7 @@ export default function FlowListBuilder({
                               onChange={(e) => setFreeTextTarget(node.id, e.target.value)}
                               className="app-select w-full"
                             >
-                              <option value="">Schritt wählen...</option>
+                              <option value="">— Flow endet hier</option>
                               {nodes.filter(n => n.id !== node.id).map((n) => (
                                 <option key={n.id} value={n.id}>
                                   {n.data?.label || "Ohne Titel"}
@@ -715,11 +757,16 @@ export default function FlowListBuilder({
                           </div>
                         </div>
 
-                        {freeTextTarget && (
+                        {freeTextTarget ? (
                           <div className="flex items-center gap-2 text-sm text-amber-400">
                             <ArrowRight className="h-4 w-4" />
                             <span>Weiter zu: <strong>{getNodeLabel(freeTextTarget)}</strong></span>
                           </div>
+                        ) : (
+                          <p className="flex items-center gap-1.5 text-xs text-emerald-400/80">
+                            <Flag className="h-3 w-3 shrink-0" />
+                            Kein nächster Schritt – Konversation endet hier.
+                          </p>
                         )}
                       </div>
                     )}
@@ -779,7 +826,7 @@ export default function FlowListBuilder({
                                   onChange={(e) => handleQuickReplyTargetChange(node.id, reply.id, e.target.value, reply.label)}
                                   className="app-select w-36"
                                 >
-                                  <option value="">Ziel wählen...</option>
+                                  <option value="">— Endet hier</option>
                                   <option value="__NEW_FREETEXT__">+ Neuer Freitext</option>
                                   {nodes.filter(n => n.id !== node.id).map((n) => (
                                     <option key={n.id} value={n.id}>
