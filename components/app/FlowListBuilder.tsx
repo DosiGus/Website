@@ -584,9 +584,11 @@ export default function FlowListBuilder({
                       )}
                       {inputMode === 'free_text' && (
                         <span className="shrink-0 rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-xs font-semibold text-amber-400">
-                          {(node.data as any)?.collects
-                            ? (collectsLabels[(node.data as any).collects] || (node.data as any).collects)
-                            : 'Freitext'}
+                          {(() => {
+                            const c = (node.data as any)?.collects;
+                            if (!c || c === "__custom_empty__") return 'Freitext';
+                            return collectsLabels[c] || c;
+                          })()}
                         </span>
                       )}
                       {status.type === 'error' && (
@@ -695,12 +697,14 @@ export default function FlowListBuilder({
                             {(() => {
                               const collectsVal = (node.data as any)?.collects ?? "";
                               const isCustom = !!collectsVal && !PREDEFINED_COLLECTS.includes(collectsVal);
+                              const displayVal = collectsVal === "__custom_empty__" ? "" : collectsVal;
                               return isCustom ? (
                                 <div className="flex items-center gap-1">
                                   <input
                                     type="text"
-                                    value={collectsVal}
-                                    onChange={(e) => updateFreeTextMeta(node.id, "collects", e.target.value)}
+                                    value={displayVal}
+                                    autoFocus={collectsVal === "__custom_empty__"}
+                                    onChange={(e) => updateFreeTextMeta(node.id, "collects", e.target.value || "__custom_empty__")}
                                     placeholder="z. B. lieblingsfarbe"
                                     className="flex-1 rounded-lg border border-amber-500/30 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-amber-500/60 focus:outline-none"
                                   />
@@ -717,7 +721,7 @@ export default function FlowListBuilder({
                                   value={collectsVal}
                                   onChange={(e) => {
                                     if (e.target.value === "__custom__") {
-                                      updateFreeTextMeta(node.id, "collects", "custom");
+                                      updateFreeTextMeta(node.id, "collects", "__custom_empty__");
                                     } else {
                                       updateFreeTextMeta(node.id, "collects", e.target.value);
                                     }
@@ -747,7 +751,7 @@ export default function FlowListBuilder({
                               onChange={(e) => setFreeTextTarget(node.id, e.target.value)}
                               className="app-select w-full"
                             >
-                              <option value="">— Flow endet hier</option>
+                              <option value="">Flow endet hier</option>
                               {nodes.filter(n => n.id !== node.id).map((n) => (
                                 <option key={n.id} value={n.id}>
                                   {n.data?.label || "Ohne Titel"}
@@ -826,7 +830,7 @@ export default function FlowListBuilder({
                                   onChange={(e) => handleQuickReplyTargetChange(node.id, reply.id, e.target.value, reply.label)}
                                   className="app-select w-36"
                                 >
-                                  <option value="">— Endet hier</option>
+                                  <option value="">Konversation endet hier</option>
                                   <option value="__NEW_FREETEXT__">+ Neuer Freitext</option>
                                   {nodes.filter(n => n.id !== node.id).map((n) => (
                                     <option key={n.id} value={n.id}>
