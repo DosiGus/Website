@@ -242,6 +242,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [nodeSearchOpen, setNodeSearchOpen] = useState(false);
   const [builderMode, setBuilderMode] = useState<BuilderMode>("simple");
   const [isInspectorOpen, setInspectorOpen] = useState(false);
+  const [showActivationModal, setShowActivationModal] = useState(false);
   const [isAddMenuOpen, setAddMenuOpen] = useState(false);
   const [showFlowSettings, setShowFlowSettings] = useState(false);
   const { vertical } = useAccountVertical();
@@ -287,6 +288,44 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const outputConfig = metadata.output_config as FlowOutputConfig | undefined;
   const outputType = outputConfig?.type ?? "reservation";
   const requiredFields = outputConfig?.requiredFields ?? (outputType === "reservation" ? ["name", "date", "time"] : []);
+
+  const COLLECTS_LABELS: Record<string, string> = {
+    name: "Name",
+    date: "Datum",
+    time: "Uhrzeit",
+    guestCount: labels.participantsCountLabel,
+    phone: "Telefon",
+    email: "E-Mail",
+    specialRequests: "Sonderwünsche",
+    reviewRating: "Bewertung",
+    reviewFeedback: "Feedback",
+    googleReviewUrl: "Google-Link",
+  };
+
+  const collectedKeys = useMemo(() => {
+    const seen = new Set<string>();
+    const keys: string[] = [];
+    for (const node of nodes) {
+      const c = (node.data as any)?.collects;
+      if (c && typeof c === "string" && c.trim() && c !== "__custom_empty__") {
+        if (!seen.has(c)) {
+          seen.add(c);
+          keys.push(c);
+        }
+      }
+    }
+    return keys;
+  }, [nodes]);
+
+  const uncoveredRequired = useMemo(
+    () => requiredFields.filter((f) => !collectedKeys.includes(f)),
+    [requiredFields, collectedKeys],
+  );
+
+  const isReadyToActivate = useMemo(
+    () => lintWarnings.length === 0 && uncoveredRequired.length === 0,
+    [lintWarnings, uncoveredRequired],
+  );
 
   const handleToggleFlowType = (newType: "reservation" | "custom") => {
     if (newType === outputType) return;
@@ -1471,7 +1510,15 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
               {/* Status */}
               <button
-                onClick={() => setStatus(status === "Aktiv" ? "Entwurf" : "Aktiv")}
+                onClick={() => {
+                  if (status === "Aktiv") {
+                    setStatus("Entwurf");
+                  } else if (!isReadyToActivate) {
+                    setShowActivationModal(true);
+                  } else {
+                    setStatus("Aktiv");
+                  }
+                }}
                 className={
                   status === "Aktiv"
                     ? "rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-300 hover:border-amber-500/50 transition-colors"
@@ -1577,50 +1624,6 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         {/* Toolbar */}
         <div className="mx-auto max-w-screen-2xl px-6 py-4">
           <div className="flex flex-wrap items-center gap-3">
-            {/* Mode Toggle */}
-            <div className="flex rounded-xl bg-white/5 p-1 border border-white/10">
-              <button
-                onClick={() => setBuilderMode("simple")}
-                className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
-                  builderMode === "simple"
-                    ? "bg-white/10 text-white shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                Einfach
-              </button>
-              <button
-                onClick={() => setBuilderMode("pro")}
-                className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
-                  builderMode === "pro"
-                    ? "bg-white/10 text-white shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                Profi
-              </button>
-            </div>
-
-            <div className="h-6 w-px bg-white/10" />
-
-            {builderMode === "pro" && (
-              <>
-                <button
-                  onClick={runAutoLayout}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-indigo-500/50 hover:text-white transition-colors"
-                >
-                  <Focus className="h-4 w-4" />
-                  Auto-Layout
-                </button>
-                <button
-                  onClick={fitToView}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-indigo-500/50 hover:text-white transition-colors"
-                >
-                  Zoom to Fit
-                </button>
-              </>
-            )}
-
             {/* Search */}
             <div className="relative ml-auto">
               <button
@@ -1666,51 +1669,87 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           </div>
         </div>
 
+        {/* Flow Cockpit */}
+        {nodes.length > 0 && (
+          <div className="mx-auto max-w-screen-2xl px-6 pb-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-white/10 bg-zinc-900/50 px-4 py-2.5 text-xs">
+              {/* What this flow produces */}
+              <div className="flex items-center gap-1.5">
+                {outputType === "reservation"
+                  ? <CalendarCheck className="h-3.5 w-3.5 text-indigo-400" />
+                  : <Zap className="h-3.5 w-3.5 text-violet-400" />}
+                <span className="text-zinc-500">Erstellt:</span>
+                <span className="font-semibold text-zinc-300">
+                  {outputType === "reservation" ? "Buchung" : "Freie Konversation"}
+                </span>
+              </div>
+
+              <div className="h-4 w-px bg-white/10 hidden sm:block" />
+
+              {/* What it collects */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-zinc-500">Sammelt:</span>
+                {collectedKeys.length > 0
+                  ? collectedKeys.map((key) => (
+                      <span
+                        key={key}
+                        className={`rounded-full border px-2 py-0.5 font-medium ${
+                          requiredFields.includes(key)
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                            : "border-white/10 bg-white/5 text-zinc-400"
+                        }`}
+                      >
+                        {COLLECTS_LABELS[key] ?? key}
+                      </span>
+                    ))
+                  : <span className="text-zinc-600 italic">nichts konfiguriert</span>}
+              </div>
+
+              {/* Missing required fields */}
+              {uncoveredRequired.length > 0 && (
+                <>
+                  <div className="h-4 w-px bg-white/10 hidden sm:block" />
+                  <div className="flex items-center gap-1.5 text-amber-400">
+                    <TriangleAlert className="h-3.5 w-3.5" />
+                    <span className="font-medium">
+                      Fehlt: {uncoveredRequired.map((f) => COLLECTS_LABELS[f] ?? f).join(", ")}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {/* Ready indicator */}
+              {isReadyToActivate && status === "Entwurf" && (
+                <>
+                  <div className="h-4 w-px bg-white/10 hidden sm:block" />
+                  <div className="flex items-center gap-1.5 text-emerald-400">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span className="font-medium">Bereit zur Aktivierung</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Canvas Area */}
         <div className="mx-auto max-w-screen-2xl px-6 pb-6">
-          {builderMode === "pro" ? (
-            <FlowBuilderCanvas
-              nodes={displayNodes}
-              edges={decoratedEdges}
-              onNodesChange={handleNodesChange}
-              onEdgesChange={handleEdgesChange}
-              onConnect={handleConnect}
-              onNodeClick={(_, node) => {
-                setSelectedNodeId(node.id);
-                setSelectedEdgeId(null);
-              }}
-              onNodeDoubleClick={(_, node) => {
-                setSelectedNodeId(node.id);
-                setSelectedEdgeId(null);
-                openInlineEditor(node);
-              }}
-              onEdgeClick={(_, edge) => {
-                setSelectedEdgeId(edge.id);
-                setSelectedNodeId(null);
-                setInspectorTab("logic");
-              }}
-              onSelectionChange={handleSelectionChange}
-              onInit={(instance) => setReactFlowInstance(instance)}
-              onFitView={fitToView}
+          <div className="h-[calc(100vh-200px)] min-h-[500px] overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
+            <FlowListBuilder
+              nodes={nodes}
+              edges={edges}
+              startNodeIds={startNodeIds}
+              triggers={triggers}
+              onOpenTriggerModal={() => openTriggerModal()}
+              onNodesChange={handleListNodesChange}
+              onEdgesChange={handleListEdgesChange}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={setSelectedNodeId}
+              onOpenInspector={handleOpenInspector}
+              onAddNode={addNode}
+              onDeleteNode={handleDeleteNode}
             />
-          ) : (
-            <div className="h-[calc(100vh-200px)] min-h-[500px] overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
-              <FlowListBuilder
-                nodes={nodes}
-                edges={edges}
-                startNodeIds={startNodeIds}
-                triggers={triggers}
-                onOpenTriggerModal={() => openTriggerModal()}
-                onNodesChange={handleListNodesChange}
-                onEdgesChange={handleListEdgesChange}
-                selectedNodeId={selectedNodeId}
-                onSelectNode={setSelectedNodeId}
-                onOpenInspector={handleOpenInspector}
-                onAddNode={addNode}
-                onDeleteNode={handleDeleteNode}
-              />
-            </div>
-          )}
+          </div>
 
           {/* Inline Editor Overlay */}
           {inlineEditNodeId && (
@@ -1748,64 +1787,63 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           )}
         </div>
 
-        {/* Floating Add Button */}
-        {builderMode === "pro" && (
-          <div className="fixed left-6 top-1/2 -translate-y-1/2 z-10">
-            <div className="relative">
-              <button
-                onClick={() => setAddMenuOpen(!isAddMenuOpen)}
-                className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-xl shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 ${
-                  isAddMenuOpen ? "rotate-45" : ""
-                }`}
-              >
-                <Plus className="h-6 w-6" />
-              </button>
+      </main>
 
-              {/* Add Menu */}
-              {isAddMenuOpen && (
-                <div className="absolute left-16 top-1/2 -translate-y-1/2 w-48 rounded-xl border border-white/10 bg-zinc-900 p-2 shadow-2xl animate-scale-in">
-                  <button
-                    onClick={() => addNode("message")}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-white/5 transition-colors"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500">
-                      <MessageSquare className="h-4 w-4 text-white" />
-                    </div>
-                    Nachricht
-                  </button>
-                  <button
-                    onClick={() => addNode("choice")}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-white/5 transition-colors"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-violet-500 to-purple-600">
-                      <Shapes className="h-4 w-4 text-white" />
-                    </div>
-                    Auswahl
-                  </button>
-                  <button
-                    onClick={() => addNode("link")}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-white/5 transition-colors"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-sky-500">
-                      <ExternalLink className="h-4 w-4 text-white" />
-                    </div>
-                    Link
-                  </button>
-                  <button
-                    onClick={() => addNode("info")}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-white/5 transition-colors"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-slate-400 to-slate-500">
-                      <Info className="h-4 w-4 text-white" />
-                    </div>
-                    Info
-                  </button>
+      {/* Activation Ceremony Modal */}
+      {showActivationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15">
+                <TriangleAlert className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Flow aktivieren?</h3>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Einige Konfigurationspunkte sind noch nicht vollständig.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {lintWarnings.length > 0 && (
+                <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+                  <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                  <p className="text-xs text-amber-300">
+                    {lintWarnings.length} Konfigurationswarnung{lintWarnings.length !== 1 ? "en" : ""}
+                  </p>
                 </div>
               )}
+              {uncoveredRequired.map((field) => (
+                <div key={field} className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+                  <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                  <p className="text-xs text-amber-300">
+                    Pflichtfeld <span className="font-semibold">{COLLECTS_LABELS[field] ?? field}</span> wird nicht gesammelt
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowActivationModal(false)}
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-zinc-300 hover:text-white transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={() => {
+                  setShowActivationModal(false);
+                  setStatus("Aktiv");
+                }}
+                className="flex-1 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-400 transition-all"
+              >
+                Trotzdem aktivieren
+              </button>
             </div>
           </div>
-        )}
-      </main>
+        </div>
+      )}
 
       {/* Inspector Slide-Over */}
       <InspectorSlideOver

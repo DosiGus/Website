@@ -64,7 +64,7 @@ export function executeFlowNode(
   const rawText = nodeData.text || nodeData.label || "";
   let text = substituteVariables(rawText, variables);
 
-  if (node.id === "summary" && !hasPlaceholders(rawText)) {
+  if ((node.id === "summary" || node.data?.variant === "confirmation") && !hasPlaceholders(rawText)) {
     const summaryDetails = buildSummaryDetails(variables);
     if (summaryDetails) {
       text = `${text}\n\n${summaryDetails}`;

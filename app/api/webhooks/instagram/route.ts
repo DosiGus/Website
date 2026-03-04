@@ -967,96 +967,111 @@ async function processMessagingEvent(
   // Merge new variables with existing ones
   let mergedVariables = mergeVariables(existingVariables, newVariables);
 
-  // Allow overriding specific fields when the user is answering a targeted question
+  // Determine what the current node is collecting via the `collects` field (primary source of truth).
+  // Falls back to node.id pattern matching for backwards-compatibility with older template flows.
   const overrideVariables: ExtractedVariables = {};
-  if (messageText && conversation.current_node_id) {
-    const nodeKey = conversation.current_node_id.toLowerCase();
-    const trimmedMessage = messageText.trim();
-
-    // When asking for name: use the entire message as the name
-    // (user is expected to just type their name)
-    if (nodeKey.includes("name")) {
-      // First try structured extraction
-      const extractedName = extractName(trimmedMessage);
-      if (extractedName) {
-        overrideVariables.name = extractedName;
-      } else if (looksLikeNameInput(trimmedMessage)) {
-        overrideVariables.name = trimmedMessage;
-      }
-    }
-
-    if (nodeKey.includes("date")) {
-      const extractedDate = extractDate(trimmedMessage);
-      if (extractedDate) overrideVariables.date = extractedDate;
-    }
-
-    if (nodeKey.includes("time")) {
-      const extractedTime = extractTime(trimmedMessage, { allowDotWithoutUhr: true });
-      if (extractedTime) overrideVariables.time = extractedTime;
-    }
-
-    if (nodeKey.includes("guest")) {
-      const extractedCount = extractGuestCount(trimmedMessage);
-      if (extractedCount) overrideVariables.guestCount = extractedCount;
-    }
-
-    // When asking for phone: accept direct phone number input
-    // Clean up the number (remove spaces, dashes) and use it
-    if (nodeKey.includes("phone") || nodeKey.includes("telefon") || nodeKey.includes("nummer")) {
-      // First try structured extraction
-      const extractedPhone = extractVariables(trimmedMessage, {}).phone;
-      if (extractedPhone) {
-        overrideVariables.phone = extractedPhone;
-      } else {
-        // If no structured phone found, try to clean the message as a phone number
-        const cleanedPhone = trimmedMessage.replace(/[\s\-\/\(\)]/g, "");
-        // Check if it looks like a phone number (mostly digits, maybe starting with +)
-        if (/^\+?[\d]{6,15}$/.test(cleanedPhone)) {
-          overrideVariables.phone = cleanedPhone;
-        }
-      }
-    }
-
-    // When asking for special requests/wishes: use the entire message
-    if (nodeKey.includes("special") || nodeKey.includes("wunsch") || nodeKey.includes("wünsch") || nodeKey.includes("notes") || nodeKey.includes("notiz")) {
-      if (trimmedMessage.length > 0) {
-        overrideVariables.specialRequests = trimmedMessage;
-      }
-    }
-
-    // Review flow: capture rating and feedback
-    if (nodeKey.includes("review-rating")) {
-      const rating = extractReviewRating(trimmedMessage);
-      if (rating) {
-        overrideVariables.reviewRating = rating;
-      }
-    }
-
-    if (nodeKey.includes("review-feedback")) {
-      if (trimmedMessage.length > 0) {
-        overrideVariables.reviewFeedback = trimmedMessage;
-      }
-    }
-  }
-
-  // Capture custom collects fields (user-defined keys like "lieblingsfarbe" not handled above)
   if (messageText && conversation.current_flow_id && conversation.current_node_id) {
     const { data: flowForCollects } = await supabase
       .from("flows")
       .select("nodes")
       .eq("id", conversation.current_flow_id)
       .single();
+
+    let collectsKey: string | null = null;
     if (Array.isArray(flowForCollects?.nodes)) {
       const curNode = (flowForCollects.nodes as any[]).find(
         (n: any) => n.id === conversation.current_node_id
       );
-      const collectsKey = String(curNode?.data?.collects ?? "").trim();
+      const rawCollects = String(curNode?.data?.collects ?? "").trim();
+      // __custom_empty__ is the sentinel for an unnamed custom field — treat as no collects
+      if (rawCollects && rawCollects !== "__custom_empty__") {
+        collectsKey = rawCollects;
+      }
+    }
+
+    // Backwards-compat: derive from node.id if no collects field set
+    if (!collectsKey && conversation.current_node_id) {
+      const nk = conversation.current_node_id.toLowerCase();
+      if (nk.includes("name")) collectsKey = "name";
+      else if (nk.includes("date")) collectsKey = "date";
+      else if (nk.includes("time")) collectsKey = "time";
+      else if (nk.includes("guest")) collectsKey = "guestCount";
+      else if (nk.includes("phone") || nk.includes("telefon") || nk.includes("nummer")) collectsKey = "phone";
+      else if (nk.includes("email") || nk.includes("mail")) collectsKey = "email";
+      else if (nk.includes("special") || nk.includes("wunsch") || nk.includes("wünsch") || nk.includes("notiz")) collectsKey = "specialRequests";
+      else if (nk.includes("review-rating")) collectsKey = "reviewRating";
+      else if (nk.includes("review-feedback")) collectsKey = "reviewFeedback";
+    }
+
+    if (collectsKey) {
+      const trimmedMessage = messageText.trim();
       const BUILTIN_COLLECTS = new Set([
         "name", "date", "time", "guestCount", "phone", "email",
         "specialRequests", "reviewRating", "reviewFeedback", "googleReviewUrl",
       ]);
-      if (collectsKey && !BUILTIN_COLLECTS.has(collectsKey) && mergedVariables[collectsKey] === undefined) {
-        overrideVariables[collectsKey] = messageText.trim();
+
+      switch (collectsKey) {
+        case "name": {
+          const extractedName = extractName(trimmedMessage);
+          if (extractedName) {
+            overrideVariables.name = extractedName;
+          } else if (looksLikeNameInput(trimmedMessage)) {
+            overrideVariables.name = trimmedMessage;
+          }
+          break;
+        }
+        case "date": {
+          const extractedDate = extractDate(trimmedMessage);
+          if (extractedDate) overrideVariables.date = extractedDate;
+          break;
+        }
+        case "time": {
+          const extractedTime = extractTime(trimmedMessage, { allowDotWithoutUhr: true });
+          if (extractedTime) overrideVariables.time = extractedTime;
+          break;
+        }
+        case "guestCount": {
+          const extractedCount = extractGuestCount(trimmedMessage);
+          if (extractedCount) overrideVariables.guestCount = extractedCount;
+          break;
+        }
+        case "phone": {
+          const extractedPhone = extractVariables(trimmedMessage, {}).phone;
+          if (extractedPhone) {
+            overrideVariables.phone = extractedPhone;
+          } else {
+            const cleanedPhone = trimmedMessage.replace(/[\s\-\/\(\)]/g, "");
+            if (/^\+?[\d]{6,15}$/.test(cleanedPhone)) {
+              overrideVariables.phone = cleanedPhone;
+            }
+          }
+          break;
+        }
+        case "email": {
+          const emailMatch = trimmedMessage.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+          if (emailMatch) overrideVariables.email = emailMatch[1];
+          break;
+        }
+        case "specialRequests": {
+          if (trimmedMessage.length > 0) overrideVariables.specialRequests = trimmedMessage;
+          break;
+        }
+        case "reviewRating": {
+          const rating = extractReviewRating(trimmedMessage);
+          if (rating) overrideVariables.reviewRating = rating;
+          break;
+        }
+        case "reviewFeedback": {
+          if (trimmedMessage.length > 0) overrideVariables.reviewFeedback = trimmedMessage;
+          break;
+        }
+        default: {
+          // Custom user-defined field (e.g. "lieblingsfarbe")
+          if (!BUILTIN_COLLECTS.has(collectsKey) && mergedVariables[collectsKey] === undefined) {
+            overrideVariables[collectsKey] = trimmedMessage;
+          }
+          break;
+        }
       }
     }
   }
