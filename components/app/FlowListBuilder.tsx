@@ -262,6 +262,9 @@ export default function FlowListBuilder({
   const nodeCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   // Tracks the node that was active when preview was opened — no scroll for initial node
   const previewStartNodeRef = useRef<string | null>(null);
+  // Ref to the outer wrapper + cached scroll container (found lazily)
+  const outerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
 
   // Order nodes by flow path
   const orderedNodes = useMemo(() => buildFlowOrder(nodes, edges, startNodeIds), [nodes, edges, startNodeIds]);
@@ -313,6 +316,21 @@ export default function FlowListBuilder({
 
   const toggleExpanded = useCallback((nodeId: string) => {
     setExpandedNodeId(prev => prev === nodeId ? null : nodeId);
+  }, []);
+
+  // Walk up the DOM to find the nearest scrollable ancestor (cached after first call)
+  const getScrollContainer = useCallback((): HTMLElement | null => {
+    if (scrollContainerRef.current) return scrollContainerRef.current;
+    let el = outerRef.current?.parentElement;
+    while (el) {
+      const overflow = window.getComputedStyle(el).overflowY;
+      if (overflow === 'auto' || overflow === 'scroll') {
+        scrollContainerRef.current = el;
+        return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
   }, []);
 
   const getFreeTextTarget = useCallback((nodeId: string) => {
@@ -521,9 +539,9 @@ export default function FlowListBuilder({
   }
 
   return (
-    <div className="flex gap-0 relative">
-      {/* Left: node list — always flex-1, never changes width (prevents layout shift when preview opens) */}
-      <div className="flex-1 min-w-0 space-y-0">
+    <div ref={outerRef} className="flex gap-0 relative">
+      {/* Left: node list */}
+      <div className={`${previewNodeId ? "flex-1 min-w-0" : "w-full"} space-y-0`}>
       {/* Flow Header Stats */}
       <div className="mb-6 flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4">
         <div className="flex items-center gap-6">
@@ -723,11 +741,21 @@ export default function FlowListBuilder({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        // Save scroll position BEFORE layout change to prevent
+                        // browser scroll-anchoring from jumping the view
+                        const container = getScrollContainer();
+                        const savedScrollTop = container?.scrollTop ?? 0;
                         const next = previewNodeId === node.id ? null : node.id;
                         setPreviewNodeId(next);
                         if (next) {
                           previewStartNodeRef.current = next;
                           setSimulatorCurrentNodeId(next);
+                        }
+                        // Restore after React has committed the layout change
+                        if (container) {
+                          requestAnimationFrame(() => {
+                            container.scrollTop = savedScrollTop;
+                          });
                         }
                       }}
                       className={`rounded-lg p-1.5 transition-colors ${
@@ -1001,32 +1029,38 @@ export default function FlowListBuilder({
       </div>
     </div>
 
-    {/* Right: always 300px wide — content only visible when preview open.
-         Width never changes → no layout shift when preview opens/closes. */}
+    {/* Right: preview panel — only rendered when preview is open */}
+    {previewNodeId && (
       <div className="w-[300px] shrink-0 pl-4">
-        {previewNodeId && (
-          <div className="sticky top-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Vorschau</p>
-              <button onClick={() => setPreviewNodeId(null)}>
-                <X className="h-4 w-4 text-zinc-400 hover:text-white transition-colors" />
-              </button>
-            </div>
-            <IPhoneMockup>
-              <FlowSimulator
-                hideHeader
-                nodes={nodes}
-                edges={edges}
-                triggers={triggers}
-                startNodeId={previewNodeId}
-                autoStart={true}
-                onCurrentNodeChange={setSimulatorCurrentNodeId}
-              />
-            </IPhoneMockup>
+        <div className="sticky top-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Vorschau</p>
+            <button onClick={() => {
+              const container = getScrollContainer();
+              const savedScrollTop = container?.scrollTop ?? 0;
+              setPreviewNodeId(null);
+              if (container) {
+                requestAnimationFrame(() => { container.scrollTop = savedScrollTop; });
+              }
+            }}>
+              <X className="h-4 w-4 text-zinc-400 hover:text-white transition-colors" />
+            </button>
           </div>
-        )}
+          <IPhoneMockup>
+            <FlowSimulator
+              hideHeader
+              nodes={nodes}
+              edges={edges}
+              triggers={triggers}
+              startNodeId={previewNodeId}
+              autoStart={true}
+              onCurrentNodeChange={setSimulatorCurrentNodeId}
+            />
+          </IPhoneMockup>
+        </div>
       </div>
-    </div>
+    )}
+  </div>
   );
 }
