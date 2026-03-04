@@ -2094,7 +2094,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               <div>
                 <label className="text-sm font-semibold text-zinc-300">Testen</label>
                 <p className="mt-0.5 text-xs text-zinc-500">
-                  Würde eine Nachricht diesen Trigger auslösen?
+                  Würde eine Nachricht irgendeinen Trigger dieses Flows auslösen?
                 </p>
                 <input
                   value={triggerTestInput}
@@ -2102,18 +2102,30 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                   placeholder='z.B. "Ich möchte gerne reservieren"'
                   className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
                 />
-                {triggerTestInput.trim() && (
-                  <div className={`mt-2 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
-                    testTriggerMatch(triggerTestInput, triggerForm.config.keywords, triggerForm.config.matchType)
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                      : "border-rose-500/30 bg-rose-500/10 text-rose-400"
-                  }`}>
-                    {testTriggerMatch(triggerTestInput, triggerForm.config.keywords, triggerForm.config.matchType)
-                      ? <><CheckCircle2 className="h-4 w-4 shrink-0" /> Würde diesen Flow auslösen</>
-                      : <><X className="h-4 w-4 shrink-0" /> Würde diesen Flow NICHT auslösen</>
-                    }
-                  </div>
-                )}
+                {triggerTestInput.trim() && (() => {
+                  // Check all existing triggers + current form
+                  const allTriggers = [
+                    ...triggers,
+                    ...(triggerForm.config.keywords.length > 0
+                      ? [{ config: triggerForm.config, startNodeId: triggerForm.startNodeId }]
+                      : []),
+                  ];
+                  const matchedTrigger = allTriggers.find((t) =>
+                    testTriggerMatch(triggerTestInput, t.config.keywords, t.config.matchType)
+                  );
+                  return (
+                    <div className={`mt-2 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                      matchedTrigger
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                        : "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                    }`}>
+                      {matchedTrigger
+                        ? <><CheckCircle2 className="h-4 w-4 shrink-0" /> Würde Flow auslösen ({matchedTrigger.config.keywords[0] ?? "Trigger"})</>
+                        : <><X className="h-4 w-4 shrink-0" /> Würde diesen Flow NICHT auslösen</>
+                      }
+                    </div>
+                  );
+                })()}
               </div>
             </div>
             <div className="mt-6 flex gap-2">
