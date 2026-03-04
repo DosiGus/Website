@@ -8,10 +8,12 @@ import { createRequestLogger } from "../../../../lib/logger";
 const flowPutSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   status: z.enum(["Entwurf", "Aktiv"]).optional(),
-  nodes: z.array(z.any()).optional(),
-  edges: z.array(z.any()).optional(),
-  triggers: z.array(z.any()).optional(),
+  nodes: z.array(z.any()).max(500, { message: "Maximal 500 Schritte erlaubt." }).optional(),
+  edges: z.array(z.any()).max(2000, { message: "Maximal 2000 Verbindungen erlaubt." }).optional(),
+  triggers: z.array(z.any()).max(50, { message: "Maximal 50 Auslöser erlaubt." }).optional(),
   metadata: z.record(z.string(), z.any()).optional(),
+  // Optimistic locking: client sends the updated_at it last saw
+  expected_updated_at: z.string().optional(),
 }).strict();
 
 export async function GET(
@@ -81,6 +83,27 @@ export async function PUT(
     ) {
       return NextResponse.json({ error: "Keine Felder zum Aktualisieren." }, { status: 400 });
     }
+
+    // Optimistic locking: if client sends expected_updated_at, verify no concurrent update occurred
+    if (body.expected_updated_at) {
+      const { data: current } = await supabase
+        .from("flows")
+        .select("updated_at")
+        .eq("id", params.id)
+        .eq("account_id", accountId)
+        .single();
+
+      if (current && current.updated_at !== body.expected_updated_at) {
+        return NextResponse.json(
+          {
+            error: "Dieser Flow wurde in einem anderen Tab geändert. Bitte lade die Seite neu, um Datenverlust zu vermeiden.",
+            code: "CONFLICT",
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     const update: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
@@ -90,17 +113,21 @@ export async function PUT(
     if (body.edges !== undefined) update.edges = body.edges;
     if (body.triggers !== undefined) update.triggers = body.triggers;
     if (body.metadata !== undefined) update.metadata = body.metadata ?? defaultMetadata;
-    const { error } = await supabase
+
+    const { data: updatedFlow, error } = await supabase
       .from("flows")
       .update(update)
       .eq("id", params.id)
-      .eq("account_id", accountId);
+      .eq("account_id", accountId)
+      .select("updated_at")
+      .single();
 
     if (error) {
       return NextResponse.json({ error: "Flow konnte nicht aktualisiert werden" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    // Return new updated_at so client can track it for next optimistic lock check
+    return NextResponse.json({ success: true, updated_at: updatedFlow?.updated_at });
   } catch (error) {
     if (error instanceof Error && error.message === "Forbidden") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });

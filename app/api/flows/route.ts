@@ -13,11 +13,38 @@ import { z } from "zod";
 const flowPostSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   templateId: z.string().min(1).optional(),
-  nodes: z.array(z.any()).optional(),
-  edges: z.array(z.any()).optional(),
-  triggers: z.array(z.any()).optional(),
+  nodes: z.array(z.any()).max(500, { message: "Maximal 500 Schritte erlaubt." }).optional(),
+  edges: z.array(z.any()).max(2000, { message: "Maximal 2000 Verbindungen erlaubt." }).optional(),
+  triggers: z.array(z.any()).max(50, { message: "Maximal 50 Auslöser erlaubt." }).optional(),
   metadata: z.record(z.string(), z.any()).optional(),
 }).strict();
+
+// Minimal structural schemas for template validation
+const templateNodeSchema = z.object({
+  id: z.string().min(1),
+  position: z.object({ x: z.number(), y: z.number() }),
+  data: z.record(z.string(), z.any()),
+}).passthrough();
+
+const templateEdgeSchema = z.object({
+  id: z.string().min(1),
+  source: z.string().min(1),
+  target: z.string().min(1),
+}).passthrough();
+
+const templateTriggerSchema = z.object({
+  id: z.string().min(1),
+  config: z.object({
+    keywords: z.array(z.string()),
+    matchType: z.enum(["EXACT", "CONTAINS"]),
+  }),
+}).passthrough();
+
+const templateDataSchema = z.object({
+  nodes: z.array(templateNodeSchema).min(1).max(500),
+  edges: z.array(templateEdgeSchema).max(2000),
+  triggers: z.array(templateTriggerSchema).max(50).optional(),
+});
 
 export async function GET(request: Request) {
   try {
@@ -99,11 +126,21 @@ export async function POST(request: Request) {
       const codeTemplate = fallbackTemplates.find((tpl) => tpl.id === templateId);
 
       if (codeTemplate) {
-        // Use code template (always up-to-date)
-        nodesToUse = codeTemplate.nodes as any;
-        edgesToUse = codeTemplate.edges as any;
-        triggersToUse = codeTemplate.triggers as any;
-        metadataToUse = codeTemplate.metadata ?? defaultMetadata;
+        // Validate template structure before using it
+        const validation = templateDataSchema.safeParse({
+          nodes: codeTemplate.nodes,
+          edges: codeTemplate.edges,
+          triggers: codeTemplate.triggers,
+        });
+        if (validation.success) {
+          nodesToUse = codeTemplate.nodes as any;
+          edgesToUse = codeTemplate.edges as any;
+          triggersToUse = codeTemplate.triggers as any;
+          metadataToUse = codeTemplate.metadata ?? defaultMetadata;
+        } else {
+          console.error("[flows/POST] Code template validation failed:", templateId, validation.error.flatten());
+          // Fall through to default preset — don't use corrupt template
+        }
       } else {
         // Only check DB for custom/user-created templates
         const { data: template, error: templateError } = await supabaseAdmin
@@ -113,13 +150,22 @@ export async function POST(request: Request) {
           .single();
 
         if (template && !templateError) {
-          nodesToUse = template.nodes as any;
-          edgesToUse = template.edges as any;
-          triggersToUse =
-            (template.triggers as any) && Array.isArray(template.triggers)
-              ? (template.triggers as any)
-              : defaultPreset.triggers;
-          metadataToUse = (template.metadata as any) ?? defaultMetadata;
+          // Validate DB template structure before using it
+          const validation = templateDataSchema.safeParse({
+            nodes: template.nodes,
+            edges: template.edges,
+            triggers: template.triggers,
+          });
+          if (validation.success) {
+            nodesToUse = template.nodes as any;
+            edgesToUse = template.edges as any;
+            triggersToUse =
+              Array.isArray(template.triggers) ? (template.triggers as any) : defaultPreset.triggers;
+            metadataToUse = (template.metadata as any) ?? defaultMetadata;
+          } else {
+            console.error("[flows/POST] DB template validation failed:", templateId, validation.error.flatten());
+            // Fall through to default preset — don't use corrupt template
+          }
         }
       }
     } else {

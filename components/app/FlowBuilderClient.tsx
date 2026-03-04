@@ -269,6 +269,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
+  // Optimistic locking: tracks the server's updated_at that the client last saw
+  const serverUpdatedAtRef = useRef<string>("");
 
   const getAccessToken = useCallback(async () => {
     const {
@@ -527,6 +529,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         return;
       }
       const data: FlowResponse = await response.json();
+      serverUpdatedAtRef.current = data.updated_at ?? "";
       const statusValue = (data.status as "Entwurf" | "Aktiv") ?? "Entwurf";
       const triggersToUse = Array.isArray(data.triggers) ? (data.triggers as FlowTrigger[]) : defaultTriggers;
       const metadataToUse = (data.metadata as FlowMetadata) ?? defaultMetadata;
@@ -1167,10 +1170,19 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           edges,
           triggers,
           metadata,
+          // Optimistic locking: only for manual saves (not background autosave)
+          ...(!silent && serverUpdatedAtRef.current
+            ? { expected_updated_at: serverUpdatedAtRef.current }
+            : {}),
         }),
       });
       if (response.ok) {
         try {
+          const responseData = await response.json();
+          // Track the new server timestamp for the next save
+          if (responseData.updated_at) {
+            serverUpdatedAtRef.current = responseData.updated_at;
+          }
           lastSavedSnapshotRef.current = JSON.stringify({
             flowName,
             status,
@@ -1187,8 +1199,15 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           setSaveState("saved");
           setTimeout(() => setSaveState("idle"), 2000);
         }
+      } else if (response.status === 409) {
+        // Concurrent edit detected — show permanent error until user reloads
+        setErrorMessage(
+          "⚠️ Dieser Flow wurde in einem anderen Tab geändert. Bitte lade die Seite neu, bevor du weiter speicherst.",
+        );
+        setSaveState("error");
+        // Don't auto-clear — user must consciously reload
       } else {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
         setErrorMessage(error.error ?? "Speichern fehlgeschlagen");
         setSaveState("error");
         setTimeout(() => setSaveState("idle"), 4000);
