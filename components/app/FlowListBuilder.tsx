@@ -259,10 +259,7 @@ export default function FlowListBuilder({
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
   const [previewNodeId, setPreviewNodeId] = useState<string | null>(null);
   const [simulatorCurrentNodeId, setSimulatorCurrentNodeId] = useState<string | null>(null);
-  const [previewTop, setPreviewTop] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
   const nodeCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const simulatorNodeIdRef = useRef<string | null>(null);
 
   // Order nodes by flow path
   const orderedNodes = useMemo(() => buildFlowOrder(nodes, edges, startNodeIds), [nodes, edges, startNodeIds]);
@@ -278,40 +275,17 @@ export default function FlowListBuilder({
     return Array.from(new Set(keywords));
   }, [triggers]);
 
-  // Keep a ref of current simulator node for stable callbacks
+  // When simulator moves to a new node, scroll the card into view
   useEffect(() => {
-    simulatorNodeIdRef.current = simulatorCurrentNodeId;
+    if (!simulatorCurrentNodeId) return;
+    const el = nodeCardRefs.current.get(simulatorCurrentNodeId);
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [simulatorCurrentNodeId]);
-
-  // Recalculate mockup position based on active simulator node
-  const recalcPreviewPosition = useCallback(() => {
-    const nodeId = simulatorNodeIdRef.current;
-    if (!nodeId || !containerRef.current) return;
-    const cardEl = nodeCardRefs.current.get(nodeId);
-    if (!cardEl) return;
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const cardRect = cardEl.getBoundingClientRect();
-    setPreviewTop(Math.max(0, cardRect.top - containerRect.top));
-  }, []);
-
-  useEffect(() => {
-    recalcPreviewPosition();
-  }, [simulatorCurrentNodeId, recalcPreviewPosition]);
-
-  // Scroll listener on the parent overflow-y-auto container
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const scrollEl = containerRef.current.parentElement;
-    if (!scrollEl) return;
-    scrollEl.addEventListener("scroll", recalcPreviewPosition, { passive: true });
-    return () => scrollEl.removeEventListener("scroll", recalcPreviewPosition);
-  }, [recalcPreviewPosition]);
 
   // Reset simulator tracking when preview closes
   useEffect(() => {
     if (!previewNodeId) {
       setSimulatorCurrentNodeId(null);
-      setPreviewTop(0);
     }
   }, [previewNodeId]);
 
@@ -539,7 +513,7 @@ export default function FlowListBuilder({
   return (
     <div className="flex gap-0 relative">
       {/* Left: node list — shrinks when preview is open */}
-      <div ref={containerRef} className={`space-y-0 ${previewNodeId ? "flex-1 min-w-0" : "w-full"}`}>
+      <div className={`space-y-0 ${previewNodeId ? "flex-1 min-w-0" : "w-full"}`}>
       {/* Flow Header Stats */}
       <div className="mb-6 flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4">
         <div className="flex items-center gap-6">
@@ -1014,13 +988,10 @@ export default function FlowListBuilder({
       </div>
     </div>
 
-    {/* Right: preview panel — top-aligned with the active simulator node */}
+    {/* Right: preview panel — sticky so it stays visible while scrolling */}
       {previewNodeId && (
         <div className="w-[300px] shrink-0 pl-4">
-          <div
-            className="transition-[margin-top] duration-500 ease-out"
-            style={{ marginTop: `${previewTop}px` }}
-          >
+          <div className="sticky top-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Vorschau</p>
