@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   X,
   Sparkles,
@@ -74,6 +74,155 @@ type InspectorSlideOverProps = {
   // Save state
   saveState: 'idle' | 'saving' | 'saved' | 'error';
 };
+
+const VARIABLE_LABELS: Record<string, string> = {
+  name: "Name",
+  date: "Datum",
+  time: "Uhrzeit",
+  guestCount: "Personenanzahl",
+  phone: "Telefon",
+  email: "E-Mail",
+  specialRequests: "Sonderwünsche",
+  reviewRating: "Bewertung",
+  reviewFeedback: "Feedback",
+  googleReviewUrl: "Google-Link",
+};
+
+function VariablesTab({
+  selectedNode,
+  nodes,
+  labels,
+}: {
+  selectedNode: ReactFlowNode | null;
+  nodes: ReactFlowNode[];
+  labels: ReturnType<typeof import('../../lib/verticals').getBookingLabels>;
+}) {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const allCollectedKeys = useMemo(() => {
+    const seen = new Set<string>();
+    const keys: string[] = [];
+    for (const node of nodes) {
+      const c = (node.data as any)?.collects;
+      if (c && typeof c === "string" && c.trim() && c !== "__custom_empty__") {
+        if (!seen.has(c)) { seen.add(c); keys.push(c); }
+      }
+    }
+    return keys;
+  }, [nodes]);
+
+  const placeholdersInText = useMemo(() => {
+    const text = (selectedNode?.data as any)?.text ?? "";
+    const matches = [...text.matchAll(/\{\{([^}]+)\}\}/g)];
+    return Array.from(new Set(matches.map((m: RegExpMatchArray) => m[1].trim())));
+  }, [selectedNode]);
+
+  const nodeCollects = (selectedNode?.data as any)?.collects;
+  const hasCollects = nodeCollects && nodeCollects !== "__custom_empty__";
+
+  const handleCopy = (placeholder: string) => {
+    navigator.clipboard.writeText(`{{${placeholder}}}`).then(() => {
+      setCopied(placeholder);
+      setTimeout(() => setCopied(null), 1500);
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* This node collects */}
+      {selectedNode && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-3">
+            Dieser Schritt sammelt
+          </p>
+          {hasCollects ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-semibold text-indigo-300">
+                {VARIABLE_LABELS[nodeCollects] ?? nodeCollects}
+              </span>
+              <span className="text-xs text-zinc-500">
+                → gespeichert als{" "}
+                <code className="rounded bg-white/5 px-1 text-zinc-300">{`{{${nodeCollects}}}`}</code>
+              </span>
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-500">
+              Dieser Schritt sammelt keine Variable.{" "}
+              {(selectedNode?.data as any)?.inputMode === "free_text" && (
+                <span className="text-zinc-400">
+                  Wähle im Feld &quot;Dieses Feld sammelt&quot; was gespeichert werden soll.
+                </span>
+              )}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Placeholders used in this node's text */}
+      {selectedNode && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-3">
+            Platzhalter im Text dieses Schritts
+          </p>
+          {placeholdersInText.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {placeholdersInText.map((p) => (
+                <span
+                  key={p}
+                  className={`rounded-full border px-2 py-0.5 text-xs font-mono font-semibold ${
+                    allCollectedKeys.includes(p)
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                      : "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                  }`}
+                  title={allCollectedKeys.includes(p) ? "Wird gesammelt ✓" : "Wird NICHT gesammelt — fehlt ein Freitext-Schritt?"}
+                >
+                  {`{{${p}}}`}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-500">
+              Kein Platzhalter verwendet.{" "}
+              <span className="text-zinc-400">Tipp: Schreibe {"{{"}<span className="text-zinc-300">name</span>{"}}"} um den Namen einzufügen.</span>
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* All available placeholders in this flow */}
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-3">
+          Verfügbare Platzhalter in diesem Flow
+        </p>
+        {allCollectedKeys.length > 0 ? (
+          <div className="space-y-2">
+            {allCollectedKeys.map((key) => (
+              <div
+                key={key}
+                className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <code className="text-sm font-mono text-indigo-300">{`{{${key}}}`}</code>
+                  <span className="text-xs text-zinc-500">{VARIABLE_LABELS[key] ?? key}</span>
+                </div>
+                <button
+                  onClick={() => handleCopy(key)}
+                  className="text-xs font-semibold text-zinc-500 hover:text-zinc-200 transition-colors"
+                >
+                  {copied === key ? "Kopiert ✓" : "Kopieren"}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-500">
+            Noch keine Felder konfiguriert. Füge Freitext-Schritte hinzu und wähle jeweils &quot;Dieses Feld sammelt&quot;.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const EDGE_TONE_META: Record<EdgeTone, { label: string; bg: string; text: string }> = {
   neutral: { label: 'Neutral', bg: '#3f3f46', text: '#a1a1aa' },
@@ -471,11 +620,7 @@ export default function InspectorSlideOver({
 
           {/* Variables Tab */}
           {inspectorTab === 'variables' && (
-            <div className="rounded-xl border border-dashed border-white/20 p-8 text-center">
-              <p className="text-sm text-zinc-500">
-                Variablen-Support folgt. Plane hier Platzhalter wie {"{{customer_name}}"} ein.
-              </p>
-            </div>
+            <VariablesTab selectedNode={selectedNode} nodes={nodes} labels={labels} />
           )}
 
           {/* Preview Tab */}

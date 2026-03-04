@@ -283,5 +283,54 @@ export function lintFlow(
     });
   }
 
+  // === CYCLE DETECTION (DFS) ===
+  // Build adjacency list from edges + quickReply targets
+  const adjList = new Map<string, Set<string>>();
+  for (const node of nodes) adjList.set(node.id, new Set());
+  for (const edge of edges) adjList.get(edge.source)?.add(edge.target);
+  for (const node of nodes) {
+    const qrs = (node.data?.quickReplies ?? []) as FlowQuickReply[];
+    for (const qr of qrs) {
+      if (qr.targetNodeId) adjList.get(node.id)?.add(qr.targetNodeId);
+    }
+  }
+
+  const dfsVisited = new Set<string>();
+  const dfsStack = new Set<string>();
+  const reportedCycles = new Set<string>();
+
+  function dfs(nodeId: string) {
+    dfsVisited.add(nodeId);
+    dfsStack.add(nodeId);
+    for (const neighbor of Array.from(adjList.get(nodeId) ?? [])) {
+      if (!dfsVisited.has(neighbor)) {
+        dfs(neighbor);
+      } else if (dfsStack.has(neighbor)) {
+        const key = [nodeId, neighbor].sort().join("-");
+        if (!reportedCycles.has(key)) {
+          reportedCycles.add(key);
+          const fromNode = nodes.find((n) => n.id === nodeId);
+          const toNode = nodes.find((n) => n.id === neighbor);
+          warnings.push(
+            buildWarning(
+              `Schleife: "${fromNode?.data?.label ?? nodeId}" → "${toNode?.data?.label ?? neighbor}"`,
+              {
+                nodeId,
+                suggestion:
+                  "Diese Verbindung bildet eine Schleife. Falls gewollt, stelle sicher dass die Konversation irgendwann enden kann.",
+                severity: "info",
+              },
+            ),
+          );
+        }
+      }
+    }
+    dfsStack.delete(nodeId);
+  }
+
+  for (const node of nodes) {
+    if (!dfsVisited.has(node.id)) dfs(node.id);
+  }
+
   return { warnings };
 }

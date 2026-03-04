@@ -201,6 +201,23 @@ const buildFreeTextDefaults = (label?: string) => {
   };
 };
 
+function testTriggerMatch(message: string, keywords: string[], matchType: "EXACT" | "CONTAINS"): boolean {
+  if (!message.trim() || !keywords.length) return false;
+  const normalized = message.toLowerCase().trim();
+  for (const keyword of keywords) {
+    const kw = keyword.toLowerCase().trim();
+    if (!kw) continue;
+    if (matchType === "EXACT") {
+      if (normalized === kw) return true;
+    } else {
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(^|\\s|[.,!?])${escaped}($|\\s|[.,!?])`, "i");
+      if (regex.test(normalized)) return true;
+    }
+  }
+  return false;
+}
+
 export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
@@ -243,6 +260,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [builderMode, setBuilderMode] = useState<BuilderMode>("simple");
   const [isInspectorOpen, setInspectorOpen] = useState(false);
   const [showActivationModal, setShowActivationModal] = useState(false);
+  const [triggerTestInput, setTriggerTestInput] = useState("");
+  const [cockpitIssuesExpanded, setCockpitIssuesExpanded] = useState(false);
   const [isAddMenuOpen, setAddMenuOpen] = useState(false);
   const [showFlowSettings, setShowFlowSettings] = useState(false);
   const { vertical } = useAccountVertical();
@@ -966,6 +985,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setTriggerForm(null);
     setEditingTriggerId(null);
     setKeywordInput("");
+    setTriggerTestInput("");
   }, []);
 
   const saveTrigger = useCallback(() => {
@@ -1718,6 +1738,25 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                 </>
               )}
 
+              {/* Lint warnings summary */}
+              {lintWarnings.length > 0 && (
+                <>
+                  <div className="h-4 w-px bg-white/10 hidden sm:block" />
+                  <button
+                    onClick={() => setCockpitIssuesExpanded((v) => !v)}
+                    className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 transition-colors"
+                  >
+                    <TriangleAlert className="h-3.5 w-3.5" />
+                    <span className="font-medium">
+                      {lintWarnings.length} Problem{lintWarnings.length !== 1 ? "e" : ""}
+                    </span>
+                    <span className="text-amber-400/60 text-[10px]">
+                      {cockpitIssuesExpanded ? "▲" : "▼"}
+                    </span>
+                  </button>
+                </>
+              )}
+
               {/* Ready indicator */}
               {isReadyToActivate && status === "Entwurf" && (
                 <>
@@ -1729,6 +1768,36 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                 </>
               )}
             </div>
+
+            {/* Expanded lint warnings */}
+            {cockpitIssuesExpanded && lintWarnings.length > 0 && (
+              <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 space-y-2">
+                {lintWarnings.map((warning) => (
+                  <div key={warning.id} className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      <TriangleAlert className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-400" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-amber-300">{warning.message}</p>
+                        {warning.suggestion && (
+                          <p className="text-xs text-amber-300/60 mt-0.5">{warning.suggestion}</p>
+                        )}
+                      </div>
+                    </div>
+                    {warning.nodeId && (
+                      <button
+                        onClick={() => {
+                          setSelectedNodeId(warning.nodeId!);
+                          setCockpitIssuesExpanded(false);
+                        }}
+                        className="text-xs font-semibold text-amber-400 hover:text-amber-300 whitespace-nowrap shrink-0 transition-colors"
+                      >
+                        Zum Schritt →
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2019,6 +2088,32 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Test Input */}
+              <div>
+                <label className="text-sm font-semibold text-zinc-300">Testen</label>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  Würde eine Nachricht diesen Trigger auslösen?
+                </p>
+                <input
+                  value={triggerTestInput}
+                  onChange={(e) => setTriggerTestInput(e.target.value)}
+                  placeholder='z.B. "Ich möchte gerne reservieren"'
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
+                />
+                {triggerTestInput.trim() && (
+                  <div className={`mt-2 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                    testTriggerMatch(triggerTestInput, triggerForm.config.keywords, triggerForm.config.matchType)
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                      : "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                  }`}>
+                    {testTriggerMatch(triggerTestInput, triggerForm.config.keywords, triggerForm.config.matchType)
+                      ? <><CheckCircle2 className="h-4 w-4 shrink-0" /> Würde diesen Flow auslösen</>
+                      : <><X className="h-4 w-4 shrink-0" /> Würde diesen Flow NICHT auslösen</>
+                    }
+                  </div>
+                )}
               </div>
             </div>
             <div className="mt-6 flex gap-2">
