@@ -260,6 +260,8 @@ export default function FlowListBuilder({
   const [previewNodeId, setPreviewNodeId] = useState<string | null>(null);
   const [simulatorCurrentNodeId, setSimulatorCurrentNodeId] = useState<string | null>(null);
   const nodeCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  // Tracks the node that was active when preview was opened — no scroll for initial node
+  const previewStartNodeRef = useRef<string | null>(null);
 
   // Order nodes by flow path
   const orderedNodes = useMemo(() => buildFlowOrder(nodes, edges, startNodeIds), [nodes, edges, startNodeIds]);
@@ -275,17 +277,25 @@ export default function FlowListBuilder({
     return Array.from(new Set(keywords));
   }, [triggers]);
 
-  // When simulator moves to a new node, scroll the card into view
+  // When simulator moves to a new node, scroll the card into view —
+  // but skip the initial node (user is already looking at it when they clicked Eye).
+  // Use requestAnimationFrame so we wait for the layout reflow (preview panel appearing)
+  // to settle before measuring positions.
   useEffect(() => {
     if (!simulatorCurrentNodeId) return;
-    const el = nodeCardRefs.current.get(simulatorCurrentNodeId);
-    el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (simulatorCurrentNodeId === previewStartNodeRef.current) return;
+    const raf = requestAnimationFrame(() => {
+      const el = nodeCardRefs.current.get(simulatorCurrentNodeId);
+      el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+    return () => cancelAnimationFrame(raf);
   }, [simulatorCurrentNodeId]);
 
   // Reset simulator tracking when preview closes
   useEffect(() => {
     if (!previewNodeId) {
       setSimulatorCurrentNodeId(null);
+      previewStartNodeRef.current = null;
     }
   }, [previewNodeId]);
 
@@ -715,7 +725,10 @@ export default function FlowListBuilder({
                         e.stopPropagation();
                         const next = previewNodeId === node.id ? null : node.id;
                         setPreviewNodeId(next);
-                        if (next) setSimulatorCurrentNodeId(next);
+                        if (next) {
+                          previewStartNodeRef.current = next;
+                          setSimulatorCurrentNodeId(next);
+                        }
                       }}
                       className={`rounded-lg p-1.5 transition-colors ${
                         previewNodeId === node.id
