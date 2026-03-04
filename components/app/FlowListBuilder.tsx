@@ -522,8 +522,8 @@ export default function FlowListBuilder({
 
   return (
     <div className="flex gap-0 relative">
-      {/* Left: node list — shrinks when preview is open */}
-      <div className={`space-y-0 ${previewNodeId ? "flex-1 min-w-0" : "w-full"}`}>
+      {/* Left: node list — always flex-1, never changes width (prevents layout shift when preview opens) */}
+      <div className="flex-1 min-w-0 space-y-0">
       {/* Flow Header Stats */}
       <div className="mb-6 flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4">
         <div className="flex items-center gap-6">
@@ -1001,9 +1001,10 @@ export default function FlowListBuilder({
       </div>
     </div>
 
-    {/* Right: preview panel — sticky so it stays visible while scrolling */}
-      {previewNodeId && (
-        <div className="w-[300px] shrink-0 pl-4">
+    {/* Right: always 300px wide — content only visible when preview open.
+         Width never changes → no layout shift when preview opens/closes. */}
+      <div className="w-[300px] shrink-0 pl-4">
+        {previewNodeId && (
           <div className="sticky top-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
@@ -1024,8 +1025,8 @@ export default function FlowListBuilder({
               />
             </IPhoneMockup>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
