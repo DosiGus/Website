@@ -19,8 +19,10 @@ type FlowSimulatorProps = {
   edges: Edge[];
   triggers: FlowTrigger[];
   onNodeSelect?: (nodeId: string) => void;
+  onCurrentNodeChange?: (nodeId: string) => void;
   startNodeId?: string;
   autoStart?: boolean;
+  hideHeader?: boolean;
 };
 
 export default function FlowSimulator({
@@ -28,8 +30,10 @@ export default function FlowSimulator({
   edges,
   triggers,
   onNodeSelect,
+  onCurrentNodeChange,
   startNodeId: startNodeIdProp,
   autoStart,
+  hideHeader,
 }: FlowSimulatorProps) {
   const [messages, setMessages] = useState<SimulatorMessage[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
@@ -125,8 +129,11 @@ export default function FlowSimulator({
       if (onNodeSelect) {
         onNodeSelect(nodeId);
       }
+      if (onCurrentNodeChange) {
+        onCurrentNodeChange(nodeId);
+      }
     },
-    [findNode, getEffectiveQuickReplies, onNodeSelect]
+    [findNode, getEffectiveQuickReplies, onNodeSelect, onCurrentNodeChange]
   );
 
   const handleStart = useCallback(() => {
@@ -231,23 +238,25 @@ export default function FlowSimulator({
   }, [currentNodeId, isFlowEnded, findNode, findOutgoingEdges, deriveInputMode, getEffectiveQuickReplies]);
 
   return (
-    <div className="flex flex-col h-[400px]">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-white/10">
-        <p className="text-sm font-semibold text-zinc-300">Chat-Simulation</p>
-        {isStarted && (
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-indigo-400 transition-colors"
-          >
-            <RotateCcw className="h-3 w-3" />
-            Neustart
-          </button>
-        )}
-      </div>
+    <div className={`flex flex-col ${hideHeader ? "flex-1 min-h-0" : "h-[400px]"}`}>
+      {/* Header — hidden in iPhone mockup mode */}
+      {!hideHeader && (
+        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+          <p className="text-sm font-semibold text-zinc-300">Chat-Simulation</p>
+          {isStarted && (
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-indigo-400 transition-colors"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Neustart
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto py-3 space-y-2 px-3 no-scrollbar">
         {hasNoStartNode ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
             <AlertCircle className="h-8 w-8 text-amber-500" />
@@ -279,23 +288,25 @@ export default function FlowSimulator({
                 }`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2 ${
+                  className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
                     msg.type === "user"
-                      ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white"
-                      : "bg-zinc-800 text-zinc-200"
+                      ? "rounded-tr-sm bg-gradient-to-r from-indigo-500 to-violet-500 text-white"
+                      : "rounded-tl-sm bg-zinc-800 text-white"
                   }`}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    {msg.type === "bot" ? (
-                      <MessageCircle className="h-3 w-3 text-zinc-500" />
-                    ) : (
-                      <User className="h-3 w-3 text-white/70" />
-                    )}
-                    <span className="text-[10px] uppercase tracking-wide opacity-60">
-                      {msg.type === "bot" ? "Service" : "Du"}
-                    </span>
-                  </div>
-                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                  {!hideHeader && (
+                    <div className="flex items-center gap-2 mb-1">
+                      {msg.type === "bot" ? (
+                        <MessageCircle className="h-3 w-3 text-zinc-500" />
+                      ) : (
+                        <User className="h-3 w-3 text-white/70" />
+                      )}
+                      <span className="text-[10px] uppercase tracking-wide opacity-60">
+                        {msg.type === "bot" ? "Service" : "Du"}
+                      </span>
+                    </div>
+                  )}
+                  <p className="whitespace-pre-wrap">{msg.text}</p>
 
                   {msg.imageUrl && (
                     <div className="mt-2 rounded-xl overflow-hidden">
@@ -309,13 +320,13 @@ export default function FlowSimulator({
                   )}
 
                   {msg.quickReplies && msg.quickReplies.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
+                    <div className="flex flex-wrap gap-1.5 mt-2">
                       {msg.quickReplies.map((qr) => (
                         <button
                           key={qr.id}
                           onClick={() => handleQuickReplyClick(qr)}
                           disabled={msg.id !== messages[messages.length - 1]?.id}
-                          className="rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-semibold text-zinc-200 hover:bg-white/20 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="rounded-full border border-zinc-600 bg-zinc-700/80 px-3 py-1 text-[11px] font-medium text-white hover:border-indigo-400 hover:bg-indigo-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {qr.label}
                         </button>
@@ -347,31 +358,45 @@ export default function FlowSimulator({
 
       {/* Input Area */}
       {isStarted && !isFlowEnded && expectsFreeText && (
-        <div className="pt-3 border-t border-white/10">
-          <div className="flex gap-2">
-            <input
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleFreeTextSubmit();
-                }
-              }}
-              placeholder={currentPlaceholder}
-              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20"
-            />
+        <div className={`border-t border-white/10 ${hideHeader ? "px-3 py-2" : "pt-3"}`}>
+          <div className="flex items-center gap-2">
+            {hideHeader && (
+              <div className="flex-1 flex items-center rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5">
+                <input
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); handleFreeTextSubmit(); }
+                  }}
+                  placeholder={currentPlaceholder}
+                  className="flex-1 bg-transparent text-[12px] text-white placeholder:text-zinc-500 focus:outline-none"
+                />
+              </div>
+            )}
+            {!hideHeader && (
+              <input
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); handleFreeTextSubmit(); }
+                }}
+                placeholder={currentPlaceholder}
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20"
+              />
+            )}
             <button
               onClick={handleFreeTextSubmit}
               disabled={!userInput.trim()}
-              className="rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 p-2 text-white hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className={`${hideHeader ? "rounded-full bg-indigo-500 p-1.5" : "rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 p-2"} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all`}
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-3.5 w-3.5" />
             </button>
           </div>
-          <p className="text-[10px] text-zinc-500 mt-2 text-center">
-            Dieser Node erwartet eine Texteingabe
-          </p>
+          {!hideHeader && (
+            <p className="text-[10px] text-zinc-500 mt-2 text-center">
+              Dieser Node erwartet eine Texteingabe
+            </p>
+          )}
         </div>
       )}
     </div>
