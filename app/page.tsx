@@ -1,23 +1,20 @@
 import Link from "next/link";
 import PhoneMockup from "../components/PhoneMockup";
 import FlowBuilderDemo from "../components/FlowBuilderDemo";
-import WorkflowStepsStacked from "../components/WorkflowStepsStacked";
 import GoogleReviewsFlow from "../components/GoogleReviewsFlow";
 import FaqAccordion from "../components/FaqAccordion";
 import HomeTemplateDemoModal from "../components/HomeTemplateDemoModal";
 import GoogleCalendarSyncDemo from "../components/GoogleCalendarSyncDemo";
 import {
-  MessageSquare,
-  CalendarCheck,
-  Bell,
   Star,
-  Shield,
-  BarChart3,
-  Users,
   ArrowRight,
   CheckCircle2,
-  Sparkles,
   Workflow,
+  Link2,
+  Layers,
+  Pencil,
+  Zap,
+  type LucideIcon,
 } from "lucide-react";
 
 /* ========================================
@@ -30,130 +27,37 @@ const heroStats = [
   "Mehr Bewertungen",
 ];
 
-const outcomes = [
+const steps: { step: string; icon: LucideIcon; title: string; description: string; color: string }[] = [
   {
-    value: "+63%",
-    label: "mehr Buchungen aus DMs",
-    detail: "Pilotdaten nach 6 Wochen",
+    step: "01",
+    icon: Link2,
+    title: "Verbinden",
+    description: "Instagram, Google Kalender und Google Reviews einmalig verknüpfen – in wenigen Minuten.",
     color: "from-indigo-500 to-violet-500",
   },
   {
-    value: "3×",
-    label: "schnellere Antworten",
-    detail: "Instagram, Facebook, WhatsApp",
+    step: "02",
+    icon: Layers,
+    title: "Flow einrichten",
+    description: "Branchentemplate übernehmen oder eigenen Ablauf mit dem Setup-Assistenten aufbauen.",
     color: "from-cyan-500 to-blue-500",
   },
   {
-    value: "-28%",
-    label: "No-Shows reduziert",
-    detail: "Bestätigung + Reminder",
+    step: "03",
+    icon: Pencil,
+    title: "Anpassen",
+    description: "Texte und Antwort-Buttons im visuellen Editor auf Ihren Betrieb zuschneiden – ohne Code.",
     color: "from-emerald-500 to-teal-500",
   },
   {
-    value: "+41%",
-    label: "mehr Google Reviews",
-    detail: "automatisiert nach dem Besuch",
+    step: "04",
+    icon: Zap,
+    title: "Live schalten",
+    description: "Flow aktivieren, direkt im Browser testen und sofort automatisch auf Anfragen antworten.",
     color: "from-amber-500 to-orange-500",
   },
 ];
 
-const features = [
-  {
-    icon: MessageSquare,
-    title: "Antwort-Buttons",
-    description: "Klare Auswahl statt Freitext – Kunden klicken sich in wenigen Sekunden zum Ziel.",
-    gradient: "from-indigo-500 to-violet-500",
-  },
-  {
-    icon: CalendarCheck,
-    title: "Buchungen im Chat",
-    description: "Datum, Uhrzeit und Personenanzahl werden im Dialog abgefragt und bestätigt.",
-    gradient: "from-emerald-500 to-teal-500",
-  },
-  {
-    icon: Bell,
-    title: "Reminder",
-    description: "Automatische Erinnerungen senken No-Shows messbar.",
-    gradient: "from-amber-500 to-orange-500",
-  },
-  {
-    icon: Star,
-    title: "Bewertungen anfragen",
-    description: "Nach dem Besuch wird freundlich zur Bewertung eingeladen.",
-    gradient: "from-pink-500 to-rose-500",
-  },
-  {
-    icon: Shield,
-    title: "Sicher & DSGVO-konform",
-    description: "Meta-verifiziert, klare Rollen, volle Datentransparenz.",
-    gradient: "from-slate-500 to-zinc-500",
-  },
-  {
-    icon: BarChart3,
-    title: "Analytics",
-    description: "Alle Konversationen, Buchungen und Metriken im Dashboard.",
-    gradient: "from-cyan-500 to-blue-500",
-  },
-];
-
-const useCases = [
-  {
-    industry: "Restaurants & Bars",
-    scenario: "DM → Tischanfrage → Bestätigung",
-    outcome: "Mehr Reservierungen aus Stories – ohne Zusatzaufwand.",
-    icon: "🍽️",
-  },
-  {
-    industry: "Salons & Beauty",
-    scenario: "DM → Termin → Zusatzleistung",
-    outcome: "Mehr Umsatz pro Termin, weniger Ausfälle.",
-    icon: "💇",
-  },
-  {
-    industry: "Praxen & Kliniken",
-    scenario: "DM → Vorqualifizierung → Termin",
-    outcome: "Weniger Telefon, klar vorbereitete Termine.",
-    icon: "🏥",
-  },
-  {
-    industry: "Fitness & Wellness",
-    scenario: "DM → Kurs → Follow-up",
-    outcome: "Mehr Mitgliedschaften durch schnelle Antworten.",
-    icon: "💪",
-  },
-];
-
-const testimonial = {
-  quote:
-    "Wir beantworten jede Instagram-Anfrage automatisch – inklusive Terminbuchung. Das spart uns täglich fast zwei Stunden und wir verlieren keine Anfrage mehr.",
-  author: "Mira Lehmann",
-  role: "Inhaberin, Studio Lumi",
-  company: "Friseur & Kosmetik",
-};
-
-
-const differentiators = [
-  {
-    title: "Branchenfertig statt Baukasten",
-    description: "Abläufe, Texte und Antworten sind auf Service-Branchen zugeschnitten – sofort nutzbar.",
-  },
-  {
-    title: "Buchungen & Bewertungen aus einem Guss",
-    description: "Vom ersten Kontakt bis zur Bewertung läuft alles im selben Dialog – ohne Tool-Chaos.",
-  },
-  {
-    title: "Onboarding mit echter Begleitung",
-    description: "Wir richten ein, testen und optimieren gemeinsam – kein Self‑Service‑Alleingang.",
-  },
-];
-
-const comparisonRows = [
-  { label: "Einrichtung & QA", wesponde: "Begleitet + geprüft", others: "Selbst einrichten" },
-  { label: "Branchenvorlagen", wesponde: "Fix & anpassbar", others: "Generisch" },
-  { label: "Buchungen im Chat", wesponde: "Inklusive", others: "Zusatz-Tool nötig" },
-  { label: "Bewertungen nach dem Besuch", wesponde: "Automatisch", others: "Manuell" },
-  { label: "Team-Übergaben", wesponde: "Klar definiert", others: "Unklar/extra" },
-];
 
 const faqs = [
   {
@@ -269,9 +173,71 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ==================== WORKFLOW SECTION ==================== */}
-      <section id="workflow" className="relative">
-        <WorkflowStepsStacked />
+      {/* ==================== ABLAUF SECTION ==================== */}
+      <section id="ablauf" className="relative overflow-hidden bg-zinc-900/50 py-16 sm:py-24 lg:py-32">
+        <div className="absolute inset-0 bg-grid-dark opacity-50" />
+        <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
+              Ablauf
+            </span>
+            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              Schnell eingerichtet.<br className="hidden sm:block" /> Dauerhaft wirksam.
+            </h2>
+            <p className="mt-4 text-lg text-zinc-400">
+              Geführter Setup-Prozess – von der ersten Integration bis zum vollständig automatisierten Betrieb.
+            </p>
+          </div>
+
+          <div className="mt-10 grid grid-cols-1 gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.step} className="relative">
+                  {/* Connector arrow — desktop only */}
+                  {index < steps.length - 1 && (
+                    <div className="absolute -right-2.5 top-9 z-10 hidden h-5 w-5 items-center justify-center lg:flex">
+                      <ArrowRight className="h-3.5 w-3.5 text-zinc-600" />
+                    </div>
+                  )}
+
+                  <div className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 transition-all hover:border-white/15 hover:bg-white/[0.07]">
+                    {/* Ambient glow */}
+                    <div
+                      className={`absolute -right-6 -top-6 h-20 w-20 rounded-full bg-gradient-to-br ${step.color} opacity-10 blur-2xl transition-opacity group-hover:opacity-20`}
+                    />
+
+                    <div className="relative">
+                      {/* Step number — subtle, monospaced */}
+                      <span className="font-mono text-xs font-medium tracking-widest text-zinc-600">
+                        {step.step}
+                      </span>
+
+                      {/* Icon */}
+                      <div
+                        className={`mt-3 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${step.color}`}
+                      >
+                        <Icon className="h-5 w-5 text-white" />
+                      </div>
+
+                      {/* Title */}
+                      <h3 className="mt-4 text-base font-semibold text-white sm:text-lg">
+                        {step.title}
+                      </h3>
+
+                      {/* Description — one sentence only */}
+                      <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                        {step.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       {/* ==================== GOOGLE CALENDAR SYNC SECTION ==================== */}
@@ -292,54 +258,13 @@ export default function HomePage() {
               </span>
             </h2>
             <p className="mt-4 text-base text-zinc-400 sm:text-lg">
-              Nutzer verbinden ihren Google Kalender einmalig. Bei jeder Anfrage prüft das System freie Slots,
-              bestätigt passende Zeiten direkt oder bietet Alternativen an. Bestätigte Termine landen ohne
-              manuelle Arbeit sofort im Kalender.
+              Verbinden Sie Ihren Google Kalender einmalig. Bei jeder Anfrage prüft Wesponde automatisch freie
+              Slots, bestätigt passende Zeiten direkt per DM oder schlägt Alternativen vor. Bestätigte Termine
+              erscheinen sofort in Ihrem Kalender – ohne manuelle Arbeit.
             </p>
           </div>
 
           <GoogleCalendarSyncDemo />
-        </div>
-      </section>
-
-      {/* ==================== OUTCOMES SECTION ==================== */}
-      <section id="outcomes" className="relative overflow-hidden bg-zinc-900/50 py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-grid-dark opacity-50" />
-        <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
-              Ergebnisse
-            </span>
-            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              Messbare Wirkung ab Woche 1
-            </h2>
-            <p className="mt-4 text-lg text-zinc-400">
-              Mehr Buchungen, weniger No-Shows, bessere Bewertungen – nachvollziehbar im Dashboard.
-            </p>
-          </div>
-
-          <div className="mt-10 grid grid-cols-2 gap-3 sm:mt-16 sm:gap-6 lg:grid-cols-4">
-            {outcomes.map((outcome, index) => (
-              <div
-                key={outcome.label}
-                className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-white/20 hover:bg-white/10 sm:rounded-2xl sm:p-6"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div
-                  className={`absolute -right-8 -top-8 hidden h-24 w-24 rounded-full bg-gradient-to-br ${outcome.color} opacity-20 blur-2xl transition-opacity group-hover:opacity-30 sm:block`}
-                />
-                <div className="relative">
-                  <div className="text-2xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                    {outcome.value}
-                  </div>
-                  <div className="mt-1.5 text-sm font-medium text-white sm:mt-3 sm:text-base">{outcome.label}</div>
-                  <div className="mt-0.5 text-xs text-zinc-500 sm:mt-1 sm:text-sm">{outcome.detail}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
