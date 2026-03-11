@@ -42,10 +42,10 @@ export default function Navbar() {
 
   return (
     <header
-      className={`fixed left-0 top-0 z-50 w-full transition-all duration-500 ${
+      className={`fixed left-0 top-0 z-50 w-full transition-all duration-300 ${
         scrolled
-          ? 'border-b border-white/[0.07] bg-zinc-950/90 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.04)]'
-          : 'bg-gradient-to-b from-black/40 to-transparent'
+          ? 'border-b border-white/[0.07] bg-zinc-950/95 backdrop-blur-xl'
+          : 'border-b border-transparent bg-zinc-950/60 backdrop-blur-md'
       }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
