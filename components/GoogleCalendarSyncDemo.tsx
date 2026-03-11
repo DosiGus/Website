@@ -34,8 +34,8 @@ const STEPS: Step[] = [
     id: "confirm",
     num: 3,
     title: "Termin bestätigen",
-    badge: "Automatische Antwort",
-    description: "Slot ist frei – Bestätigung geht sofort per DM raus.",
+    badge: "Auto-Antwort",
+    description: "Slot ist frei - Bestätigung geht sofort per DM raus.",
   },
   {
     id: "sync",
@@ -142,9 +142,10 @@ export default function GoogleCalendarSyncDemo() {
   // We render it as an absolute overlay so it can show content without truncation
   const EVENT_TOP_SLOT = 2; // 10:00 is at index 2
   const EVENT_SLOTS    = 1; // 30-minute event
+  const primarySteps = STEPS.slice(0, 3);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
+    <div className="grid items-start gap-5 lg:grid-cols-[1fr_1.12fr]">
 
       {/* ═══════════════════════════════════════════
           LEFT – Process Timeline
@@ -172,7 +173,7 @@ export default function GoogleCalendarSyncDemo() {
         <div className="relative flex flex-col gap-2">
           <div className="absolute bottom-7 left-[19px] top-7 w-px bg-gradient-to-b from-white/15 via-white/10 to-transparent" />
 
-          {STEPS.map((step, index) => {
+          {primarySteps.map((step, index) => {
             const isActive = index === stepIndex;
             const isDone   = index < stepIndex;
             return (
@@ -198,7 +199,7 @@ export default function GoogleCalendarSyncDemo() {
                   {isDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : step.num}
                 </div>
 
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 pr-8">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className={`text-sm font-semibold transition-colors ${isActive ? "text-white" : isDone ? "text-zinc-300" : "text-zinc-500"}`}>
                       {step.title}
@@ -219,7 +220,7 @@ export default function GoogleCalendarSyncDemo() {
                 </div>
 
                 {isActive && (
-                  <div className="flex flex-shrink-0 items-center gap-1">
+                  <div className="pointer-events-none absolute right-4 top-3.5 flex items-center gap-1">
                     {[0, 150, 300].map((d) => (
                       <span key={d} className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400" style={{ animationDelay: `${d}ms` }} />
                     ))}
@@ -229,13 +230,44 @@ export default function GoogleCalendarSyncDemo() {
             );
           })}
         </div>
+
+        {/* Compact final state row to avoid excessive left column height */}
+        <div
+          className={`rounded-xl border px-4 py-3 transition-all duration-500 ${
+            hasSynced
+              ? "border-emerald-500/30 bg-emerald-500/[0.06]"
+              : "border-white/[0.07] bg-white/[0.02]"
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ring-1 ${
+                hasSynced
+                  ? "bg-emerald-500/20 text-emerald-400 ring-emerald-500/40"
+                  : "bg-white/5 text-zinc-600 ring-white/10"
+              }`}
+            >
+              4
+            </div>
+            <p className={`text-sm font-semibold ${hasSynced ? "text-emerald-300" : "text-zinc-500"}`}>
+              Kalender synchronisiert
+            </p>
+            <span
+              className={`ml-auto rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                hasSynced ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-zinc-600"
+              }`}
+            >
+              Event erstellt
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════
           RIGHT – Google Calendar  (3-day view)
           ═══════════════════════════════════════════ */}
-      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-3 sm:p-4">
-        <div className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-[0_8px_48px_-16px_rgba(0,0,0,0.7)]">
+      <div className="flex h-full items-center rounded-2xl border border-white/10 bg-zinc-900/50 p-3 sm:p-4">
+        <div className="flex w-full flex-col overflow-hidden rounded-xl bg-white shadow-[0_8px_48px_-16px_rgba(0,0,0,0.7)]">
 
           {/* Toolbar */}
           <div className="flex items-center gap-2 border-b border-zinc-100 px-4 py-2.5">

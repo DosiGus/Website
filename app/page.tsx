@@ -143,8 +143,15 @@ export default function HomePage() {
               </p>
 
               {/* CTA */}
-              <div className="mt-10">
+              <div className="mt-10 flex flex-wrap items-center gap-3">
                 <HomeTemplateDemoModal />
+                <Link
+                  href="/home-v2"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-medium text-zinc-200 backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10 hover:text-white"
+                >
+                  Neue Homepage ansehen
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
 
               {/* Hero Benefits */}

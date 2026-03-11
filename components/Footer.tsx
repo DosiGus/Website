@@ -40,13 +40,8 @@ export default function Footer() {
 
           {/* ── Brand column ── */}
           <div>
-            <Link href="/" className="inline-flex items-center gap-2.5 group">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500">
-                <span className="text-xs font-bold text-white">W</span>
-              </div>
-              <span className="font-display text-base font-medium tracking-tight text-white">
-                Wesponde
-              </span>
+            <Link href="/" className="inline-flex leading-none tracking-tight text-white">
+              <span className="font-display text-xl">Wesponde</span>
             </Link>
 
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-zinc-500">
