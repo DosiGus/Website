@@ -60,7 +60,7 @@ export default function GoogleReviewsFlow() {
               <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Instagram DM</span>
             </div>
 
-            <p className="text-sm font-medium text-zinc-300">
+            <p className="min-h-[56px] text-sm font-medium text-zinc-300">
               Automatische Nachricht nach Besuch
             </p>
 
@@ -71,17 +71,19 @@ export default function GoogleReviewsFlow() {
               <p className="text-sm text-white">
                 Danke für deinen Besuch bei uns! Wie war dein Erlebnis?
               </p>
-              <div className="mt-3 flex gap-1">
+              <div className="mt-3 grid grid-cols-5 gap-1">
                 {[1, 2, 3, 4, 5].map((rating) => (
                   <button
                     key={rating}
-                    className={`rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+                    className={`inline-flex h-10 w-full items-center justify-center rounded-xl border px-0 text-xs font-medium transition-all ${
                       step >= 3 && rating === 5
-                        ? 'scale-110 border-emerald-400 bg-emerald-500 text-white'
+                        ? 'border-emerald-400 bg-emerald-500 text-white'
                         : 'border-white/30 bg-white/10 text-white hover:bg-white/20'
                     }`}
                   >
-                    {rating === 5 ? '5 ★' : rating}
+                    <span className="text-[12px] leading-none">
+                      {rating === 5 ? "5★" : rating}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -137,7 +139,7 @@ export default function GoogleReviewsFlow() {
               <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Google Reviews</span>
             </div>
 
-            <p className="text-sm font-medium text-zinc-300">
+            <p className="min-h-[56px] text-sm font-medium text-zinc-300">
               Direkter Link zur Bewertung
             </p>
 
@@ -153,7 +155,7 @@ export default function GoogleReviewsFlow() {
                   <p className="text-xs font-semibold text-zinc-900">Lisa M.</p>
                   <div className="flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} className="h-3 w-3 fill-emerald-400 text-emerald-400" />
+                      <Star key={i} className="h-3 w-3 fill-[#fbbc04] text-[#fbbc04]" />
                     ))}
                   </div>
                 </div>
