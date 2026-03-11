@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Minus } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 type FaqItem = {
   question: string;
@@ -15,43 +15,49 @@ type FaqAccordionProps = {
 export default function FaqAccordion({ faqs }: FaqAccordionProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  const toggleFaq = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index);
-  };
-
   return (
-    <div className="mx-auto max-w-2xl divide-y divide-white/10">
+    <div className="divide-y divide-white/[0.06]">
       {faqs.map((faq, index) => {
         const isOpen = openIndex === index;
         return (
-          <div key={faq.question} className="group">
+          <div key={faq.question}>
             <button
-              onClick={() => toggleFaq(index)}
-              className="flex w-full items-start justify-between gap-4 py-6 text-left"
+              onClick={() => setOpenIndex(isOpen ? null : index)}
+              className="group flex w-full items-start gap-4 py-5 text-left sm:py-6"
             >
-              <h3 className={`text-base font-medium transition-colors sm:text-lg ${
+              {/* Number */}
+              <span className="mt-0.5 w-7 flex-shrink-0 font-mono text-[11px] font-medium tabular-nums text-zinc-600 transition-colors group-hover:text-zinc-500">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+
+              {/* Question */}
+              <h3 className={`flex-1 text-sm font-medium leading-relaxed transition-colors sm:text-base ${
                 isOpen ? 'text-white' : 'text-zinc-300 group-hover:text-white'
               }`}>
                 {faq.question}
               </h3>
-              <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border transition-all ${
+
+              {/* Toggle */}
+              <div className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
                 isOpen
-                  ? 'border-emerald-500/50 bg-emerald-500/10'
-                  : 'border-white/20 bg-white/5 group-hover:border-white/30'
+                  ? 'border-indigo-500/40 bg-indigo-500/[0.08]'
+                  : 'border-white/[0.08] bg-white/[0.03] group-hover:border-white/15'
               }`}>
-                {isOpen ? (
-                  <Minus className="h-3.5 w-3.5 text-emerald-400" />
-                ) : (
-                  <Plus className="h-3.5 w-3.5 text-zinc-400 group-hover:text-white" />
-                )}
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-all duration-300 ${
+                    isOpen ? 'rotate-180 text-indigo-400' : 'text-zinc-500 group-hover:text-zinc-300'
+                  }`}
+                />
               </div>
             </button>
+
+            {/* Answer */}
             <div
               className={`grid transition-all duration-300 ease-in-out ${
-                isOpen ? 'grid-rows-[1fr] opacity-100 pb-6' : 'grid-rows-[0fr] opacity-0'
+                isOpen ? 'grid-rows-[1fr] opacity-100 pb-5 sm:pb-6' : 'grid-rows-[0fr] opacity-0'
               }`}
             >
-              <div className="overflow-hidden">
+              <div className="overflow-hidden pl-11">
                 <p className="text-sm leading-relaxed text-zinc-400 sm:text-base">
                   {faq.answer}
                 </p>

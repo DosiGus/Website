@@ -83,7 +83,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/login?view=signup"
-            className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:bg-emerald-500 hover:text-white hover:shadow-emerald-500/30"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
           >
             Jetzt starten
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -123,7 +123,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/login?view=signup"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-zinc-900 shadow-lg transition-all hover:bg-emerald-500 hover:text-white"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
                 onClick={() => setMenuOpen(false)}
               >
                 Jetzt starten

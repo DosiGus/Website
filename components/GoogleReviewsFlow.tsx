@@ -77,7 +77,7 @@ export default function GoogleReviewsFlow() {
                     key={rating}
                     className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${
                       step >= 3 && rating === 5
-                        ? 'scale-110 border-amber-400 bg-amber-500 text-white'
+                        ? 'scale-110 border-emerald-400 bg-emerald-500 text-white'
                         : 'border-white/30 bg-white/10 text-white hover:bg-white/20'
                     }`}
                   >
@@ -146,12 +146,14 @@ export default function GoogleReviewsFlow() {
               step >= 4 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
             }`}>
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-zinc-800">
+                  <span className="text-[10px] font-semibold text-zinc-300">LM</span>
+                </div>
                 <div>
                   <p className="text-xs font-semibold text-zinc-900">Lisa M.</p>
                   <div className="flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      <Star key={i} className="h-3 w-3 fill-emerald-400 text-emerald-400" />
                     ))}
                   </div>
                 </div>
@@ -163,7 +165,7 @@ export default function GoogleReviewsFlow() {
 
             {/* Success indicator */}
             <div className={`mt-4 flex items-center gap-2 text-xs transition-all duration-500 ${
-              step >= 5 ? 'text-emerald-400' : 'text-zinc-500'
+              step >= 5 ? 'text-indigo-400' : 'text-zinc-500'
             }`}>
               {step >= 5 ? (
                 <>
@@ -187,17 +189,17 @@ export default function GoogleReviewsFlow() {
           {
             label: 'Vollautomatisch',
             detail: 'Kein manuelles Nachfassen – die Anfrage geht nach dem Besuch automatisch raus.',
-            color: 'text-emerald-400',
+            color: 'text-white',
           },
           {
             label: 'Direktlink zu Google',
             detail: 'Ein Klick zur Bewertungsseite – kein Suchen, kein Umweg.',
-            color: 'text-amber-400',
+            color: 'text-white',
           },
           {
             label: 'Richtiger Zeitpunkt',
             detail: 'Die Nachricht wird gesendet, wenn das Erlebnis noch frisch ist.',
-            color: 'text-indigo-400',
+            color: 'text-white',
           },
         ].map((item) => (
           <div key={item.label} className="rounded-lg border border-white/10 bg-zinc-900/50 p-2.5 text-center sm:rounded-xl sm:p-4">

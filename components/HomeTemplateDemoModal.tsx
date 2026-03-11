@@ -145,7 +145,7 @@ export default function HomeTemplateDemoModal({
             event.preventDefault();
             openModal();
           }}
-          className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-zinc-900 shadow-lg shadow-white/10 transition-all hover:bg-emerald-500 hover:text-white hover:shadow-emerald-500/30"
+          className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3.5 text-sm font-medium text-white backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
         >
           Demo testen
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
