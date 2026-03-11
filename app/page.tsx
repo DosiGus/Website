@@ -132,7 +132,7 @@ export default function HomePage() {
             {/* Left Content */}
             <div className="max-w-2xl">
               {/* Headline */}
-              <h1 className="mt-6 font-display text-4xl font-medium tracking-tight sm:mt-8 sm:text-5xl md:text-6xl lg:text-7xl">
+              <h1 className="mt-6 font-display text-3xl font-medium tracking-tight sm:mt-8 sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
                 Premium-Service beginnt bei der ersten Nachricht.
               </h1>
 
@@ -324,7 +324,7 @@ export default function HomePage() {
               <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
                 FAQ
               </span>
-              <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+              <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:text-4xl lg:text-5xl">
                 Häufige<br />Fragen
               </h2>
               <p className="mt-5 text-base leading-relaxed text-zinc-400">

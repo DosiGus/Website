@@ -57,8 +57,8 @@ export default function LoginPage({ searchParams }: { searchParams: { view?: str
     <div className="relative min-h-screen bg-zinc-950 pt-24">
       {/* Background */}
       <div className="absolute inset-0 bg-grid-dark opacity-50" />
-      <div className="absolute left-0 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px]" />
-      <div className="absolute bottom-0 right-0 h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px]" />
+      <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
+      <div className="absolute bottom-0 right-0 hidden h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px] sm:block" />
 
       <section className="relative mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">

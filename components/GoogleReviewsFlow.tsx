@@ -75,7 +75,7 @@ export default function GoogleReviewsFlow() {
                 {[1, 2, 3, 4, 5].map((rating) => (
                   <button
                     key={rating}
-                    className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${
+                    className={`rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
                       step >= 3 && rating === 5
                         ? 'scale-110 border-emerald-400 bg-emerald-500 text-white'
                         : 'border-white/30 bg-white/10 text-white hover:bg-white/20'
@@ -184,7 +184,7 @@ export default function GoogleReviewsFlow() {
       </div>
 
       {/* Feature Cards Row */}
-      <div className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:gap-4">
+      <div className="mt-6 grid grid-cols-1 gap-2 sm:mt-8 sm:grid-cols-3 sm:gap-4">
         {[
           {
             label: 'Vollautomatisch',
