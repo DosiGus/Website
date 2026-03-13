@@ -58,6 +58,45 @@ const TIME_SLOTS = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30"];
 // Height of each 30-min slot in px
 const ROW_H = 44;
 
+const STEP_TONES = [
+  {
+    activeShell:
+      "border-[#2fc7a0]/45 bg-[#1f6f64]/24 shadow-[inset_0_0_0_1px_rgba(47,199,160,0.2)]",
+    activeBullet: "bg-[#1f6f64]/60 text-[#8af5d9] ring-[#3fd8b3]/60",
+    activeBadge: "bg-[#1f6f64]/40 text-[#8af5d9]",
+    activeDots: "bg-[#5de3c2]",
+    doneShell: "border-[#2fc7a0]/30 bg-[#1f6f64]/16",
+    doneBullet: "bg-[#1f6f64]/55 text-[#79efcf] ring-[#3fd8b3]/45",
+    doneBadge: "bg-[#1f6f64]/32 text-[#79efcf]",
+    doneTitle: "text-[#d9f9ef]",
+    doneDesc: "text-[#a2d9cb]",
+  },
+  {
+    activeShell:
+      "border-[#7ea5ef]/50 bg-[#345897]/24 shadow-[inset_0_0_0_1px_rgba(126,165,239,0.2)]",
+    activeBullet: "bg-[#3e5fa3]/60 text-[#d7e4ff] ring-[#9ab9f4]/60",
+    activeBadge: "bg-[#3a5f9e]/38 text-[#cfe0ff]",
+    activeDots: "bg-[#95b5f3]",
+    doneShell: "border-[#7ea5ef]/30 bg-[#345897]/14",
+    doneBullet: "bg-[#355693]/55 text-[#c6d8ff] ring-[#88acef]/45",
+    doneBadge: "bg-[#385e9b]/32 text-[#c6d8ff]",
+    doneTitle: "text-[#e3ecff]",
+    doneDesc: "text-[#b6c8e9]",
+  },
+  {
+    activeShell:
+      "border-[#a58ef4]/50 bg-[#4c458f]/24 shadow-[inset_0_0_0_1px_rgba(165,142,244,0.2)]",
+    activeBullet: "bg-[#4a4388]/60 text-[#e3dcff] ring-[#b29ef6]/60",
+    activeBadge: "bg-[#524a95]/38 text-[#ddd4ff]",
+    activeDots: "bg-[#b6a2f8]",
+    doneShell: "border-[#a58ef4]/30 bg-[#4c458f]/14",
+    doneBullet: "bg-[#4a4388]/55 text-[#ddd4ff] ring-[#b29ef6]/45",
+    doneBadge: "bg-[#524a95]/32 text-[#ddd4ff]",
+    doneTitle: "text-[#ede8ff]",
+    doneDesc: "text-[#c6bbe9]",
+  },
+] as const;
+
 /* ============================================================
    SUB-COMPONENTS
    ============================================================ */
@@ -150,20 +189,20 @@ export default function GoogleCalendarSyncDemo() {
       {/* ═══════════════════════════════════════════
           LEFT – Process Timeline
           ═══════════════════════════════════════════ */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-5 sm:p-6">
+      <div className="flex flex-col gap-4 rounded-2xl border border-[#8fa7d3]/30 bg-[linear-gradient(155deg,rgba(11,22,48,0.78),rgba(17,45,94,0.6))] p-5 sm:p-6">
 
         {/* Instagram DM Bubble */}
-        <div className="rounded-xl border border-white/[0.07] bg-zinc-950/70 p-4">
+        <div className="rounded-xl border border-[#8fa7d3]/20 bg-[linear-gradient(145deg,rgba(8,15,34,0.9),rgba(15,31,64,0.74))] p-4">
           <div className="mb-3 flex items-center gap-2.5">
             <InstagramAvatar />
             <div className="min-w-0 flex-1">
               <p className="text-[12px] font-semibold leading-none text-white">Instagram DM</p>
-              <p className="mt-0.5 text-[10px] text-zinc-500">Kunde · gerade eben</p>
+              <p className="mt-0.5 text-[10px] text-[#9db3d8]">Kunde · gerade eben</p>
             </div>
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_2px_rgba(52,211,153,0.4)]" />
           </div>
           <div className="flex justify-start">
-            <div className="max-w-[88%] rounded-2xl rounded-bl-sm bg-zinc-800 px-3.5 py-2.5 text-[13px] leading-relaxed text-zinc-100">
+            <div className="max-w-[88%] rounded-2xl rounded-bl-sm bg-[linear-gradient(120deg,rgba(42,57,95,0.9),rgba(34,47,80,0.95))] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#eef3ff]">
               Hi, habt ihr am Samstag um 10:00 Uhr einen Termin frei?
             </div>
           </div>
@@ -171,29 +210,30 @@ export default function GoogleCalendarSyncDemo() {
 
         {/* Step timeline */}
         <div className="relative flex flex-col gap-2">
-          <div className="absolute bottom-7 left-[19px] top-7 w-px bg-gradient-to-b from-white/15 via-white/10 to-transparent" />
+          <div className="absolute bottom-7 left-[19px] top-7 w-px bg-gradient-to-b from-[#9ab4e8]/35 via-[#8fa7d3]/25 to-transparent" />
 
           {primarySteps.map((step, index) => {
             const isActive = index === stepIndex;
             const isDone   = index < stepIndex;
+            const tone = STEP_TONES[index];
             return (
               <div
                 key={step.id}
                 className={`relative flex items-start gap-3.5 rounded-xl border px-4 py-3.5 transition-all duration-500 ${
                   isActive
-                    ? "border-indigo-500/40 bg-indigo-500/[0.07] shadow-[inset_0_0_0_1px_rgba(99,102,241,0.12)]"
+                    ? tone.activeShell
                     : isDone
-                    ? "border-emerald-500/20 bg-emerald-500/[0.04]"
-                    : "border-white/[0.07] bg-white/[0.02]"
+                    ? tone.doneShell
+                    : "border-[#8fa7d3]/20 bg-[#223a67]/20"
                 }`}
               >
                 <div
                   className={`relative z-10 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold ring-1 transition-all duration-500 ${
                     isDone
-                      ? "bg-emerald-500/20 text-emerald-400 ring-emerald-500/40"
+                      ? tone.doneBullet
                       : isActive
-                      ? "bg-indigo-500/25 text-indigo-300 ring-indigo-400/50"
-                      : "bg-white/5 text-zinc-600 ring-white/10"
+                      ? tone.activeBullet
+                      : "bg-[#253d69]/45 text-[#9cb3d9] ring-[#8fa7d3]/20"
                   }`}
                 >
                   {isDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : step.num}
@@ -201,20 +241,28 @@ export default function GoogleCalendarSyncDemo() {
 
                 <div className="min-w-0 flex-1 pr-8">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className={`text-sm font-semibold transition-colors ${isActive ? "text-white" : isDone ? "text-zinc-300" : "text-zinc-500"}`}>
+                    <p
+                      className={`text-sm font-semibold transition-colors ${
+                        isActive ? "text-white" : isDone ? tone.doneTitle : "text-[#a6bcdf]"
+                      }`}
+                    >
                       {step.title}
                     </p>
                     <span className={`inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-all ${
                       isActive
-                        ? "bg-indigo-500/20 text-indigo-300"
+                        ? tone.activeBadge
                         : isDone
-                        ? "bg-emerald-500/15 text-emerald-400"
-                        : "bg-white/5 text-zinc-600"
+                        ? tone.doneBadge
+                        : "bg-[#253d69]/45 text-[#9cb3d9]"
                     }`}>
                       {step.badge}
                     </span>
                   </div>
-                  <p className={`mt-0.5 text-[12px] leading-relaxed transition-colors ${isActive ? "text-zinc-400" : isDone ? "text-zinc-500" : "text-zinc-600"}`}>
+                  <p
+                    className={`mt-0.5 text-[12px] leading-relaxed transition-colors ${
+                      isActive ? "text-[#d4e1fc]" : isDone ? tone.doneDesc : "text-[#8ea5cd]"
+                    }`}
+                  >
                     {step.description}
                   </p>
                 </div>
@@ -222,7 +270,11 @@ export default function GoogleCalendarSyncDemo() {
                 {isActive && (
                   <div className="pointer-events-none absolute right-4 top-3.5 flex items-center gap-1">
                     {[0, 150, 300].map((d) => (
-                      <span key={d} className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400" style={{ animationDelay: `${d}ms` }} />
+                      <span
+                        key={d}
+                        className={`h-1.5 w-1.5 animate-pulse rounded-full ${tone.activeDots}`}
+                        style={{ animationDelay: `${d}ms` }}
+                      />
                     ))}
                   </div>
                 )}
@@ -235,26 +287,26 @@ export default function GoogleCalendarSyncDemo() {
         <div
           className={`rounded-xl border px-4 py-3 transition-all duration-500 ${
             hasSynced
-              ? "border-emerald-500/30 bg-emerald-500/[0.06]"
-              : "border-white/[0.07] bg-white/[0.02]"
+              ? "border-[#2fc7a0]/30 bg-[#1f6f64]/16"
+              : "border-[#8fa7d3]/20 bg-[#223a67]/20"
           }`}
         >
           <div className="flex items-center gap-2.5">
             <div
               className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ring-1 ${
                 hasSynced
-                  ? "bg-emerald-500/20 text-emerald-400 ring-emerald-500/40"
-                  : "bg-white/5 text-zinc-600 ring-white/10"
+                  ? "bg-[#1f6f64]/55 text-[#79efcf] ring-[#3fd8b3]/45"
+                  : "bg-[#253d69]/45 text-[#9cb3d9] ring-[#8fa7d3]/20"
               }`}
             >
               4
             </div>
-            <p className={`text-sm font-semibold ${hasSynced ? "text-emerald-300" : "text-zinc-500"}`}>
+            <p className={`text-sm font-semibold ${hasSynced ? "text-[#d9f9ef]" : "text-[#a6bcdf]"}`}>
               Kalender synchronisiert
             </p>
             <span
               className={`ml-auto rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                hasSynced ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-zinc-600"
+                hasSynced ? "bg-[#1f6f64]/32 text-[#79efcf]" : "bg-[#253d69]/45 text-[#9cb3d9]"
               }`}
             >
               Event erstellt
@@ -266,7 +318,7 @@ export default function GoogleCalendarSyncDemo() {
       {/* ═══════════════════════════════════════════
           RIGHT – Google Calendar  (3-day view)
           ═══════════════════════════════════════════ */}
-      <div className="flex h-full items-center rounded-2xl border border-white/10 bg-zinc-900/50 p-3 sm:p-4">
+      <div className="flex h-full items-center rounded-2xl border border-[#8fa7d3]/30 bg-[linear-gradient(155deg,rgba(16,31,66,0.7),rgba(15,42,92,0.58))] p-3 sm:p-4">
         <div className="flex w-full flex-col overflow-hidden rounded-xl bg-white shadow-[0_8px_48px_-16px_rgba(0,0,0,0.7)]">
 
           {/* Toolbar */}

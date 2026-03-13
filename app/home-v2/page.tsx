@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import {
   ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
   Layers,
   Link2,
@@ -94,13 +95,21 @@ const faqs = [
   },
 ];
 
+const statistics = [
+  { value: "24/7",   label: "Fragen automatisch beantworten",             tone: "bg-[#becae0] text-[#2450b2]" },
+  { value: "1-Klick",label: "Reservierungen & Termine direkt bestätigen", tone: "bg-[#a7b9db] text-white/70" },
+  { value: "100%",   label: "Termine in Google Kalender überführen",      tone: "bg-[#7f9fd3] text-white/85" },
+  { value: "+50%",    label: "Google Bewertungen automatisch anstoßen",    tone: "bg-[#4975c3] text-white" },
+  { value: "−30%",   label: "No-Shows durch Erinnerungen senken",         tone: "bg-[#2450b2] text-white" },
+];
+
 export default function HomePageV2() {
   return (
     <div
       className={`${display.variable} ${sans.variable} relative overflow-hidden bg-[#f4efe7] text-[#171923]`}
       style={{ fontFamily: "var(--font-home-sans)" }}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_15%,rgba(61,94,255,0.14),transparent_35%),radial-gradient(circle_at_85%_80%,rgba(9,167,132,0.12),transparent_38%),linear-gradient(to_bottom,rgba(255,255,255,0.72),transparent_30%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_6%,rgba(61,94,255,0.13),transparent_30%),radial-gradient(circle_at_88%_20%,rgba(9,167,132,0.10),transparent_28%),radial-gradient(circle_at_8%_44%,rgba(42,78,167,0.09),transparent_30%),radial-gradient(circle_at_85%_62%,rgba(61,94,255,0.08),transparent_28%),radial-gradient(circle_at_20%_80%,rgba(42,99,255,0.09),transparent_26%),radial-gradient(circle_at_75%_92%,rgba(9,167,132,0.07),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.65),transparent_20%)]" />
 
       <section id="home" className="relative border-b border-black/10">
         <div className="mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-24 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-8 lg:pb-24 lg:pt-32">
@@ -129,8 +138,8 @@ export default function HomePageV2() {
                 href="/about"
                 className="inline-flex items-center gap-2 rounded-xl border border-black/20 px-5 py-3 text-sm font-semibold text-[#1d2130] transition-colors hover:bg-black/5"
               >
-                Mehr über Wesponde
-                <ArrowRight className="h-4 w-4" />
+                Kostenlos starten
+                <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
 
@@ -157,7 +166,8 @@ export default function HomePageV2() {
         </div>
       </section>
 
-      <section id="ablauf" className="relative py-16 sm:py-20 lg:py-24">
+      <section id="ablauf" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 max-w-3xl sm:mb-10">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#4c546f]">Ablauf</p>
@@ -175,10 +185,10 @@ export default function HomePageV2() {
               return (
                 <article
                   key={item.step}
-                  className="rounded-2xl border border-black/10 bg-white/80 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)] transition-transform duration-300 hover:-translate-y-1"
+                  className="rounded-2xl border border-white/55 bg-white/46 p-5 shadow-[0_12px_34px_rgba(28,53,122,0.08),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-md transition-transform duration-300 hover:-translate-y-1 hover:bg-white/54"
                 >
                   <p className="font-mono text-xs font-semibold tracking-widest text-[#5e6580]">{item.step}</p>
-                  <div className="mt-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#10131f] text-white">
+                  <div className="mt-3 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/60 bg-white/40 text-[#1f3f90] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-md">
                     <Icon className="h-5 w-5" />
                   </div>
                   <h3 className="mt-4 text-base font-semibold text-[#161a27]">{item.title}</h3>
@@ -190,131 +200,180 @@ export default function HomePageV2() {
         </div>
       </section>
 
-      <section id="flow-builder" className="relative bg-[#121625] py-16 text-white sm:py-20 lg:py-24">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(42,99,255,0.22),transparent_36%),radial-gradient(circle_at_100%_100%,rgba(13,162,127,0.2),transparent_30%)]" />
+      <section id="flow-builder" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 max-w-3xl sm:mb-10">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/85">
+            <span className="inline-flex items-center gap-2 rounded-full border border-black/15 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">
               <Workflow className="h-3.5 w-3.5" />
               Flow Builder
             </span>
             <h2
-              className="mt-4 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl"
+              className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-[#11131a] sm:text-5xl"
               style={{ fontFamily: "var(--font-home-display)" }}
             >
-              Visuell bauen, Abläufe in Minuten erstellen.
+              Visuell bauen und Abläufe in Minuten erstellen.
             </h2>
-            <p className="mt-4 max-w-2xl text-sm text-slate-300 sm:text-base">
+            <p className="mt-4 max-w-2xl text-sm text-[#46506a] sm:text-base">
               Starten Sie mit einer Vorlage und passen Sie Inhalte und Logik jederzeit flexibel an.
             </p>
           </div>
 
-          <div className="rounded-3xl border border-white/15 bg-black/20 p-2 sm:p-4">
-            <FlowBuilderDemo />
+          <div className="rounded-3xl border border-black/10 bg-white/35 p-2 sm:p-4">
+            <FlowBuilderDemo theme="light" />
           </div>
         </div>
       </section>
 
       <section className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_15%,rgba(61,94,255,0.14),transparent_35%),radial-gradient(circle_at_85%_80%,rgba(9,167,132,0.12),transparent_38%),linear-gradient(to_bottom,rgba(255,255,255,0.72),transparent_30%)]" />
-        <div className="relative mx-auto flex max-w-5xl flex-col gap-8 px-4 sm:px-6 lg:gap-10 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <article className="rounded-3xl border border-black/10 bg-white/80 p-6 shadow-[0_12px_34px_rgba(0,0,0,0.08)] sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4d5773]">Kalender Sync</p>
-            <h3
-              className="mt-3 text-3xl font-semibold tracking-tight text-[#141724]"
-              style={{ fontFamily: "var(--font-home-display)" }}
-            >
-              Verfügbarkeit automatisch prüfen
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-[#46506a] sm:text-base">
-              Freie Slots prüfen, passende Zeit bestätigen und direkt im Kalender eintragen.
-            </p>
-            <div className="mt-6 rounded-2xl border border-black/10 bg-[#111827] p-3">
-              <GoogleCalendarSyncDemo />
+            <div className="grid gap-8 py-2 md:grid-cols-[260px_minmax(0,560px)] md:justify-center md:gap-16">
+              <div className="md:pt-1.5">
+                <div className="flex items-center gap-4">
+                  <span className="h-px w-14 bg-[#96afe9]" />
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#2a4ea7]">
+                    Integrationen
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="max-w-[560px] text-sm leading-relaxed text-[#2a4ea7] sm:text-[15px]">
+                  Verbinden Sie Kalender, Bewertungen und Messenger in einem Ablauf. So bleiben
+                  Verfügbarkeit, Feedback und Kommunikation in einem System gebündelt. Alles
+                  läuft zentral, klar strukturiert und ohne ständigen Tool-Wechsel.
+                </p>
+              </div>
             </div>
-          </article>
 
-          <article className="rounded-3xl border border-black/10 bg-white/80 p-6 shadow-[0_12px_34px_rgba(0,0,0,0.08)] sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4d5773]">Bewertungen</p>
-            <h3
-              className="mt-3 text-3xl font-semibold tracking-tight text-[#141724]"
-              style={{ fontFamily: "var(--font-home-display)" }}
-            >
-              Feedback nach dem Besuch anstoßen
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-[#46506a] sm:text-base">
-              Nach dem Termin automatisch freundlich nach einer Google-Bewertung fragen.
-            </p>
-            <div className="mt-6 rounded-2xl border border-black/10 bg-[#111827] p-3">
-              <GoogleReviewsFlow />
+            <div className="mt-8 space-y-5">
+              <div className="rounded-2xl border border-[#2a4ea7]/14 bg-[#edf1f8] p-5 text-[#171923] shadow-[0_12px_34px_rgba(28,53,122,0.05)] sm:p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">Kalender Sync</p>
+                <h4
+                  className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl"
+                  style={{ fontFamily: "var(--font-home-display)" }}
+                >
+                  Verfügbarkeit automatisch prüfen
+                </h4>
+                <p className="mt-2 text-sm leading-relaxed text-[#434c64] sm:text-base">
+                  Freie Slots prüfen, passende Zeit bestätigen und direkt im Kalender eintragen.
+                </p>
+                <div className="mt-5 rounded-2xl border border-[#2a4ea7]/14 bg-[linear-gradient(180deg,rgba(42,78,167,0.07),rgba(42,78,167,0.03))] p-3">
+                  <GoogleCalendarSyncDemo />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#2a4ea7]/14 bg-[#edf1f8] p-5 text-[#171923] shadow-[0_12px_34px_rgba(28,53,122,0.05)] sm:p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">Bewertungen</p>
+                <h4
+                  className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl"
+                  style={{ fontFamily: "var(--font-home-display)" }}
+                >
+                  Feedback nach dem Besuch anstoßen
+                </h4>
+                <p className="mt-2 text-sm leading-relaxed text-[#434c64] sm:text-base">
+                  Nach dem Termin automatisch freundlich nach einer Google-Bewertung fragen.
+                </p>
+                <div className="mt-5 rounded-2xl border border-[#2a4ea7]/14 bg-[linear-gradient(180deg,rgba(42,78,167,0.07),rgba(42,78,167,0.03))] p-3">
+                  <GoogleReviewsFlow />
+                </div>
+              </div>
             </div>
           </article>
         </div>
       </section>
 
-      <section id="faq" className="bg-[#101420] py-16 text-white sm:py-20 lg:py-24">
+      <section className="relative py-16 sm:py-20 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-10 lg:grid-cols-[0.72fr_1fr] lg:items-start lg:gap-16">
+            <div className="mx-auto w-full max-w-[360px] lg:max-w-none">
+              <div className="flex items-center gap-4">
+                <span className="h-px w-20 bg-[#8ea6de]" />
+                <p className="font-mono text-[12px] uppercase tracking-[0.08em] text-[#2450b2]">
+                  Solutions
+                </p>
+              </div>
+              <p className="mt-8 max-w-[280px] font-mono text-[16px] leading-[1.6] text-[#2450b2]">
+                Wesponde automatisiert die häufigsten Kundenanfragen – von der ersten Nachricht
+                bis zum bestätigten Termin.
+              </p>
+            </div>
+
+            <div className="space-y-0">
+              {statistics.map((item) => (
+                <div
+                  key={item.label}
+                  className={`flex items-center justify-between rounded-[18px] px-6 py-4 sm:px-7 sm:py-5 ${item.tone}`}
+                >
+                  <span
+                    className="font-mono text-[26px] leading-none sm:text-[32px]"
+                  >
+                    {item.value}
+                  </span>
+                  <span className="font-mono text-[13px] text-right sm:text-[14px]">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
+<div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+          <h2
+            className="bg-[linear-gradient(135deg,#6b8fd6_0%,#3461be_55%,#1a3590_100%)] bg-clip-text text-5xl font-semibold tracking-tight text-transparent sm:text-6xl lg:text-7xl"
+            style={{ fontFamily: "var(--font-home-display)" }}
+          >
+            Premium-Service beginnt bei der ersten Nachricht.
+          </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#4975c3] sm:text-lg">
+            Bereit für automatisierte Konversationen?
+          </p>
+          <div className="mt-8 flex items-center justify-center">
+            <Link
+              href="/login?view=signup"
+              className="group inline-flex items-center justify-center gap-2 rounded-xl border border-[#2a4ea7]/25 bg-white/80 px-6 py-3 text-sm font-semibold text-[#1f3f90] transition-colors hover:bg-white"
+            >
+              Jetzt starten
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" className="border-t border-[#2e4da8]/20 bg-[#edf1f8] py-16 text-[#173983] sm:py-20 lg:py-24">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">FAQ</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">FAQ</p>
             <h2
               className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl"
               style={{ fontFamily: "var(--font-home-display)" }}
             >
               Häufige Fragen
             </h2>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400 sm:text-base">
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-[#434c64] sm:text-base">
               Alles Wichtige zu Setup, Anpassung und Betrieb in einer kompakten Übersicht.
             </p>
 
-            <div className="mt-8 max-w-md rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5">
-              <p className="text-sm font-semibold text-white">Noch Fragen offen?</p>
-              <p className="mt-1 text-xs text-slate-400">
-                E-Mail eintragen und direkt Kontakt aufnehmen.
+            <div className="mt-8 max-w-md rounded-2xl border border-[#2a4ea7]/15 bg-white/72 p-4 shadow-[0_10px_30px_rgba(28,53,122,0.06)] sm:p-5">
+              <p className="text-sm font-semibold text-[#1f3f90]">Noch Fragen offen?</p>
+              <p className="mt-1 text-xs text-[#5a6f9e]">
+                Melde dich gerne direkt bei uns – wir helfen schnell und unkompliziert weiter.
               </p>
-              <form action="/contact" className="mt-3 flex flex-col gap-2">
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  placeholder="Ihre E-Mail-Adresse"
-                  className="w-full rounded-xl border border-white/15 bg-[#0f1320] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-indigo-400/60 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#11141e] transition-colors hover:bg-slate-100"
+              <div className="mt-3">
+                <Link
+                  href="/contact"
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl border border-[#2a4ea7]/20 bg-white/80 px-4 py-2.5 text-sm font-semibold text-[#1f3f90] transition-colors hover:bg-white"
                 >
                   Kontakt aufnehmen
-                </button>
-              </form>
+                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 px-5 py-2 sm:px-8">
+          <div className="rounded-3xl border border-[#2a4ea7]/14 bg-white/72 px-5 py-2 shadow-[0_12px_34px_rgba(28,53,122,0.06)] sm:px-8">
             <FaqAccordion faqs={faqs} />
-          </div>
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(42,99,255,0.18),transparent_34%)]" />
-        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2
-            className="text-4xl font-semibold tracking-tight text-[#11131a] sm:text-5xl lg:text-6xl"
-            style={{ fontFamily: "var(--font-home-display)" }}
-          >
-            Wenn die erste Nachricht sitzt, wirkt der ganze Betrieb souveräner.
-          </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-[#434c64] sm:text-base">
-            Starte mit einer Vorschau, optimiere deinen ersten Flow und gehe anschließend live.
-          </p>
-          <div className="mt-8 flex items-center justify-center">
-            <Link
-              href="/login?view=signup"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#121624] px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              Jetzt starten
-              <ArrowRight className="h-4 w-4" />
-            </Link>
           </div>
         </div>
       </section>
