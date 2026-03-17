@@ -66,30 +66,46 @@ function CompactReviewsFlow() {
       </div>
 
       <div className="overflow-hidden rounded-[16px] bg-white shadow-[0_18px_40px_rgba(76,91,125,0.16)] ring-1 ring-[#eef1f7]">
-        <div className="flex items-center gap-3 px-4 py-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e3e8f2] bg-white">
-            <GoogleG />
+        <div className="flex items-center gap-2.5 px-4 py-4">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[#e3e8f2] bg-white shadow-sm">
+            <GoogleG className="h-3.5 w-3.5" />
           </div>
-          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#7480a0]">Google Reviews</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7480a0]">Google Reviews</p>
+          <div className="ml-auto flex items-center gap-1">
+            {[0,1,2,3,4].map((i) => (
+              <Star key={i} className="h-3 w-3 fill-[#fbbc04] text-[#fbbc04]" />
+            ))}
+            <span className="ml-1 text-[11px] font-semibold text-[#3c4257]">4,9</span>
+          </div>
         </div>
 
-        <div className="px-5 pb-5">
-          <p className="text-[15px] font-medium text-[#232738]">Direkter Link zur Bewertung</p>
-          <div className="rounded-[14px] border border-[#e5e9f2] bg-[#fbfcff] p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#edf1f8] text-[11px] font-semibold text-[#5a6480]">
-                LM
+        <div className="px-4 pb-4">
+          <div className="rounded-[14px] border border-[#e8eaf0] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            {/* Reviewer row */}
+            <div className="flex items-start gap-3">
+              {/* Google-style colored avatar */}
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#1a73e8] text-[13px] font-semibold text-white shadow-sm">
+                L
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium text-[#1d2436]">Lisa Müller</p>
-                <div className="mt-1 flex items-center gap-0.5">
-                  {[0, 1, 2, 3, 4].map((star) => (
-                    <Star key={star} className="h-3.5 w-3.5 fill-[#fbbc04] text-[#fbbc04]" />
-                  ))}
-                </div>
+                <p className="text-[14px] font-semibold leading-tight text-[#202124]">Lisa Müller</p>
+                <p className="mt-0.5 text-[11px] text-[#70757a]">Ortskundige Guide · 4 Bewertungen</p>
               </div>
+              <GoogleG className="h-4 w-4 flex-shrink-0 mt-0.5" />
             </div>
-            <p className="mt-4 text-[12px] leading-relaxed text-[#5d667d]">
+
+            {/* Stars + date */}
+            <div className="mt-2.5 flex items-center gap-2">
+              <div className="flex items-center gap-0.5">
+                {[0, 1, 2, 3, 4].map((star) => (
+                  <Star key={star} className="h-4 w-4 fill-[#fbbc04] text-[#fbbc04]" />
+                ))}
+              </div>
+              <span className="text-[11px] text-[#70757a]">vor 2 Tagen</span>
+            </div>
+
+            {/* Review text */}
+            <p className="mt-2.5 text-[13px] leading-relaxed text-[#202124]">
               Super Service und tolles Ambiente! Kann ich nur empfehlen.
             </p>
           </div>

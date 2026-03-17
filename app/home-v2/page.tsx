@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import PhoneMockup from "../../components/PhoneMockup";
 import FlowBuilderDemo from "../../components/FlowBuilderDemo";
+import SolutionStats from "../../components/SolutionStats";
 import IntegrationsStickyScroll from "../../components/IntegrationsStickyScroll";
 import FaqAccordion from "../../components/FaqAccordion";
 
@@ -94,13 +95,6 @@ const faqs = [
   },
 ];
 
-const statistics = [
-  { value: "24/7",   label: "Fragen automatisch beantworten",             tone: "bg-[#becae0] text-[#2450b2]" },
-  { value: "1-Klick",label: "Reservierungen & Termine direkt bestätigen", tone: "bg-[#a7b9db] text-white/70" },
-  { value: "100%",   label: "Termine in Google Kalender überführen",      tone: "bg-[#7f9fd3] text-white/85" },
-  { value: "+50%",    label: "Google Bewertungen automatisch anstoßen",    tone: "bg-[#4975c3] text-white" },
-  { value: "−30%",   label: "No-Shows durch Erinnerungen senken",         tone: "bg-[#2450b2] text-white" },
-];
 
 export default function HomePageV2() {
   return (
@@ -108,9 +102,19 @@ export default function HomePageV2() {
       className={`${display.variable} ${sans.variable} relative bg-[#f4efe7] text-[#171923]`}
       style={{ fontFamily: "var(--font-home-sans)" }}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_6%,rgba(61,94,255,0.13),transparent_30%),radial-gradient(circle_at_88%_20%,rgba(9,167,132,0.10),transparent_28%),radial-gradient(circle_at_8%_44%,rgba(42,78,167,0.09),transparent_30%),radial-gradient(circle_at_85%_62%,rgba(61,94,255,0.08),transparent_28%),radial-gradient(circle_at_20%_80%,rgba(42,99,255,0.09),transparent_26%),radial-gradient(circle_at_75%_92%,rgba(9,167,132,0.07),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.65),transparent_20%)]" />
+
+      {/* ── White ray background: hero → ablauf → flow-builder ── */}
+      <div className="relative overflow-hidden bg-white">
+        {/* Soft vertical light rays */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-40 left-[4%] h-[3000px] w-[260px] -rotate-[7deg] rounded-full bg-sky-200/55 blur-[90px]" />
+          <div className="absolute -top-24 left-[28%] h-[2800px] w-[210px] rotate-[4deg] rounded-full bg-sky-300/40 blur-[80px]" />
+          <div className="absolute -top-32 left-[54%] h-[2900px] w-[240px] rotate-[8deg] rounded-full bg-blue-200/45 blur-[85px]" />
+          <div className="absolute -top-20 right-[5%] h-[2600px] w-[190px] -rotate-[5deg] rounded-full bg-sky-100/50 blur-[75px]" />
+        </div>
 
       <section id="home" className="relative border-b border-black/10">
+
         <div className="mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-24 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-8 lg:pb-24 lg:pt-32">
           <div>
             <h1
@@ -122,7 +126,7 @@ export default function HomePageV2() {
 
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-[#3d4255] sm:text-lg">
               Wesponde verwandelt Ihren Messenger in einen leistungsstarken Buchungskanal, der
-              Anfragen automatisch in bestätigte Termine überführt.
+              Anfragen automatisch beantwortet und in bestätigte Termine überführt.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -253,21 +257,7 @@ export default function HomePageV2() {
               </p>
             </div>
 
-            <div className="space-y-0">
-              {statistics.map((item) => (
-                <div
-                  key={item.label}
-                  className={`flex items-center justify-between rounded-[18px] px-6 py-4 sm:px-7 sm:py-5 ${item.tone}`}
-                >
-                  <span
-                    className="font-mono text-[26px] leading-none sm:text-[32px]"
-                  >
-                    {item.value}
-                  </span>
-                  <span className="font-mono text-[13px] text-right sm:text-[14px]">{item.label}</span>
-                </div>
-              ))}
-            </div>
+            <SolutionStats />
           </div>
         </div>
       </section>
@@ -294,6 +284,7 @@ export default function HomePageV2() {
           </div>
         </div>
       </section>
+      </div>{/* end white ray wrapper */}
 
       <section id="faq" className="border-t border-[#2e4da8]/20 bg-[#edf1f8] py-16 text-[#173983] sm:py-20 lg:py-24">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
