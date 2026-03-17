@@ -13,8 +13,7 @@ import {
 } from "lucide-react";
 import PhoneMockup from "../../components/PhoneMockup";
 import FlowBuilderDemo from "../../components/FlowBuilderDemo";
-import GoogleReviewsFlow from "../../components/GoogleReviewsFlow";
-import GoogleCalendarSyncDemo from "../../components/GoogleCalendarSyncDemo";
+import IntegrationsStickyScroll from "../../components/IntegrationsStickyScroll";
 import FaqAccordion from "../../components/FaqAccordion";
 
 const display = Cormorant_Garamond({
@@ -106,7 +105,7 @@ const statistics = [
 export default function HomePageV2() {
   return (
     <div
-      className={`${display.variable} ${sans.variable} relative overflow-hidden bg-[#f4efe7] text-[#171923]`}
+      className={`${display.variable} ${sans.variable} relative bg-[#f4efe7] text-[#171923]`}
       style={{ fontFamily: "var(--font-home-sans)" }}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_6%,rgba(61,94,255,0.13),transparent_30%),radial-gradient(circle_at_88%_20%,rgba(9,167,132,0.10),transparent_28%),radial-gradient(circle_at_8%_44%,rgba(42,78,167,0.09),transparent_30%),radial-gradient(circle_at_85%_62%,rgba(61,94,255,0.08),transparent_28%),radial-gradient(circle_at_20%_80%,rgba(42,99,255,0.09),transparent_26%),radial-gradient(circle_at_75%_92%,rgba(9,167,132,0.07),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.65),transparent_20%)]" />
@@ -225,61 +224,9 @@ export default function HomePageV2() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <article className="rounded-3xl border border-black/10 bg-white/80 p-6 shadow-[0_12px_34px_rgba(0,0,0,0.08)] sm:p-8">
-            <div className="grid gap-8 py-2 md:grid-cols-[260px_minmax(0,560px)] md:justify-center md:gap-16">
-              <div className="md:pt-1.5">
-                <div className="flex items-center gap-4">
-                  <span className="h-px w-14 bg-[#96afe9]" />
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#2a4ea7]">
-                    Integrationen
-                  </p>
-                </div>
-              </div>
-              <div>
-                <p className="max-w-[560px] text-sm leading-relaxed text-[#2a4ea7] sm:text-[15px]">
-                  Verbinden Sie Kalender, Bewertungen und Messenger in einem Ablauf. So bleiben
-                  Verfügbarkeit, Feedback und Kommunikation in einem System gebündelt. Alles
-                  läuft zentral, klar strukturiert und ohne ständigen Tool-Wechsel.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-8 space-y-5">
-              <div className="rounded-2xl border border-[#2a4ea7]/14 bg-[#edf1f8] p-5 text-[#171923] shadow-[0_12px_34px_rgba(28,53,122,0.05)] sm:p-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">Kalender Sync</p>
-                <h4
-                  className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl"
-                  style={{ fontFamily: "var(--font-home-display)" }}
-                >
-                  Verfügbarkeit automatisch prüfen
-                </h4>
-                <p className="mt-2 text-sm leading-relaxed text-[#434c64] sm:text-base">
-                  Freie Slots prüfen, passende Zeit bestätigen und direkt im Kalender eintragen.
-                </p>
-                <div className="mt-5 rounded-2xl border border-[#2a4ea7]/14 bg-[linear-gradient(180deg,rgba(42,78,167,0.07),rgba(42,78,167,0.03))] p-3">
-                  <GoogleCalendarSyncDemo />
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[#2a4ea7]/14 bg-[#edf1f8] p-5 text-[#171923] shadow-[0_12px_34px_rgba(28,53,122,0.05)] sm:p-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">Bewertungen</p>
-                <h4
-                  className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl"
-                  style={{ fontFamily: "var(--font-home-display)" }}
-                >
-                  Feedback nach dem Besuch anstoßen
-                </h4>
-                <p className="mt-2 text-sm leading-relaxed text-[#434c64] sm:text-base">
-                  Nach dem Termin automatisch freundlich nach einer Google-Bewertung fragen.
-                </p>
-                <div className="mt-5 rounded-2xl border border-[#2a4ea7]/14 bg-[linear-gradient(180deg,rgba(42,78,167,0.07),rgba(42,78,167,0.03))] p-3">
-                  <GoogleReviewsFlow />
-                </div>
-              </div>
-            </div>
-          </article>
+      <section className="relative">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <IntegrationsStickyScroll />
         </div>
       </section>
 
