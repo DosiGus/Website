@@ -104,7 +104,7 @@ export default function HomePageV2() {
     >
 
       {/* ── White ray background: hero → ablauf → flow-builder ── */}
-      <div className="relative overflow-hidden bg-white">
+      <div className="relative bg-white">
         {/* Soft vertical light rays */}
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-40 left-[4%] h-[3000px] w-[260px] -rotate-[7deg] rounded-full bg-sky-200/55 blur-[90px]" />
