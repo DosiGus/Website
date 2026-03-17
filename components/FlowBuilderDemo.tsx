@@ -643,15 +643,14 @@ export default function FlowBuilderDemo({ theme = 'dark' }: { theme?: 'dark' | '
                 </div>
 
                 {/* RIGHT PANEL: canvas */}
-                <div className="relative flex flex-1 flex-col overflow-hidden bg-[linear-gradient(180deg,#f6f8ff_0%,#edf1fb_100%)]">
+                <div className="relative flex flex-1 flex-col overflow-hidden bg-white">
                   <div
                     className="pointer-events-none absolute inset-0"
                     style={{
-                      backgroundImage: 'radial-gradient(circle, rgba(84,106,173,0.08) 1px, transparent 1px)',
+                      backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px)',
                       backgroundSize: '26px 26px',
                     }}
                   />
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(84,106,173,0.09),transparent_28%),radial-gradient(circle_at_85%_80%,rgba(129,143,199,0.12),transparent_34%)]" />
 
                   {/* Canvas header */}
                   <div className={`relative flex items-center justify-between border-b px-5 py-3 ${subtleBord}`}>

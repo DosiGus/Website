@@ -169,7 +169,12 @@ export default function HomePageV2() {
         <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 max-w-3xl sm:mb-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#4c546f]">Ablauf</p>
+            <div className="flex items-center gap-4">
+              <span className="h-px w-16 bg-[#7d9be2]" />
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#3159bb]">
+                Ablauf
+              </p>
+            </div>
             <h2
               className="mt-3 text-4xl font-semibold tracking-tight text-[#11131a] sm:text-5xl"
               style={{ fontFamily: "var(--font-home-display)" }}
@@ -203,10 +208,12 @@ export default function HomePageV2() {
         <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 max-w-3xl sm:mb-10">
-            <span className="inline-flex items-center gap-2 rounded-full border border-black/15 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">
-              <Workflow className="h-3.5 w-3.5" />
-              Flow Builder
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="h-px w-16 bg-[#7d9be2]" />
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#3159bb]">
+                Flow Builder
+              </p>
+            </div>
             <h2
               className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-[#11131a] sm:text-5xl"
               style={{ fontFamily: "var(--font-home-display)" }}
@@ -235,8 +242,8 @@ export default function HomePageV2() {
           <div className="grid gap-10 lg:grid-cols-[0.72fr_1fr] lg:items-start lg:gap-16">
             <div className="mx-auto w-full max-w-[360px] lg:max-w-none">
               <div className="flex items-center gap-4">
-                <span className="h-px w-20 bg-[#8ea6de]" />
-                <p className="font-mono text-[12px] uppercase tracking-[0.08em] text-[#2450b2]">
+                <span className="h-px w-16 bg-[#7d9be2]" />
+                <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#3159bb]">
                   Solutions
                 </p>
               </div>

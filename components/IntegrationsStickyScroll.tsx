@@ -1,78 +1,198 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import GoogleCalendarSyncDemo from './GoogleCalendarSyncDemo';
 import GoogleReviewsFlow from './GoogleReviewsFlow';
 
-export default function IntegrationsStickyScroll() {
+const SECTIONS = [
+  {
+    tag: 'Integrationen',
+    label: 'Kalender Sync',
+    heading: 'Verfügbarkeit automatisch prüfen',
+    description:
+      'Freie Slots prüfen, passende Zeit bestätigen und direkt im Kalender eintragen.',
+  },
+  {
+    tag: null,
+    label: 'Google Bewertungen',
+    heading: 'Feedback nach dem Besuch anstoßen',
+    description:
+      'Nach dem Termin automatisch freundlich nach einer Google-Bewertung fragen.',
+  },
+] as const;
+
+function TextContent({
+  section,
+  active,
+  fillRef,
+}: {
+  section: (typeof SECTIONS)[number];
+  active: boolean;
+  fillRef?: React.RefObject<HTMLDivElement>;
+}) {
   return (
-    <div className="py-16 sm:py-20 lg:py-24">
+    <div
+      className={`flex items-stretch gap-5 transition-all duration-500 ${
+        active ? 'opacity-100' : 'opacity-35'
+      }`}
+    >
+      {/* Progress bar — only on desktop (rendered via fillRef presence) */}
+      {fillRef && (
+        <div className="relative w-[3px] flex-shrink-0 rounded-full bg-[#dde2ee]">
+          <div
+            ref={fillRef}
+            className="absolute inset-x-0 top-0 rounded-full bg-[#2450b2]"
+            style={{ height: '0%' }}
+          />
+        </div>
+      )}
 
-      {/* ── Sektion 1: Kalender Sync ─────────────────────────────── */}
-      <div className="grid items-start gap-10 lg:grid-cols-[1fr_minmax(0,600px)] lg:gap-16">
-
-        {/* Text links */}
-        <div>
+      <div className="max-w-sm">
+        {section.tag && (
           <div className="mb-6 flex items-center gap-4">
             <span className="h-px w-14 bg-[#8ea6de]" />
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#2450b2]">
-              Integrationen
+              {section.tag}
             </p>
           </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">
-            Kalender Sync
-          </p>
-          <h3
-            className="mt-3 text-3xl font-semibold tracking-tight text-[#171923] sm:text-4xl"
-            style={{ fontFamily: 'var(--font-home-display)' }}
-          >
-            Verfügbarkeit automatisch prüfen
-          </h3>
-          <p className="mt-3 max-w-[280px] font-mono text-[14px] leading-relaxed text-[#2450b2]">
-            Freie Slots prüfen, passende Zeit bestätigen und direkt im Kalender eintragen.
-          </p>
-        </div>
-
-        {/* Demo rechts */}
-        <div className="rounded-[20px] bg-[#f0f0ee] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-          <GoogleCalendarSyncDemo compact />
-        </div>
-
+        )}
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">
+          {section.label}
+        </p>
+        <h3
+          className="mt-3 text-3xl font-semibold tracking-tight text-[#171923] sm:text-4xl"
+          style={{ fontFamily: 'var(--font-home-display)' }}
+        >
+          {section.heading}
+        </h3>
+        <p className="mt-3 font-mono text-[14px] leading-relaxed text-[#2450b2]">
+          {section.description}
+        </p>
       </div>
+    </div>
+  );
+}
 
-      {/* Trenner */}
-      <div className="my-16 h-px bg-black/8 sm:my-20" />
+export default function IntegrationsStickyScroll() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fill1Ref = useRef<HTMLDivElement>(null);
+  const fill2Ref = useRef<HTMLDivElement>(null);
 
-      {/* ── Sektion 2: Google Bewertungen ────────────────────────── */}
-      <div className="grid items-start gap-10 lg:grid-cols-[1fr_minmax(0,600px)] lg:gap-16">
+  useEffect(() => {
+    let current = 0;
+    let rafId: number;
 
-        {/* Text links */}
+    const tick = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const scrolled = -rect.top;
+        const scrollable = containerRef.current.offsetHeight - window.innerHeight;
+
+        if (scrollable > 0) {
+          const progress = Math.max(0, Math.min(1, scrolled / scrollable));
+
+          // Fill bars directly — no React state, smooth 60fps
+          if (fill1Ref.current) {
+            fill1Ref.current.style.height = `${Math.min(100, (progress / 0.5) * 100)}%`;
+          }
+          if (fill2Ref.current) {
+            fill2Ref.current.style.height = `${Math.max(0, ((progress - 0.5) / 0.5) * 100)}%`;
+          }
+
+          const next = progress >= 0.5 ? 1 : 0;
+          if (next !== current) {
+            current = next;
+            setActiveIndex(next);
+          }
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  return (
+    <>
+      {/* ── Mobile: stacked ──────────────────────────────────────── */}
+      <div className="space-y-16 py-16 sm:py-20 lg:hidden">
         <div>
-          <div className="flex gap-4">
-            <div className="mt-0.5 w-0.5 self-stretch rounded-full bg-[#2450b2]" />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">
-                Google Bewertungen
-              </p>
-              <h3
-                className="mt-3 text-3xl font-semibold tracking-tight text-[#171923] sm:text-4xl"
-                style={{ fontFamily: 'var(--font-home-display)' }}
-              >
-                Feedback nach dem Besuch anstoßen
-              </h3>
-              <p className="mt-3 max-w-[280px] font-mono text-[14px] leading-relaxed text-[#2450b2]">
-                Nach dem Termin automatisch freundlich nach einer Google-Bewertung fragen.
-              </p>
+          <TextContent section={SECTIONS[0]} active />
+          <div className="mt-8 rounded-[24px] bg-[#2450b2] p-3 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+            <div className="rounded-[20px] bg-[#fafaf8] p-6">
+              <GoogleCalendarSyncDemo compact />
             </div>
           </div>
         </div>
-
-        {/* Demo rechts */}
-        <div className="rounded-[20px] bg-[#f0f0ee] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-          <GoogleReviewsFlow compact />
+        <div>
+          <TextContent section={SECTIONS[1]} active />
+          <div className="mt-8 rounded-[24px] bg-[#2450b2] p-3 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+            <div className="rounded-[20px] bg-[#fafaf8] p-6">
+              <GoogleReviewsFlow compact />
+            </div>
+          </div>
         </div>
-
       </div>
 
-    </div>
+      {/* ── Desktop: sticky scroll ───────────────────────────────── */}
+      {/*
+        containerRef ist die Source of Truth für den Scroll-Fortschritt.
+        progress = scrolled / (containerHeight - viewportHeight)
+        Switch bei progress 0.5 = exakt in der Hälfte des Scroll-Weges.
+      */}
+      <div
+        ref={containerRef}
+        className="hidden lg:grid lg:grid-cols-[1fr_minmax(0,640px)] lg:items-start lg:gap-24"
+      >
+        {/* Left: natürlicher Scroll */}
+        <div>
+          <div className="pt-[20vh] pb-[55vh]">
+            <TextContent section={SECTIONS[0]} active={activeIndex === 0} fillRef={fill1Ref} />
+          </div>
+          <div className="pt-[2vh] pb-[65vh]">
+            <TextContent section={SECTIONS[1]} active={activeIndex === 1} fillRef={fill2Ref} />
+          </div>
+        </div>
+
+        {/* Right: sticky Demo-Panel */}
+        <div className="sticky top-0 flex h-screen items-center">
+          <div className="grid w-full">
+
+            {/* Demo 1 — Calendar */}
+            <div
+              className={`col-start-1 row-start-1 transition-all duration-700 ease-in-out ${
+                activeIndex === 0
+                  ? 'z-10 opacity-100 translate-y-0'
+                  : 'z-0 pointer-events-none opacity-0 -translate-y-4'
+              }`}
+            >
+              <div className="rounded-[24px] bg-[#2450b2] p-3 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+                <div className="rounded-[20px] bg-[#fafaf8] p-6">
+                  <GoogleCalendarSyncDemo compact />
+                </div>
+              </div>
+            </div>
+
+            {/* Demo 2 — Reviews */}
+            <div
+              className={`col-start-1 row-start-1 transition-all duration-700 ease-in-out ${
+                activeIndex === 1
+                  ? 'z-10 opacity-100 translate-y-0'
+                  : 'z-0 pointer-events-none opacity-0 translate-y-4'
+              }`}
+            >
+              <div className="rounded-[24px] bg-[#2450b2] p-3 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+                <div className="rounded-[20px] bg-[#fafaf8] p-6">
+                  <GoogleReviewsFlow compact />
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
