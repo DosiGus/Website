@@ -105,13 +105,18 @@ export default function HomePageV2() {
 
       {/* ── White ray background: hero → ablauf → flow-builder ── */}
       <div className="relative bg-white">
-        {/* Soft vertical light rays */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-40 left-[4%] h-[3000px] w-[260px] -rotate-[7deg] rounded-full bg-sky-200/55 blur-[90px]" />
-          <div className="absolute -top-24 left-[28%] h-[2800px] w-[210px] rotate-[4deg] rounded-full bg-sky-300/40 blur-[80px]" />
-          <div className="absolute -top-32 left-[54%] h-[2900px] w-[240px] rotate-[8deg] rounded-full bg-blue-200/45 blur-[85px]" />
-          <div className="absolute -top-20 right-[5%] h-[2600px] w-[190px] -rotate-[5deg] rounded-full bg-sky-100/50 blur-[75px]" />
-        </div>
+        {/* Soft vertical light rays — radial-gradient (no blur filter, GPU-friendly) */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: [
+              'radial-gradient(ellipse 28% 55% at 8% 0%, rgba(186,230,253,0.65), transparent)',
+              'radial-gradient(ellipse 22% 45% at 32% 0%, rgba(147,197,253,0.50), transparent)',
+              'radial-gradient(ellipse 25% 50% at 58% 0%, rgba(191,219,254,0.55), transparent)',
+              'radial-gradient(ellipse 20% 42% at 88% 0%, rgba(186,230,253,0.45), transparent)',
+            ].join(', '),
+          }}
+        />
 
       <section id="home" className="relative border-b border-black/10">
 
