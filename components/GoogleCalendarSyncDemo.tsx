@@ -69,7 +69,7 @@ function CalendarSyncContent() {
   const current = states[step];
 
   return (
-    <div className="rounded-[34px] bg-white/92 p-6 shadow-[0_24px_60px_rgba(52,69,112,0.14)] ring-1 ring-white/70 xl:p-7">
+    <div className="rounded-[34px] bg-white p-6 shadow-[0_24px_60px_rgba(52,69,112,0.14)] ring-1 ring-white/70 xl:p-7">
       <div className="rounded-[14px] border border-[#d9ddea] bg-white px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
         <div className="flex items-center gap-3">
           <InstagramAvatar />

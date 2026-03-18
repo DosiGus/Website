@@ -100,8 +100,84 @@ export default function HomePageV2() {
       {/* Wrapper for sections that need relative positioning for sticky scroll */}
       <div className="relative">
 
+        {/* Swirl — Flow Builder → Integration */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <svg
+            viewBox="0 0 1400 1300"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="absolute inset-0 h-full w-full"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            {/* Main thick ribbon */}
+            <path
+              d="M 1420 -60
+                 C 1520 80, 1280 220, 1080 270
+                 C 880 320, 660 295, 680 440
+                 C 700 585, 960 610, 900 740
+                 C 840 870, 480 900, 280 960
+                 C 100 1010, 80 1060, 280 1080"
+              stroke="#2a4ea7"
+              strokeWidth="70"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* Thinner trailing ribbon for depth */}
+            <path
+              d="M 1420 10
+                 C 1500 130, 1300 250, 1100 295
+                 C 900 340, 700 320, 715 460
+                 C 730 600, 980 640, 920 765
+                 C 860 890, 510 918, 310 975
+                 C 130 1025, 110 1072, 310 1092"
+              stroke="#2a4ea7"
+              strokeWidth="28"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.55"
+            />
+          </svg>
+        </div>
+
       {/* ── Hero ──────────────────────────────────────────────────── */}
       <section id="home" className="relative overflow-hidden bg-white">
+
+        {/* Swirl — Hero (oben rechts → unten links) */}
+        <div className="pointer-events-none absolute inset-0">
+          <svg
+            viewBox="0 0 1400 1300"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="absolute inset-0 h-full w-full"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <path
+              d="M 1420 -60
+                 C 1520 80, 1280 220, 1080 270
+                 C 880 320, 660 295, 680 440
+                 C 700 585, 960 610, 900 740
+                 C 840 870, 480 900, 280 960
+                 C 100 1010, 80 1060, 280 1080"
+              stroke="#2a4ea7"
+              strokeWidth="70"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M 1420 10
+                 C 1500 130, 1300 250, 1100 295
+                 C 900 340, 700 320, 715 460
+                 C 730 600, 980 640, 920 765
+                 C 860 890, 510 918, 310 975
+                 C 130 1025, 110 1072, 310 1092"
+              stroke="#2a4ea7"
+              strokeWidth="28"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.55"
+            />
+          </svg>
+        </div>
 
         {/* ── Content ──────────────────────────────────────────────── */}
         <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-24 pt-24 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-8 lg:pb-36 lg:pt-32">
@@ -155,6 +231,7 @@ export default function HomePageV2() {
 
       <section id="ablauf" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
         <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
+
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 max-w-3xl sm:mb-10">
             <div className="flex items-center gap-4">
@@ -193,7 +270,16 @@ export default function HomePageV2() {
       </section>
 
       <section id="flow-builder" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
+        {/* Halftone dot background — fades top to bottom */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(36,80,178,0.32) 1.6px, transparent 1.6px)',
+            backgroundSize: '18px 18px',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,1) 45%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%)',
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,1) 45%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%)',
+          }}
+        />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 max-w-3xl sm:mb-10">
             <div className="flex items-center gap-4">
@@ -213,7 +299,7 @@ export default function HomePageV2() {
             </p>
           </div>
 
-          <div className="rounded-3xl border border-black/10 bg-white/35 p-2 sm:p-4">
+          <div className="rounded-3xl border border-black/10 bg-white p-2 sm:p-4">
             <FlowBuilderDemo theme="light" />
           </div>
         </div>
