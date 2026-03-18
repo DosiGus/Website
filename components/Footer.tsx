@@ -25,7 +25,7 @@ const legalLinks = [
 
 export default function Footer() {
   const pathname = usePathname();
-  const isHomeV2Route = pathname === "/home-v2";
+  const isHomeV2Route = pathname === "/" || pathname === "/home-v2";
   const footerBg = isHomeV2Route ? "bg-[#edf1f8]" : "bg-zinc-950";
   const mutedText = isHomeV2Route ? "text-[#54668f]" : "text-zinc-500";
   const subtleText = isHomeV2Route ? "text-[#7485ad]" : "text-zinc-600";

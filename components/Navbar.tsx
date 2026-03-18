@@ -13,7 +13,7 @@ const navLinks = [
 ];
 
 const homeV2Links = [
-  { href: "/home-v2#home", label: "Home" },
+  { href: "/#home", label: "Home" },
   { href: "/blog", label: "Insights" },
   { href: "/about", label: "Über uns" },
   { href: "/contact", label: "Kontakt" },
@@ -25,7 +25,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
 
   const isAppRoute = pathname?.startsWith('/app');
-  const isHomeV2Route = pathname === "/home-v2";
+  const isHomeV2Route = pathname === "/" || pathname === "/home-v2";
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -46,7 +46,7 @@ export default function Navbar() {
         }`}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/home-v2" className="text-[30px] leading-none tracking-tight text-[#2450b3]">
+          <Link href="/" className="text-[30px] leading-none tracking-tight text-[#2450b3]">
             <span className="font-display text-xl">Wesponde</span>
           </Link>
 

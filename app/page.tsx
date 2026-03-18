@@ -1,50 +1,58 @@
 import Link from "next/link";
-import PhoneMockup from "../components/PhoneMockup";
-import FlowBuilderDemo from "../components/FlowBuilderDemo";
-import GoogleReviewsFlow from "../components/GoogleReviewsFlow";
-import FaqAccordion from "../components/FaqAccordion";
-import HomeTemplateDemoModal from "../components/HomeTemplateDemoModal";
-import GoogleCalendarSyncDemo from "../components/GoogleCalendarSyncDemo";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import {
-  Star,
   ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
-  Workflow,
-  Link2,
   Layers,
+  Link2,
   Pencil,
+  Workflow,
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import PhoneMockup from "../components/PhoneMockup";
+import FlowBuilderDemo from "../components/FlowBuilderDemo";
+import SolutionStats from "../components/SolutionStats";
+import IntegrationsStickyScroll from "../components/IntegrationsStickyScroll";
+import FaqAccordion from "../components/FaqAccordion";
 
-/* ========================================
-   DATA
-   ======================================== */
+const display = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-home-display",
+});
+
+const sans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-home-sans",
+});
 
 const heroStats = [
-  "Kürzere Antwortzeiten",
-  "Weniger No-Shows",
-  "Mehr Bewertungen",
+  "In wenigen Klicks eingerichtet",
+  "Mehr bestätigte Termine",
+  "Geringere No-Show-Rate",
 ];
 
 const steps: { step: string; icon: LucideIcon; title: string; description: string }[] = [
   {
     step: "01",
     icon: Link2,
-    title: "Verbinden",
-    description: "Instagram, Google Kalender und Google Reviews einmalig verknüpfen – in wenigen Minuten.",
+    title: "Kanäle verbinden",
+    description: "Instagram und Kalender einmal koppeln. Danach läuft alles im Hintergrund.",
   },
   {
     step: "02",
     icon: Layers,
-    title: "Flow einrichten",
-    description: "Branchentemplate übernehmen oder eigenen Ablauf mit dem Setup-Assistenten aufbauen.",
+    title: "Flow auswählen",
+    description: "Mit einem Branchentemplate starten oder den Setup-Assistenten nutzen.",
   },
   {
     step: "03",
     icon: Pencil,
-    title: "Anpassen",
-    description: "Texte und Antwort-Buttons im visuellen Editor auf Ihren Betrieb zuschneiden – ohne Code.",
+    title: "Ton & Inhalte anpassen",
+    description: "Texte und Antwort-Buttons im visuellen Editor auf Ihren Betrieb zuschneiden.",
   },
   {
     step: "04",
@@ -54,334 +62,268 @@ const steps: { step: string; icon: LucideIcon; title: string; description: strin
   },
 ];
 
-
 const faqs = [
   {
-    question: "Für welche Branchen ist Wesponde geeignet?",
+    question: "Für wen ist Wesponde gedacht?",
     answer:
-      "Wesponde eignet sich für Service-Unternehmen mit regelmäßigen Buchungsanfragen über Instagram – vor allem Gastronomie, Beauty & Kosmetik, Fitness sowie Praxen. Entscheidend ist das Anfragevolumen: Ab etwa 20–30 DM-Anfragen pro Woche rechnet sich die Automatisierung spürbar.",
+      "Für Teams, die regelmäßig Anfragen über Instagram bekommen und weniger manuell beantworten wollen. Besonders gut passt es für Gastronomie, Beauty, Fitness und Praxen.",
   },
   {
-    question: "Wie schnell sind wir live?",
+    question: "Wie schnell können wir starten?",
     answer:
-      "Der Setup dauert in der Regel 1–3 Werktage – inklusive Instagram-Verknüpfung, Google Kalender-Integration und einem gemeinsamen Testlauf. Sie erhalten einen dedizierten Onboarding-Termin und gehen erst live, wenn alles reibungslos funktioniert.",
+      "In der Regel innerhalb weniger Tage. Nach der Verbindung der Kanäle und einem kurzen gemeinsamen Test kann der Flow live gehen.",
   },
   {
-    question: "Braucht mein Team technische Kenntnisse?",
+    question: "Können wir später alles ändern?",
     answer:
-      "Nein. Flows werden im visuellen Editor per Drag & Drop aufgebaut – ähnlich einem Präsentationstool. Texte, Buttons und Abläufe lassen sich jederzeit ohne Code anpassen. Den initialen Setup begleiten wir vollständig; danach ist Ihr Team selbstständig.",
+      "Ja. Inhalte, Buttons und Regeln kannst du jederzeit im visuellen Editor anpassen, ohne Entwicklungsteam.",
   },
   {
-    question: "Wie werden Übergaben an mein Team geregelt?",
+    question: "Was passiert bei Sonderfällen?",
     answer:
-      "Sie definieren im Flow, wann eine manuelle Übergabe erfolgen soll – z.B. bei Sonderwünschen oder Beschwerden. Dort stoppt die Automatisierung, und Ihr Team übernimmt direkt im Postfach, mit allen bereits gesammelten Informationen übersichtlich zur Hand.",
+      "Du definierst klare Übergaben an dein Team. Wenn ein Fall nicht automatisch gelöst werden soll, wird die Konversation sauber übergeben.",
+  },
+  {
+    question: "Wie werden Übergaben geregelt?",
+    answer:
+      "Im Flow lässt sich genau festlegen, wann die Automatisierung stoppt und eine manuelle Übernahme erfolgt - zum Beispiel bei Sonderwünschen oder Beschwerden.",
   },
   {
     question: "Ist Wesponde DSGVO-konform?",
     answer:
-      "Ja. Alle Daten werden ausschließlich auf europäischen Servern gespeichert und verarbeitet. Ein Auftragsverarbeitungsvertrag (AVV) wird auf Anfrage bereitgestellt. Wesponde gibt keine Daten an Dritte weiter und nutzt keinerlei Gesprächsdaten für KI-Training.",
+      "Ja. Daten werden auf europäischen Servern verarbeitet, und auf Anfrage stellen wir einen AVV bereit.",
   },
 ];
 
-const structuredData = [
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: "Wesponde",
-    url: "https://wesponde.com",
-    contactPoint: {
-      "@type": "ContactPoint",
-      contactType: "sales",
-      email: "hello@wesponde.com",
-    },
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Wesponde",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web",
-    url: "https://wesponde.com",
-    description:
-      "Messenger-Automation für Service-Brands: Reservierungen, Reminder und Bewertungen über Instagram, WhatsApp und Facebook.",
-  },
-];
 
-/* ========================================
-   COMPONENTS
-   ======================================== */
-
-export default function HomePage() {
+export default function HomePageV2() {
   return (
-    <div className="relative bg-zinc-950 text-white">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
+    <div
+      className={`${display.variable} ${sans.variable} relative bg-[#f4efe7] text-[#171923]`}
+      style={{ fontFamily: "var(--font-home-sans)" }}
+    >
 
-      {/* ==================== HERO SECTION ==================== */}
-      <section className="relative overflow-hidden">
-        {/* Background Effects - reduced blur for mobile performance */}
-        <div className="absolute inset-0 bg-grid-dark" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/50 to-zinc-950" />
-        <div className="absolute left-1/2 top-0 h-[400px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/15 blur-[60px] sm:h-[600px] sm:w-[800px] sm:bg-indigo-500/20 sm:blur-[120px]" />
-        <div className="absolute right-0 top-1/2 hidden h-[400px] w-[400px] -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
+      {/* ── White ray background: hero → ablauf → flow-builder ── */}
+      <div className="relative bg-white">
+        {/* Soft vertical light rays — radial-gradient (no blur filter, GPU-friendly) */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: [
+              'radial-gradient(ellipse 28% 55% at 8% 0%, rgba(186,230,253,0.65), transparent)',
+              'radial-gradient(ellipse 22% 45% at 32% 0%, rgba(147,197,253,0.50), transparent)',
+              'radial-gradient(ellipse 25% 50% at 58% 0%, rgba(191,219,254,0.55), transparent)',
+              'radial-gradient(ellipse 20% 42% at 88% 0%, rgba(186,230,253,0.45), transparent)',
+            ].join(', '),
+          }}
+        />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-12 pt-24 sm:px-6 sm:pb-16 sm:pt-32 lg:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-[1.1fr,0.9fr] lg:gap-20">
-            {/* Left Content */}
-            <div className="max-w-2xl">
-              {/* Headline */}
-              <h1 className="mt-6 font-display text-3xl font-medium tracking-tight sm:mt-8 sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
-                Premium-Service beginnt bei der ersten Nachricht.
-              </h1>
+      <section id="home" className="relative border-b border-black/10">
 
-              {/* Subheadline */}
-              <p className="mt-4 text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg md:text-xl">
-                Wesponde verwandelt Ihren Messenger in einen leistungsstarken Buchungskanal, der Anfragen
-                automatisch in bestätigte Termine überführt.
-              </p>
+        <div className="mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-24 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-8 lg:pb-24 lg:pt-32">
+          <div>
+            <h1
+              className="mt-7 text-5xl font-semibold leading-[0.95] tracking-tight text-[#11131a] sm:text-6xl lg:text-7xl"
+              style={{ fontFamily: "var(--font-home-display)" }}
+            >
+              Premium-Service beginnt bei der ersten Nachricht.
+            </h1>
 
-              {/* CTA */}
-              <div className="mt-10 flex flex-wrap items-center gap-3">
-                <HomeTemplateDemoModal />
-                <Link
-                  href="/home-v2"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-medium text-zinc-200 backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10 hover:text-white"
-                >
-                  Neue Homepage ansehen
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
+            <p className="mt-6 max-w-2xl text-base leading-relaxed text-[#3d4255] sm:text-lg">
+              Wesponde verwandelt Ihren Messenger in einen leistungsstarken Buchungskanal, der
+              Anfragen automatisch beantwortet und in bestätigte Termine überführt.
+            </p>
 
-              {/* Hero Benefits */}
-              <div className="mt-10 flex flex-wrap items-center gap-2 sm:mt-14 sm:gap-3">
-                {heroStats.map((stat) => (
-                  <span
-                    key={stat}
-                    className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-200 backdrop-blur-sm"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-indigo-400" />
-                    {stat}
-                  </span>
-                ))}
-              </div>
+            <div className="mt-9 flex flex-wrap items-center gap-3">
+              <Link
+                href="/demo"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#121624] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                Demo testen
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/about"
+                className="inline-flex items-center gap-2 rounded-xl border border-black/20 px-5 py-3 text-sm font-semibold text-[#1d2130] transition-colors hover:bg-black/5"
+              >
+                Kostenlos starten
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
             </div>
 
-            {/* Right - Phone Mockup */}
-            <div className="relative flex justify-center lg:justify-end">
+            <div className="mt-9 flex flex-wrap gap-2.5">
+              {heroStats.map((stat) => (
+                <span
+                  key={stat}
+                  className="inline-flex items-center gap-2 rounded-full border border-black/15 bg-white/70 px-4 py-1.5 text-[11px] font-normal tracking-[0.08em] text-[#4b5062]"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#4b5062]" />
+                  {stat}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute -left-6 -top-6 h-24 w-24 rounded-full bg-[#2a63ff]/20 blur-2xl" />
+            <div className="absolute -bottom-8 right-4 h-24 w-24 rounded-full bg-[#0da27f]/20 blur-2xl" />
+            <div className="relative p-1">
               <PhoneMockup />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ==================== ABLAUF SECTION ==================== */}
-      <section id="ablauf" className="relative overflow-hidden bg-zinc-900/50 py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-grid-dark opacity-50" />
-        <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
-              Ablauf
-            </span>
-            <h2 className="mt-4 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              Schnell eingerichtet.<br className="hidden sm:block" /> Dauerhaft wirksam.
+      <section id="ablauf" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 max-w-3xl sm:mb-10">
+            <div className="flex items-center gap-4">
+              <span className="h-px w-16 bg-[#7d9be2]" />
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#3159bb]">
+                Ablauf
+              </p>
+            </div>
+            <h2
+              className="mt-3 text-4xl font-semibold tracking-tight text-[#11131a] sm:text-5xl"
+              style={{ fontFamily: "var(--font-home-display)" }}
+            >
+              Schnell eingerichtet - Dauerhaft wirksam
             </h2>
-            <p className="mt-4 text-lg text-zinc-400">
-              Geführter Setup-Prozess – von der ersten Integration bis zum vollständig automatisierten Betrieb.
-            </p>
           </div>
 
-          <div className="mt-10 grid grid-cols-1 gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {steps.map((item) => {
+              const Icon = item.icon;
               return (
-                <div key={step.step} className="relative">
-                  {/* Connector arrow — desktop only */}
-                  {index < steps.length - 1 && (
-                    <div className="absolute -right-2.5 top-9 z-10 hidden h-5 w-5 items-center justify-center lg:flex">
-                      <ArrowRight className="h-3.5 w-3.5 text-zinc-600" />
-                    </div>
-                  )}
-
-                  <div className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-white/20 hover:bg-white/[0.09] hover:shadow-2xl hover:shadow-indigo-500/10">
-                    {/* Ambient glow — intensifies on hover */}
-                    <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-500 opacity-0 blur-2xl transition-all duration-300 group-hover:opacity-25" />
-
-                    <div className="relative">
-                      {/* Step number — subtle, monospaced */}
-                      <span className="font-mono text-xs font-medium tracking-widest text-zinc-600">
-                        {step.step}
-                      </span>
-
-                      {/* Icon — glass look */}
-                      <div className="mt-3 flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm transition-all duration-300 group-hover:border-white/30 group-hover:bg-white/15">
-                        <Icon className="h-5 w-5 text-white" />
-                      </div>
-
-                      {/* Title */}
-                      <h3 className="mt-4 text-base font-semibold text-white sm:text-lg">
-                        {step.title}
-                      </h3>
-
-                      {/* Description — one sentence only */}
-                      <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                        {step.description}
-                      </p>
-                    </div>
+                <article
+                  key={item.step}
+                  className="rounded-2xl border border-white/55 bg-white/46 p-5 shadow-[0_12px_34px_rgba(28,53,122,0.08),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-md transition-transform duration-300 hover:-translate-y-1 hover:bg-white/54"
+                >
+                  <p className="font-mono text-xs font-semibold tracking-widest text-[#5e6580]">{item.step}</p>
+                  <div className="mt-3 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/60 bg-white/40 text-[#1f3f90] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-md">
+                    <Icon className="h-5 w-5" />
                   </div>
-                </div>
+                  <h3 className="mt-4 text-base font-semibold text-[#161a27]">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#4b5268]">{item.description}</p>
+                </article>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* ==================== GOOGLE CALENDAR SYNC SECTION ==================== */}
-      <section id="calendar-sync" className="relative overflow-hidden py-16 sm:py-24 lg:py-28">
-        <div className="absolute inset-0 bg-zinc-900/40" />
-        <div className="absolute right-0 top-1/2 hidden h-[520px] w-[520px] -translate-y-1/2 translate-x-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
-        <div className="absolute left-0 top-0 hidden h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[90px] sm:block" />
-
+      <section id="flow-builder" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 max-w-3xl sm:mb-12">
-            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
-              Google Kalender Sync
-            </span>
-            <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">
-              Termine werden automatisch{" "}
-              <span className="bg-gradient-to-r from-indigo-300 to-white bg-clip-text text-transparent">
-                geprüft und synchronisiert
-              </span>
-            </h2>
-            <p className="mt-4 text-base text-zinc-400 sm:text-lg">
-              Verbinden Sie Ihren Google Kalender einmalig. Bei jeder Anfrage prüft Wesponde automatisch freie
-              Slots, bestätigt passende Zeiten direkt per DM oder schlägt Alternativen vor. Bestätigte Termine
-              erscheinen sofort in Ihrem Kalender – ohne manuelle Arbeit.
-            </p>
-          </div>
-
-          <GoogleCalendarSyncDemo />
-        </div>
-      </section>
-
-      {/* ==================== GOOGLE REVIEWS SECTION ==================== */}
-      <section id="reviews" className="relative py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/30 to-zinc-950" />
-        <div className="absolute left-0 top-1/2 hidden h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
-
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 max-w-3xl sm:mb-16">
-            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
-              Bewertungsanfrage
-            </span>
-            <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:mt-6 sm:text-4xl md:text-5xl">
-              Google Bewertungen{" "}
-              <span className="bg-gradient-to-r from-indigo-300 to-white bg-clip-text text-transparent">
-                automatisiert
-              </span>
-            </h2>
-            <p className="mt-3 text-sm text-zinc-400 sm:mt-4 sm:text-lg">
-              Nach dem Besuch fragen wir automatisch per DM nach einer Bewertung.
-            </p>
-          </div>
-
-          <GoogleReviewsFlow />
-        </div>
-      </section>
-
-      {/* ==================== FLOW BUILDER SECTION ==================== */}
-      <section id="flow-builder" className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-zinc-900/30" />
-        <div className="absolute right-0 top-1/2 hidden h-[600px] w-[600px] -translate-y-1/2 translate-x-1/2 rounded-full bg-indigo-500/10 blur-[120px] sm:block" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center sm:mb-16">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-indigo-400 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs">
-              <Workflow className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              Ablauf-Editor
-            </span>
-            <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:mt-6 sm:text-4xl md:text-5xl">
-              Abläufe erstellen in{" "}
-              <span className="bg-gradient-to-r from-indigo-300 to-white bg-clip-text text-transparent">
-                Minuten
-              </span>
-            </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400 sm:mt-4 sm:text-lg">
-              Visueller Editor für Dialoge. Ohne Code, ohne Aufwand.
-            </p>
-          </div>
-
-          <FlowBuilderDemo />
-        </div>
-      </section>
-
-      {/* ==================== FAQ SECTION ==================== */}
-      <section id="faq" className="relative py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-zinc-900/50" />
-        <div className="absolute right-0 top-1/2 hidden h-[400px] w-[400px] translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/8 blur-[100px] sm:block" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-[1fr,1.6fr] lg:gap-20">
-
-            {/* Left — sticky heading */}
-            <div className="lg:sticky lg:top-28 lg:self-start">
-              <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
-                FAQ
-              </span>
-              <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:text-4xl lg:text-5xl">
-                Häufige<br />Fragen
-              </h2>
-              <p className="mt-5 text-base leading-relaxed text-zinc-400">
-                Alles was Sie wissen müssen, bevor Sie starten — von der Einrichtung über die Integration bis zum Datenschutz.
+          <div className="mb-8 max-w-3xl sm:mb-10">
+            <div className="flex items-center gap-4">
+              <span className="h-px w-16 bg-[#7d9be2]" />
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#3159bb]">
+                Flow Builder
               </p>
-              <div className="mt-8 h-px w-12 bg-white/10" />
-              <p className="mt-6 text-sm text-zinc-600">
-                {faqs.length} Antworten · Weitere Fragen?
+            </div>
+            <h2
+              className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-[#11131a] sm:text-5xl"
+              style={{ fontFamily: "var(--font-home-display)" }}
+            >
+              Visuell bauen und Abläufe in Minuten erstellen.
+            </h2>
+            <p className="mt-4 max-w-2xl text-sm text-[#46506a] sm:text-base">
+              Starten Sie mit einer Vorlage und passen Sie Inhalte und Logik jederzeit flexibel an.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-black/10 bg-white/35 p-2 sm:p-4">
+            <FlowBuilderDemo theme="light" />
+          </div>
+        </div>
+      </section>
+
+      <section className="relative">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <IntegrationsStickyScroll />
+        </div>
+      </section>
+
+      <section className="relative py-16 sm:py-20 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-10 lg:grid-cols-[0.72fr_1fr] lg:items-start lg:gap-16">
+            <div className="mx-auto w-full max-w-[360px] lg:max-w-none">
+              <div className="flex items-center gap-4">
+                <span className="h-px w-16 bg-[#7d9be2]" />
+                <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#3159bb]">
+                  Solutions
+                </p>
+              </div>
+              <p className="mt-8 max-w-[280px] font-mono text-[16px] leading-[1.6] text-[#2450b2]">
+                Wesponde automatisiert die häufigsten Kundenanfragen – von der ersten Nachricht
+                bis zum bestätigten Termin.
               </p>
-              <Link
-                href="/contact"
-                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-zinc-300 transition-colors hover:text-white"
-              >
-                Direkt anfragen
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
             </div>
 
-            {/* Right — accordion */}
-            <div>
-              <FaqAccordion faqs={faqs} />
-            </div>
+            <SolutionStats />
           </div>
         </div>
       </section>
 
-      {/* ==================== FINAL CTA SECTION ==================== */}
-      <section className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent" />
-        <div className="absolute left-1/2 top-0 hidden h-[400px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/20 blur-[120px] sm:block" />
-
-        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="font-display text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-            Bereit für automatisierte{" "}
-            <span className="bg-gradient-to-r from-indigo-300 to-white bg-clip-text text-transparent">
-              Konversationen
-            </span>
-            ?
+      <section className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
+<div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+          <h2
+            className="bg-[linear-gradient(135deg,#6b8fd6_0%,#3461be_55%,#1a3590_100%)] bg-clip-text text-5xl font-semibold tracking-tight text-transparent sm:text-6xl lg:text-7xl"
+            style={{ fontFamily: "var(--font-home-display)" }}
+          >
+            Premium-Service beginnt bei der ersten Nachricht.
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:mt-6 sm:text-lg">
-            Setup, Integrationen und Launch.
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#4975c3] sm:text-lg">
+            Bereit für automatisierte Konversationen?
           </p>
-          <div className="mt-8 sm:mt-10">
+          <div className="mt-8 flex items-center justify-center">
             <Link
               href="/login?view=signup"
-              className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10 sm:px-8 sm:py-4"
+              className="group inline-flex items-center justify-center gap-2 rounded-xl border border-[#2a4ea7]/25 bg-white/80 px-6 py-3 text-sm font-semibold text-[#1f3f90] transition-colors hover:bg-white"
             >
               Jetzt starten
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
+          </div>
+        </div>
+      </section>
+      </div>{/* end white ray wrapper */}
+
+      <section id="faq" className="border-t border-[#2e4da8]/20 bg-[#edf1f8] py-16 text-[#173983] sm:py-20 lg:py-24">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">FAQ</p>
+            <h2
+              className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl"
+              style={{ fontFamily: "var(--font-home-display)" }}
+            >
+              Häufige Fragen
+            </h2>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-[#434c64] sm:text-base">
+              Alles Wichtige zu Setup, Anpassung und Betrieb in einer kompakten Übersicht.
+            </p>
+
+            <div className="mt-8 max-w-md rounded-2xl border border-[#2a4ea7]/15 bg-white/72 p-4 shadow-[0_10px_30px_rgba(28,53,122,0.06)] sm:p-5">
+              <p className="text-sm font-semibold text-[#1f3f90]">Noch Fragen offen?</p>
+              <p className="mt-1 text-xs text-[#5a6f9e]">
+                Melde dich gerne direkt bei uns – wir helfen schnell und unkompliziert weiter.
+              </p>
+              <div className="mt-3">
+                <Link
+                  href="/contact"
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl border border-[#2a4ea7]/20 bg-white/80 px-4 py-2.5 text-sm font-semibold text-[#1f3f90] transition-colors hover:bg-white"
+                >
+                  Kontakt aufnehmen
+                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-[#2a4ea7]/14 bg-white/72 px-5 py-2 shadow-[0_12px_34px_rgba(28,53,122,0.06)] sm:px-8">
+            <FaqAccordion faqs={faqs} />
           </div>
         </div>
       </section>

@@ -16,7 +16,7 @@ type FaqAccordionProps = {
 export default function FaqAccordion({ faqs }: FaqAccordionProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const pathname = usePathname();
-  const isHomeV2Route = pathname === '/home-v2';
+  const isHomeV2Route = pathname === '/' || pathname === '/home-v2';
 
   return (
     <div className={isHomeV2Route ? "divide-y divide-[#2a4ea7]/10" : "divide-y divide-white/[0.06]"}>
