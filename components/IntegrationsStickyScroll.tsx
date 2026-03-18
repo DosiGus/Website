@@ -120,18 +120,14 @@ export default function IntegrationsStickyScroll() {
       <div className="space-y-16 py-16 sm:py-20 lg:hidden">
         <div>
           <TextContent section={SECTIONS[0]} active />
-          <div className="mt-8 rounded-[24px] bg-[#2450b2] p-3 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-            <div className="rounded-[20px] bg-[#fafaf8] p-6">
-              <GoogleCalendarSyncDemo compact />
-            </div>
+          <div className="mt-8">
+            <GoogleCalendarSyncDemo compact />
           </div>
         </div>
         <div>
           <TextContent section={SECTIONS[1]} active />
-          <div className="mt-8 rounded-[24px] bg-[#2450b2] p-3 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-            <div className="rounded-[20px] bg-[#fafaf8] p-6">
-              <GoogleReviewsFlow compact />
-            </div>
+          <div className="mt-8">
+            <GoogleReviewsFlow compact />
           </div>
         </div>
       </div>
@@ -168,11 +164,7 @@ export default function IntegrationsStickyScroll() {
                   : 'z-0 pointer-events-none opacity-0 -translate-y-4'
               }`}
             >
-              <div className="rounded-[24px] bg-[#2450b2] p-3 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-                <div className="rounded-[20px] bg-[#fafaf8] p-6">
-                  <GoogleCalendarSyncDemo compact />
-                </div>
-              </div>
+              <GoogleCalendarSyncDemo compact />
             </div>
 
             {/* Demo 2 — Reviews */}
@@ -183,11 +175,7 @@ export default function IntegrationsStickyScroll() {
                   : 'z-0 pointer-events-none opacity-0 translate-y-4'
               }`}
             >
-              <div className="rounded-[24px] bg-[#2450b2] p-3 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-                <div className="rounded-[20px] bg-[#fafaf8] p-6">
-                  <GoogleReviewsFlow compact />
-                </div>
-              </div>
+              <GoogleReviewsFlow compact />
             </div>
 
           </div>

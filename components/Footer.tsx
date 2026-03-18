@@ -29,14 +29,25 @@ export default function Footer() {
   if (pathname?.startsWith('/app')) return null;
 
   return (
-    <footer className="relative bg-[#edf1f8]">
-      {/* Top gradient line */}
-      <div className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[#2e4da8]/18 to-transparent" />
+    <footer className="relative bg-white">
+      {/* Top separator line */}
+      <div className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[#2e4da8]/50 to-transparent" />
+
+      {/* Halftone dot pattern — fades from bottom up */}
+      <div
+        className="pointer-events-none absolute bottom-0 left-0 right-0 h-full"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(36,80,178,0.38) 1.8px, transparent 1.8px)',
+          backgroundSize: '18px 18px',
+          WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.25) 40%, rgba(0,0,0,0.05) 65%, rgba(0,0,0,0) 85%)',
+          maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.25) 40%, rgba(0,0,0,0.05) 65%, rgba(0,0,0,0) 85%)',
+        }}
+      />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
         {/* Main grid */}
-        <div className="grid gap-12 py-16 sm:py-20 lg:grid-cols-[1.8fr_1fr_1fr_1.4fr] lg:gap-8">
+        <div className="grid gap-12 pb-16 pt-16 sm:pb-24 sm:pt-20 lg:grid-cols-[1.8fr_1fr_1fr_1.4fr] lg:gap-8">
 
           {/* ── Brand column ── */}
           <div>
@@ -131,7 +142,7 @@ export default function Footer() {
 
         {/* ── Bottom bar ── */}
         <div className="flex flex-col items-start justify-between gap-4 border-t border-[#2e4da8]/14 py-6 sm:flex-row sm:items-center">
-          <p className="text-xs text-[#7a8aaf]">
+          <p className="text-xs text-[#54668f]">
             © {new Date().getFullYear()} Wesponde. Alle Rechte vorbehalten.
           </p>
           <div className="flex items-center gap-5">
@@ -139,7 +150,7 @@ export default function Footer() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-xs text-[#7a8aaf] transition-colors hover:text-[#173983]"
+                className="text-xs text-[#54668f] transition-colors hover:text-[#173983]"
               >
                 {link.label}
               </Link>

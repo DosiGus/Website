@@ -3,7 +3,6 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import {
   ArrowRight,
   ArrowUpRight,
-  CheckCircle2,
   Layers,
   Link2,
   Pencil,
@@ -29,11 +28,6 @@ const sans = Plus_Jakarta_Sans({
   variable: "--font-home-sans",
 });
 
-const heroStats = [
-  "In wenigen Klicks eingerichtet",
-  "Mehr bestätigte Termine",
-  "Geringere No-Show-Rate",
-];
 
 const steps: { step: string; icon: LucideIcon; title: string; description: string }[] = [
   {
@@ -99,37 +93,21 @@ const faqs = [
 export default function HomePageV2() {
   return (
     <div
-      className={`${display.variable} ${sans.variable} relative text-[#171923]`}
-      style={{
-        fontFamily: "var(--font-home-sans)",
-        background: [
-          /* Soft blue wash from the top — sets the airy tone */
-          'linear-gradient(180deg, rgba(186,230,253,0.52) 0%, rgba(186,230,253,0.10) 30%, transparent 50%)',
-          /* Stripe 1 — pale sky-blue band, upper third */
-          'linear-gradient(175deg, transparent 7%, rgba(186,230,253,0.28) 13%, rgba(186,230,253,0.28) 19%, transparent 25%)',
-          /* Stripe 2 — slightly deeper ice-blue */
-          'linear-gradient(175deg, transparent 26%, rgba(147,197,253,0.18) 33%, rgba(147,197,253,0.18) 38%, transparent 45%)',
-          /* Stripe 3 — very faint lavender hint */
-          'linear-gradient(175deg, transparent 44%, rgba(214,210,250,0.13) 50%, rgba(214,210,250,0.13) 54%, transparent 60%)',
-          /* Stripe 4 — ice blue, mid-lower page */
-          'linear-gradient(175deg, transparent 58%, rgba(219,234,254,0.22) 64%, rgba(219,234,254,0.22) 69%, transparent 75%)',
-          /* Stripe 5 — pale sky, lower page */
-          'linear-gradient(175deg, transparent 73%, rgba(186,230,253,0.16) 79%, rgba(186,230,253,0.16) 83%, transparent 89%)',
-          /* Base — cool near-white */
-          '#f6f9ff',
-        ].join(', '),
-      }}
+      className={`${display.variable} ${sans.variable} relative bg-white text-[#171923]`}
+      style={{ fontFamily: "var(--font-home-sans)" }}
     >
 
       {/* Wrapper for sections that need relative positioning for sticky scroll */}
       <div className="relative">
 
-      <section id="home" className="relative border-b border-black/10">
+      {/* ── Hero ──────────────────────────────────────────────────── */}
+      <section id="home" className="relative overflow-hidden bg-white">
 
-        <div className="mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-24 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-8 lg:pb-24 lg:pt-32">
+        {/* ── Content ──────────────────────────────────────────────── */}
+        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-24 pt-24 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-8 lg:pb-36 lg:pt-32">
           <div>
             <h1
-              className="mt-7 text-5xl font-semibold leading-[0.95] tracking-tight text-[#11131a] sm:text-6xl lg:text-7xl"
+              className="mt-7 text-5xl font-semibold leading-[0.95] tracking-tight text-[#171923] sm:text-6xl lg:text-7xl"
               style={{ fontFamily: "var(--font-home-display)" }}
             >
               Premium-Service beginnt bei der ersten Nachricht.
@@ -140,33 +118,32 @@ export default function HomePageV2() {
               Anfragen automatisch beantwortet und in bestätigte Termine überführt.
             </p>
 
+            {/* CTA Buttons — pill-shaped */}
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link
                 href="/demo"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#121624] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                className="inline-flex items-center gap-2 rounded-full bg-[#121624] px-6 py-3 text-sm font-semibold text-white shadow-[0_2px_20px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1e2d5a]"
               >
                 Demo testen
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/about"
-                className="inline-flex items-center gap-2 rounded-xl border border-black/20 px-5 py-3 text-sm font-semibold text-[#1d2130] transition-colors hover:bg-black/5"
+                href="/login?view=signup"
+                className="inline-flex items-center gap-2 rounded-full border border-[#2a4ea7]/20 bg-white/70 px-6 py-3 text-sm font-medium text-[#171923] transition-all hover:bg-white"
               >
                 Kostenlos starten
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
 
-            <div className="mt-9 flex flex-wrap gap-2.5">
-              {heroStats.map((stat) => (
-                <span
-                  key={stat}
-                  className="inline-flex items-center gap-2 rounded-full border border-black/15 bg-white/70 px-4 py-1.5 text-[11px] font-normal tracking-[0.08em] text-[#4b5062]"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5 text-[#4b5062]" />
-                  {stat}
-                </span>
-              ))}
+            {/* Meta Business Partner Badge */}
+            <div className="mt-9">
+              <img
+                src="/meta-business-partner.png"
+                alt="Meta Business Partner"
+                height={22}
+                style={{ height: '14px', width: 'auto' }}
+              />
             </div>
           </div>
 
@@ -293,7 +270,7 @@ export default function HomePageV2() {
       </section>
       </div>{/* end white ray wrapper */}
 
-      <section id="faq" className="border-t border-[#2e4da8]/14 bg-[#eaf0fb] py-16 text-[#173983] sm:py-20 lg:py-24">
+      <section id="faq" className="pb-32 pt-16 text-[#173983] sm:pb-40 sm:pt-20 lg:pb-48 lg:pt-24">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">FAQ</p>
