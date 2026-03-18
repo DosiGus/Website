@@ -48,7 +48,7 @@ const teamInfo = [
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-[#f4efe7] pt-24">
+    <div className="min-h-screen bg-[#f6f9ff] pt-24">
       <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
         {/* Hero */}
         <div className="max-w-3xl">

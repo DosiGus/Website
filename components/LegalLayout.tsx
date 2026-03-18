@@ -14,7 +14,7 @@ export default function LegalLayout({
   children,
 }: LegalLayoutProps) {
   return (
-    <section className="min-h-screen bg-[#f4efe7] pt-24">
+    <section className="min-h-screen bg-[#f6f9ff] pt-24">
       <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="overflow-hidden rounded-2xl border border-[#2a4ea7]/15 bg-white shadow-[0_10px_30px_rgba(28,53,122,0.06)]">
           {/* Header */}

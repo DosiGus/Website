@@ -51,7 +51,7 @@ export default function LoginPage({ searchParams }: { searchParams: { view?: str
   const badgeLabel = isSignup ? "Jetzt testen" : "Partner-Login";
   const heading = isSignup ? "Starte deinen Testzugang" : "Zugriff für bestehende Kund:innen";
   return (
-    <div className="min-h-screen bg-[#f4efe7] pt-24">
+    <div className="min-h-screen bg-[#f6f9ff] pt-24">
       <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
           {/* Left Column - Info */}

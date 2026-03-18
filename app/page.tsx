@@ -99,24 +99,30 @@ const faqs = [
 export default function HomePageV2() {
   return (
     <div
-      className={`${display.variable} ${sans.variable} relative bg-[#f4efe7] text-[#171923]`}
-      style={{ fontFamily: "var(--font-home-sans)" }}
+      className={`${display.variable} ${sans.variable} relative text-[#171923]`}
+      style={{
+        fontFamily: "var(--font-home-sans)",
+        background: [
+          /* Soft blue wash from the top — sets the airy tone */
+          'linear-gradient(180deg, rgba(186,230,253,0.52) 0%, rgba(186,230,253,0.10) 30%, transparent 50%)',
+          /* Stripe 1 — pale sky-blue band, upper third */
+          'linear-gradient(175deg, transparent 7%, rgba(186,230,253,0.28) 13%, rgba(186,230,253,0.28) 19%, transparent 25%)',
+          /* Stripe 2 — slightly deeper ice-blue */
+          'linear-gradient(175deg, transparent 26%, rgba(147,197,253,0.18) 33%, rgba(147,197,253,0.18) 38%, transparent 45%)',
+          /* Stripe 3 — very faint lavender hint */
+          'linear-gradient(175deg, transparent 44%, rgba(214,210,250,0.13) 50%, rgba(214,210,250,0.13) 54%, transparent 60%)',
+          /* Stripe 4 — ice blue, mid-lower page */
+          'linear-gradient(175deg, transparent 58%, rgba(219,234,254,0.22) 64%, rgba(219,234,254,0.22) 69%, transparent 75%)',
+          /* Stripe 5 — pale sky, lower page */
+          'linear-gradient(175deg, transparent 73%, rgba(186,230,253,0.16) 79%, rgba(186,230,253,0.16) 83%, transparent 89%)',
+          /* Base — cool near-white */
+          '#f6f9ff',
+        ].join(', '),
+      }}
     >
 
-      {/* ── White ray background: hero → ablauf → flow-builder ── */}
-      <div className="relative bg-white">
-        {/* Soft vertical light rays — radial-gradient (no blur filter, GPU-friendly) */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: [
-              'radial-gradient(ellipse 28% 55% at 8% 0%, rgba(186,230,253,0.65), transparent)',
-              'radial-gradient(ellipse 22% 45% at 32% 0%, rgba(147,197,253,0.50), transparent)',
-              'radial-gradient(ellipse 25% 50% at 58% 0%, rgba(191,219,254,0.55), transparent)',
-              'radial-gradient(ellipse 20% 42% at 88% 0%, rgba(186,230,253,0.45), transparent)',
-            ].join(', '),
-          }}
-        />
+      {/* Wrapper for sections that need relative positioning for sticky scroll */}
+      <div className="relative">
 
       <section id="home" className="relative border-b border-black/10">
 
@@ -164,12 +170,8 @@ export default function HomePageV2() {
             </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute -left-6 -top-6 h-24 w-24 rounded-full bg-[#2a63ff]/20 blur-2xl" />
-            <div className="absolute -bottom-8 right-4 h-24 w-24 rounded-full bg-[#0da27f]/20 blur-2xl" />
-            <div className="relative p-1">
-              <PhoneMockup />
-            </div>
+          <div className="relative p-1">
+            <PhoneMockup />
           </div>
         </div>
       </section>
@@ -246,7 +248,7 @@ export default function HomePageV2() {
         </div>
       </section>
 
-      <section className="relative py-16 sm:py-20 lg:py-24">
+      <section id="solutions" className="relative py-16 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-10 lg:grid-cols-[0.72fr_1fr] lg:items-start lg:gap-16">
             <div className="mx-auto w-full max-w-[360px] lg:max-w-none">
@@ -291,7 +293,7 @@ export default function HomePageV2() {
       </section>
       </div>{/* end white ray wrapper */}
 
-      <section id="faq" className="border-t border-[#2e4da8]/20 bg-[#edf1f8] py-16 text-[#173983] sm:py-20 lg:py-24">
+      <section id="faq" className="border-t border-[#2e4da8]/14 bg-[#eaf0fb] py-16 text-[#173983] sm:py-20 lg:py-24">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4c546f]">FAQ</p>

@@ -78,7 +78,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
 
   if (!post) {
     return (
-      <div className="min-h-screen bg-[#f4efe7] pt-24">
+      <div className="min-h-screen bg-[#f6f9ff] pt-24">
         <section className="mx-auto max-w-3xl px-4 py-20">
           <p className="text-sm text-[#67718a]">Artikel nicht gefunden.</p>
           <Link href="/blog" className="mt-6 inline-flex text-sm font-semibold text-[#2450b2]">
@@ -90,7 +90,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4efe7] pt-24">
+    <div className="min-h-screen bg-[#f6f9ff] pt-24">
       <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <Link href="/blog" className="text-xs font-semibold uppercase tracking-[0.3em] text-[#7485ad] transition-colors hover:text-[#2450b2]">
           ← Insights
