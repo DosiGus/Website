@@ -153,7 +153,7 @@ export default function IntegrationsStickyScroll() {
         </div>
 
         {/* Right: sticky Demo-Panel */}
-        <div className="sticky top-0 flex h-screen items-center">
+        <div className="sticky top-0 flex h-screen items-start pt-[20vh]">
           <div className="grid w-full">
 
             {/* Demo 1 — Calendar */}

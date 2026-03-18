@@ -230,6 +230,8 @@ export default function HomePageV2() {
       </section>
 
       <section id="ablauf" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
+
+
         <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

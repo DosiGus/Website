@@ -30,7 +30,7 @@ function GoogleG({ className = 'h-4 w-4' }: { className?: string }) {
 
 function CompactReviewsFlow() {
   return (
-    <div className="rounded-[34px] bg-white p-6 shadow-[0_24px_60px_rgba(52,69,112,0.14)] ring-1 ring-white/70 xl:p-7">
+    <div className="rounded-[34px] border border-white/55 bg-white/46 p-6 shadow-[0_12px_34px_rgba(28,53,122,0.08),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-md xl:p-7">
       <div className="rounded-[14px] border border-[#d9ddea] bg-white px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
         <div className="flex items-center gap-3">
           <InstagramAvatar />
