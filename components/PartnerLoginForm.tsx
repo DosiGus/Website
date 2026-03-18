@@ -34,7 +34,7 @@ function getPasswordStrength(pw: string): { score: number; label: string; color:
   if (/[^A-Za-z0-9]/.test(pw)) score++;
   if (score <= 1) return { score, label: "Schwach", color: "bg-red-500" };
   if (score <= 2) return { score, label: "Mittel", color: "bg-yellow-500" };
-  if (score <= 3) return { score, label: "Gut", color: "bg-blue-500" };
+  if (score <= 3) return { score, label: "Gut", color: "bg-[#2a4ea7]" };
   return { score, label: "Stark", color: "bg-emerald-500" };
 }
 
@@ -125,25 +125,23 @@ export default function PartnerLoginForm() {
     }
   }
 
+  const inputCls = "mt-2 w-full rounded-xl border border-[#2a4ea7]/20 bg-white px-4 py-3 text-[#171923] placeholder-[#9aa3b8] transition-colors focus:border-[#2a4ea7] focus:outline-none focus:ring-2 focus:ring-[#2a4ea7]/15";
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-sm sm:p-8"
+      className="rounded-2xl border border-[#2a4ea7]/15 bg-white p-6 shadow-[0_10px_30px_rgba(28,53,122,0.06)] sm:p-8"
     >
-      {/* Gradient glow effect */}
-      <div className="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-indigo-500/10 blur-[60px]" />
-      <div className="pointer-events-none absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-violet-500/10 blur-[60px]" />
-
-      <div className="relative space-y-5">
+      <div className="space-y-5">
         {/* Tab Switcher */}
-        <div className="flex gap-1 rounded-xl bg-zinc-800/50 p-1">
+        <div className="flex gap-1 rounded-xl bg-[#2a4ea7]/8 p-1">
           <button
             type="button"
             onClick={() => updateView("login")}
             className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
               view === "login"
-                ? "bg-white text-zinc-900 shadow-sm"
-                : "text-zinc-400 hover:text-white"
+                ? "bg-white text-[#171923] shadow-sm"
+                : "text-[#67718a] hover:text-[#2a4ea7]"
             }`}
           >
             Login
@@ -153,8 +151,8 @@ export default function PartnerLoginForm() {
             onClick={() => updateView("signup")}
             className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
               view === "signup"
-                ? "bg-white text-zinc-900 shadow-sm"
-                : "text-zinc-400 hover:text-white"
+                ? "bg-white text-[#171923] shadow-sm"
+                : "text-[#67718a] hover:text-[#2a4ea7]"
             }`}
           >
             Registrieren
@@ -164,13 +162,13 @@ export default function PartnerLoginForm() {
         {/* Business Name (signup only) */}
         {view === "signup" && (
           <div>
-            <label className="block text-sm font-medium text-zinc-300">
+            <label className="block text-sm font-medium text-[#35508f]">
               Firmenname
             </label>
             <input
               name="businessName"
               type="text"
-              className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className={inputCls}
               placeholder="z.B. Ristorante Milano"
             />
           </div>
@@ -178,21 +176,21 @@ export default function PartnerLoginForm() {
 
         {/* Email Input */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300">
+          <label className="block text-sm font-medium text-[#35508f]">
             Geschäfts-E-Mail
           </label>
           <input
             required
             name="email"
             type="email"
-            className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className={inputCls}
             placeholder="team@restaurant.de"
           />
         </div>
 
         {/* Password Input */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300">
+          <label className="block text-sm font-medium text-[#35508f]">
             Passwort
           </label>
           <input
@@ -201,7 +199,7 @@ export default function PartnerLoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className={inputCls}
             placeholder="••••••••"
           />
           {view === "signup" && password.length > 0 && (
@@ -213,12 +211,12 @@ export default function PartnerLoginForm() {
                     className={`h-1 flex-1 rounded-full transition-colors ${
                       i <= getPasswordStrength(password).score
                         ? getPasswordStrength(password).color
-                        : "bg-white/10"
+                        : "bg-[#2a4ea7]/10"
                     }`}
                   />
                 ))}
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[#7a8aaf]">
                 Staerke: {getPasswordStrength(password).label}
               </p>
             </div>
@@ -228,7 +226,7 @@ export default function PartnerLoginForm() {
         {/* Password Confirmation (signup only) */}
         {view === "signup" && (
           <div>
-            <label className="block text-sm font-medium text-zinc-300">
+            <label className="block text-sm font-medium text-[#35508f]">
               Passwort bestaetigen
             </label>
             <input
@@ -237,15 +235,15 @@ export default function PartnerLoginForm() {
               type="password"
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
-              className={`mt-2 w-full rounded-xl border bg-white/5 px-4 py-3 text-white placeholder-zinc-500 transition-colors focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${
+              className={`mt-2 w-full rounded-xl border bg-white px-4 py-3 text-[#171923] placeholder-[#9aa3b8] transition-colors focus:outline-none focus:ring-2 focus:ring-[#2a4ea7]/15 ${
                 passwordConfirm.length > 0 && password !== passwordConfirm
-                  ? "border-red-500/50 focus:border-red-500"
-                  : "border-white/10 focus:border-indigo-500"
+                  ? "border-red-400 focus:border-red-400"
+                  : "border-[#2a4ea7]/20 focus:border-[#2a4ea7]"
               }`}
               placeholder="••••••••"
             />
             {passwordConfirm.length > 0 && password !== passwordConfirm && (
-              <p className="mt-1.5 text-xs text-red-400">
+              <p className="mt-1.5 text-xs text-red-500">
                 Passwoerter stimmen nicht ueberein
               </p>
             )}
@@ -254,20 +252,20 @@ export default function PartnerLoginForm() {
 
         {/* Terms Checkbox (signup only) */}
         {view === "signup" && (
-          <label className="flex items-start gap-3 cursor-pointer">
+          <label className="flex cursor-pointer items-start gap-3">
             <input
               required
               name="terms"
               type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 text-indigo-500 focus:ring-indigo-500/20"
+              className="mt-0.5 h-4 w-4 rounded border-[#2a4ea7]/20 bg-white text-[#2a4ea7] focus:ring-[#2a4ea7]/20"
             />
-            <span className="text-xs leading-relaxed text-zinc-400">
+            <span className="text-xs leading-relaxed text-[#67718a]">
               Ich akzeptiere die{" "}
-              <a href="/terms" target="_blank" className="text-zinc-300 underline underline-offset-2 hover:text-white">
+              <a href="/terms" target="_blank" className="text-[#2450b2] underline underline-offset-2 hover:text-[#173983]">
                 AGB
               </a>{" "}
               und{" "}
-              <a href="/privacy" target="_blank" className="text-zinc-300 underline underline-offset-2 hover:text-white">
+              <a href="/privacy" target="_blank" className="text-[#2450b2] underline underline-offset-2 hover:text-[#173983]">
                 Datenschutzerklaerung
               </a>.
             </span>
@@ -278,9 +276,9 @@ export default function PartnerLoginForm() {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed disabled:opacity-70"
+          className="group w-full rounded-xl bg-[#121624] px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-[#1e2d5a] focus:outline-none focus:ring-2 focus:ring-[#2a4ea7] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          <span className="relative flex items-center justify-center gap-2">
+          <span className="flex items-center justify-center gap-2">
             {status === "loading" ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -297,10 +295,10 @@ export default function PartnerLoginForm() {
         {/* Divider */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-white/10" />
+            <div className="w-full border-t border-[#2a4ea7]/12" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-zinc-900 px-4 text-zinc-500">oder</span>
+            <span className="bg-white px-4 text-[#7a8aaf]">oder</span>
           </div>
         </div>
 
@@ -308,7 +306,7 @@ export default function PartnerLoginForm() {
         <button
           type="button"
           disabled={status === "loading"}
-          className="w-full rounded-xl border border-white/10 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 transition-all hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-70"
+          className="w-full rounded-xl border border-[#2a4ea7]/20 bg-white px-6 py-3.5 text-sm font-semibold text-[#171923] transition-all hover:bg-[#f8f9fc] disabled:cursor-not-allowed disabled:opacity-70"
           onClick={async () => {
             const supabase = createSupabaseBrowserClient();
             setStatus("loading");
@@ -346,27 +344,27 @@ export default function PartnerLoginForm() {
         {/* Status Message */}
         {message && (
           <div
-            className={`relative overflow-hidden rounded-xl border px-4 py-4 text-sm ${
+            className={`rounded-xl border px-4 py-4 text-sm ${
               status === "error"
-                ? "border-red-500/30 bg-red-500/10 text-red-300"
-                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-100 shadow-lg shadow-emerald-500/10"
+                ? "border-red-200 bg-red-50 text-red-600"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
             }`}
           >
             {status === "success" && signupEmail ? (
               <div className="flex gap-3">
-                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-200">
+                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                   <MailCheck className="h-4 w-4" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-emerald-100">Bestaetigungsmail gesendet</p>
-                  <p className="mt-1 text-xs text-emerald-100/80">
+                  <p className="text-sm font-semibold text-emerald-700">Bestaetigungsmail gesendet</p>
+                  <p className="mt-1 text-xs text-emerald-600">
                     Wir haben eine Bestaetigungsmail an{" "}
-                    <span className="font-semibold text-emerald-100">{signupEmail}</span> gesendet. Bitte auch im Spam-Ordner pruefen.
+                    <span className="font-semibold">{signupEmail}</span> gesendet. Bitte auch im Spam-Ordner pruefen.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="rounded-full border border-emerald-400/30 px-3 py-1 text-xs font-semibold text-emerald-100 transition-colors hover:border-emerald-300/60 hover:text-white"
+                      className="rounded-full border border-emerald-300 px-3 py-1 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
                       onClick={async () => {
                         try {
                           const supabase = createSupabaseBrowserClient();
@@ -388,7 +386,7 @@ export default function PartnerLoginForm() {
                     </button>
                     <button
                       type="button"
-                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white"
+                      className="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-600 transition-colors hover:bg-emerald-50"
                       onClick={() => {
                         updateView("login");
                         setSignupEmail("");
@@ -406,10 +404,10 @@ export default function PartnerLoginForm() {
         )}
 
         {/* Support Link */}
-        <p className="text-center text-xs text-zinc-500">
+        <p className="text-center text-xs text-[#7a8aaf]">
           {view === "login" ? "Probleme beim Login?" : "Probleme beim Registrieren?"}{" "}
           <a
-            className="font-medium text-zinc-400 underline underline-offset-2 transition-colors hover:text-white"
+            className="font-medium text-[#2450b2] underline underline-offset-2 transition-colors hover:text-[#173983]"
             href="/contact"
           >
             Support kontaktieren

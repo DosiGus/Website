@@ -78,34 +78,38 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
 
   if (!post) {
     return (
-      <section className="mx-auto max-w-3xl px-4 py-20">
-        <p className="text-sm text-slate-600">Artikel nicht gefunden.</p>
-        <Link href="/blog" className="mt-6 inline-flex text-sm font-semibold text-ink">
-          Zurück zu Insights →
-        </Link>
-      </section>
+      <div className="min-h-screen bg-[#f4efe7] pt-24">
+        <section className="mx-auto max-w-3xl px-4 py-20">
+          <p className="text-sm text-[#67718a]">Artikel nicht gefunden.</p>
+          <Link href="/blog" className="mt-6 inline-flex text-sm font-semibold text-[#2450b2]">
+            Zurück zu Insights →
+          </Link>
+        </section>
+      </div>
     );
   }
 
   return (
-    <article className="mx-auto max-w-3xl px-4 py-20">
-      <Link href="/blog" className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-        ← Insights
-      </Link>
-      <p className="mt-6 text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-        {post.tag}
-      </p>
-      <h1 className="font-display text-balance mt-4 text-4xl font-semibold text-ink">
-        {post.title}
-      </h1>
-      <div className="mt-10 space-y-8">
-        {post.sections.map((section) => (
-          <div key={section.title} className="rounded-[24px] border border-slate-200/70 bg-white p-6">
-            <h2 className="text-lg font-semibold text-ink">{section.title}</h2>
-            <p className="mt-3 text-sm text-slate-600">{section.body}</p>
-          </div>
-        ))}
-      </div>
-    </article>
+    <div className="min-h-screen bg-[#f4efe7] pt-24">
+      <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+        <Link href="/blog" className="text-xs font-semibold uppercase tracking-[0.3em] text-[#7485ad] transition-colors hover:text-[#2450b2]">
+          ← Insights
+        </Link>
+        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.3em] text-[#2450b2]">
+          {post.tag}
+        </p>
+        <h1 className="mt-4 font-display text-balance text-4xl font-semibold text-[#171923]">
+          {post.title}
+        </h1>
+        <div className="mt-10 space-y-4">
+          {post.sections.map((section) => (
+            <div key={section.title} className="rounded-2xl border border-[#2a4ea7]/15 bg-white/70 p-6 shadow-[0_4px_16px_rgba(28,53,122,0.04)]">
+              <h2 className="text-lg font-semibold text-[#171923]">{section.title}</h2>
+              <p className="mt-3 text-sm text-[#3d4255]">{section.body}</p>
+            </div>
+          ))}
+        </div>
+      </article>
+    </div>
   );
 }

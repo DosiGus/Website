@@ -19,8 +19,8 @@ Wesponde is a B2B SaaS platform for automating customer conversations (Instagram
 
 ### Two-zone layout
 
-- **Public marketing site** (`app/page.tsx`, `app/about/`, `app/blog/`, `app/contact/`, legal pages) — server-rendered, dark theme (slate-950)
-- **Protected app** (`app/app/`) — client-heavy, light theme (slate-50), guarded by `components/AppAuthGate.tsx` which checks Supabase sessions and redirects to `/login`
+- **Public marketing site** (`app/page.tsx`, `app/about/`, `app/blog/`, `app/contact/`, `app/login/`, legal pages) — server-rendered, **light theme** (`bg-[#f4efe7]`, blue `#2450b2` accent, white cards)
+- **Protected app** (`app/app/`) — client-heavy, guarded by `components/AppAuthGate.tsx` which checks Supabase sessions and redirects to `/login`
 
 ### Authentication & API
 
@@ -217,7 +217,9 @@ Log to messages/conversations/logs tables
 - German-first: all user-facing copy, database values (`"Entwurf"`, `"Aktiv"`), and RLS policy names are in German
 - Client components use `'use client'` directive; server components are the default
 - Icons from `lucide-react`
-- Brand primary color: `#3769FF` (configured in `tailwind.config.ts`)
+- Brand primary color: `#2450b2` / `#2a4ea7` (blue, used site-wide on public pages)
+- Public site theme: `bg-[#f4efe7]` background, white cards, `#2450b2` accent — NO dark colors (zinc-950 etc.) on public pages
+- App theme: dark/neutral (app routes only, Navbar/Footer are hidden in /app/* routes)
 - Component naming: `*Client.tsx` suffix for state-heavy client components
 - No ORM — direct Supabase JS client calls throughout
 - API routes use Next.js 14 Route Handlers (not pages/api)

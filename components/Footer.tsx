@@ -25,21 +25,13 @@ const legalLinks = [
 
 export default function Footer() {
   const pathname = usePathname();
-  const isHomeV2Route = pathname === "/" || pathname === "/home-v2";
-  const footerBg = isHomeV2Route ? "bg-[#edf1f8]" : "bg-zinc-950";
-  const mutedText = isHomeV2Route ? "text-[#54668f]" : "text-zinc-500";
-  const subtleText = isHomeV2Route ? "text-[#7485ad]" : "text-zinc-600";
-  const divider = isHomeV2Route ? "border-[#2e4da8]/14" : "border-white/[0.06]";
-  const buttonCls = isHomeV2Route
-    ? "group mt-6 inline-flex items-center gap-2 rounded-xl border border-[#2a4ea7]/20 bg-white/72 px-4 py-2.5 text-sm font-semibold text-[#1f3f90] transition-all hover:bg-white"
-    : "group mt-6 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10";
 
   if (pathname?.startsWith('/app')) return null;
 
   return (
-    <footer className={`relative ${footerBg}`}>
+    <footer className="relative bg-[#edf1f8]">
       {/* Top gradient line */}
-      <div className={`pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent ${isHomeV2Route ? "via-[#2e4da8]/18" : "via-white/10"} to-transparent`} />
+      <div className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[#2e4da8]/18 to-transparent" />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
@@ -48,11 +40,11 @@ export default function Footer() {
 
           {/* ── Brand column ── */}
           <div>
-            <Link href="/" className={`inline-flex leading-none tracking-tight ${isHomeV2Route ? "text-[#2450b3]" : "text-white"}`}>
+            <Link href="/" className="inline-flex leading-none tracking-tight text-[#2450b3]">
               <span className="font-display text-xl">Wesponde</span>
             </Link>
 
-            <p className={`mt-5 max-w-xs text-sm leading-relaxed ${mutedText}`}>
+            <p className="mt-5 max-w-xs text-sm leading-relaxed text-[#54668f]">
               Instagram-Automation für Service-Brands. Reservierungen, Termine und Bewertungen – vollautomatisch.
             </p>
 
@@ -62,28 +54,28 @@ export default function Footer() {
                 href="https://www.linkedin.com"
                 target="_blank"
                 rel="noreferrer"
-                className={`group inline-flex items-center gap-2 text-sm transition-colors ${isHomeV2Route ? "hover:text-[#173983]" : "hover:text-white"} ${subtleText}`}
+                className="group inline-flex items-center gap-2 text-sm text-[#7485ad] transition-colors hover:text-[#173983]"
               >
                 <span>LinkedIn</span>
                 <ArrowUpRight className="h-3 w-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                <span className={`h-px flex-1 max-w-[40px] transition-colors ${isHomeV2Route ? "bg-[#2e4da8]/18 group-hover:bg-[#2e4da8]/45" : "bg-zinc-800 group-hover:bg-white/55"}`} />
+                <span className="h-px flex-1 max-w-[40px] bg-[#2e4da8]/18 transition-colors group-hover:bg-[#2e4da8]/45" />
               </a>
               <a
                 href="https://www.instagram.com"
                 target="_blank"
                 rel="noreferrer"
-                className={`group inline-flex items-center gap-2 text-sm transition-colors ${isHomeV2Route ? "hover:text-[#173983]" : "hover:text-white"} ${subtleText}`}
+                className="group inline-flex items-center gap-2 text-sm text-[#7485ad] transition-colors hover:text-[#173983]"
               >
                 <span>Instagram</span>
                 <ArrowUpRight className="h-3 w-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                <span className={`h-px flex-1 max-w-[40px] transition-colors ${isHomeV2Route ? "bg-[#2e4da8]/18 group-hover:bg-[#2e4da8]/45" : "bg-zinc-800 group-hover:bg-white/55"}`} />
+                <span className="h-px flex-1 max-w-[40px] bg-[#2e4da8]/18 transition-colors group-hover:bg-[#2e4da8]/45" />
               </a>
             </div>
           </div>
 
           {/* ── Product links ── */}
           <div>
-            <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${subtleText}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7485ad]">
               Produkt
             </p>
             <ul className="mt-5 space-y-3.5">
@@ -91,7 +83,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className={`text-sm transition-colors ${isHomeV2Route ? "text-[#35508f] hover:text-[#173983]" : "text-zinc-400 hover:text-white"}`}
+                    className="text-sm text-[#35508f] transition-colors hover:text-[#173983]"
                   >
                     {link.label}
                   </Link>
@@ -102,7 +94,7 @@ export default function Footer() {
 
           {/* ── Company links ── */}
           <div>
-            <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${subtleText}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7485ad]">
               Unternehmen
             </p>
             <ul className="mt-5 space-y-3.5">
@@ -110,7 +102,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className={`text-sm transition-colors ${isHomeV2Route ? "text-[#35508f] hover:text-[#173983]" : "text-zinc-400 hover:text-white"}`}
+                    className="text-sm text-[#35508f] transition-colors hover:text-[#173983]"
                   >
                     {link.label}
                   </Link>
@@ -120,16 +112,16 @@ export default function Footer() {
           </div>
 
           {/* ── CTA column ── */}
-          <div className={`lg:pl-8 lg:border-l ${divider}`}>
-            <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${subtleText}`}>
+          <div className="lg:border-l lg:pl-8 border-[#2e4da8]/14">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7485ad]">
               Loslegen
             </p>
-            <p className={`mt-5 text-sm leading-relaxed ${isHomeV2Route ? "text-[#54668f]" : "text-zinc-400"}`}>
+            <p className="mt-5 text-sm leading-relaxed text-[#54668f]">
               Bereit, Ihre DMs zu automatisieren? Wir zeigen Ihnen in einem kurzen Gespräch, was Wesponde für Ihren Betrieb leisten kann.
             </p>
             <Link
               href="/contact"
-              className={buttonCls}
+              className="group mt-6 inline-flex items-center gap-2 rounded-xl border border-[#2a4ea7]/20 bg-white/72 px-4 py-2.5 text-sm font-semibold text-[#1f3f90] transition-all hover:bg-white"
             >
               Kontakt aufnehmen
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -138,8 +130,8 @@ export default function Footer() {
         </div>
 
         {/* ── Bottom bar ── */}
-        <div className={`flex flex-col items-start justify-between gap-4 border-t py-6 sm:flex-row sm:items-center ${divider}`}>
-          <p className={`text-xs ${isHomeV2Route ? "text-[#7a8aaf]" : "text-zinc-700"}`}>
+        <div className="flex flex-col items-start justify-between gap-4 border-t border-[#2e4da8]/14 py-6 sm:flex-row sm:items-center">
+          <p className="text-xs text-[#7a8aaf]">
             © {new Date().getFullYear()} Wesponde. Alle Rechte vorbehalten.
           </p>
           <div className="flex items-center gap-5">
@@ -147,7 +139,7 @@ export default function Footer() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`text-xs transition-colors ${isHomeV2Route ? "text-[#7a8aaf] hover:text-[#173983]" : "text-zinc-700 hover:text-zinc-400"}`}
+                className="text-xs text-[#7a8aaf] transition-colors hover:text-[#173983]"
               >
                 {link.label}
               </Link>

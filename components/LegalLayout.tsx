@@ -14,24 +14,20 @@ export default function LegalLayout({
   children,
 }: LegalLayoutProps) {
   return (
-    <section className="relative min-h-screen bg-zinc-950 pt-24">
-      {/* Background */}
-      <div className="absolute inset-0 bg-grid-dark opacity-50" />
-      <div className="absolute left-1/2 top-0 hidden h-[500px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px] sm:block" />
-
-      <div className="relative mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-sm">
+    <section className="min-h-screen bg-[#f4efe7] pt-24">
+      <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-2xl border border-[#2a4ea7]/15 bg-white shadow-[0_10px_30px_rgba(28,53,122,0.06)]">
           {/* Header */}
-          <div className="border-b border-white/10 bg-zinc-900/80 px-5 py-8 sm:px-8 sm:py-10 lg:px-12">
-            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-indigo-400">
+          <div className="border-b border-[#2a4ea7]/10 bg-[#f8f9fc] px-5 py-8 sm:px-8 sm:py-10 lg:px-12">
+            <span className="inline-flex items-center gap-2 rounded-xl border border-[#2a4ea7]/15 bg-white/70 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[#2450b2]">
               Legal
             </span>
-            <h1 className="mt-6 font-display text-3xl font-medium tracking-tight text-white sm:text-4xl">
+            <h1 className="mt-6 font-display text-3xl font-medium tracking-tight text-[#171923] sm:text-4xl">
               {title}
             </h1>
-            <p className="mt-4 text-lg leading-relaxed text-zinc-400">{description}</p>
+            <p className="mt-4 text-lg leading-relaxed text-[#3d4255]">{description}</p>
             {lastUpdated ? (
-              <p className="mt-6 text-sm font-medium text-zinc-500">
+              <p className="mt-6 text-sm font-medium text-[#7485ad]">
                 Zuletzt aktualisiert: {lastUpdated}
               </p>
             ) : null}
@@ -39,7 +35,7 @@ export default function LegalLayout({
 
           {/* Content */}
           <article className="px-5 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
-            <div className="prose prose-invert prose-zinc mx-auto max-w-3xl prose-headings:font-display prose-headings:font-medium prose-headings:text-white prose-p:text-zinc-400 prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:text-indigo-300 prose-strong:text-white prose-ul:text-zinc-400 prose-ol:text-zinc-400 prose-li:marker:text-zinc-600">
+            <div className="prose prose-zinc mx-auto max-w-3xl prose-headings:font-display prose-headings:font-medium prose-headings:text-[#171923] prose-p:text-[#3d4255] prose-a:text-[#2450b2] prose-a:no-underline hover:prose-a:text-[#173983] prose-strong:text-[#171923] prose-ul:text-[#3d4255] prose-ol:text-[#3d4255] prose-li:marker:text-[#7485ad]">
               {children}
             </div>
           </article>
