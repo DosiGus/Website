@@ -1,3 +1,4 @@
+import React from "react";
 import Link from "next/link";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import {
@@ -100,44 +101,6 @@ export default function HomePageV2() {
       {/* Wrapper for sections that need relative positioning for sticky scroll */}
       <div className="relative">
 
-        {/* Swirl — Flow Builder → Integration */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <svg
-            viewBox="0 0 1400 1300"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="absolute inset-0 h-full w-full"
-            preserveAspectRatio="xMidYMid meet"
-          >
-            {/* Main thick ribbon */}
-            <path
-              d="M 1420 -60
-                 C 1520 80, 1280 220, 1080 270
-                 C 880 320, 660 295, 680 440
-                 C 700 585, 960 610, 900 740
-                 C 840 870, 480 900, 280 960
-                 C 100 1010, 80 1060, 280 1080"
-              stroke="#2a4ea7"
-              strokeWidth="70"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {/* Thinner trailing ribbon for depth */}
-            <path
-              d="M 1420 10
-                 C 1500 130, 1300 250, 1100 295
-                 C 900 340, 700 320, 715 460
-                 C 730 600, 980 640, 920 765
-                 C 860 890, 510 918, 310 975
-                 C 130 1025, 110 1072, 310 1092"
-              stroke="#2a4ea7"
-              strokeWidth="28"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.55"
-            />
-          </svg>
-        </div>
 
       {/* ── Hero ──────────────────────────────────────────────────── */}
       <section id="home" className="relative overflow-hidden bg-white">
@@ -229,8 +192,77 @@ export default function HomePageV2() {
         </div>
       </section>
 
-      <section id="ablauf" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
+      {/* ── Hero V2 (Duplikat zum Testen) ─────────────────────────── */}
+      <section id="home-v2" className="relative overflow-hidden">
 
+        {/* Layer 1 — Blauer Gradient (hell → dunkel) */}
+        <div className="absolute inset-0" style={{
+          background: 'linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #2a4ea7 78%, #0a1a55 100%)',
+        }} />
+
+        {/* Layer 2 — Grid mit größeren Vierecken */}
+        <div className="pointer-events-none absolute inset-0" style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',
+          backgroundSize: '100px 100px',
+        }} />
+
+        {/* Layer 3 — Noise Textur */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.22]" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundSize: '200px 200px',
+        }} />
+
+        {/* ── Content ──────────────────────────────────────────────── */}
+        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-24 pt-24 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-8 lg:pb-36 lg:pt-32">
+          <div>
+            <h1
+              className="mt-7 text-5xl font-semibold leading-[0.95] tracking-tight text-[#171923] sm:text-6xl lg:text-7xl"
+              style={{ fontFamily: "var(--font-home-display)" }}
+            >
+              Premium-Service beginnt bei der ersten Nachricht.
+            </h1>
+
+            <p className="mt-6 max-w-2xl text-base leading-relaxed text-[#3d4255] sm:text-lg">
+              Wesponde verwandelt Ihren Messenger in einen leistungsstarken Buchungskanal, der
+              Anfragen automatisch beantwortet und in bestätigte Termine überführt.
+            </p>
+
+            {/* CTA Buttons — pill-shaped */}
+            <div className="mt-9 flex flex-wrap items-center gap-3">
+              <Link
+                href="/demo"
+                className="inline-flex items-center gap-2 rounded-full bg-[#121624] px-6 py-3 text-sm font-semibold text-white shadow-[0_2px_20px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1e2d5a]"
+              >
+                Demo testen
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/login?view=signup"
+                className="inline-flex items-center gap-2 rounded-full border border-[#2a4ea7]/20 bg-white/70 px-6 py-3 text-sm font-medium text-[#171923] transition-all hover:bg-white"
+              >
+                Kostenlos starten
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* Meta Business Partner Badge */}
+            <div className="mt-9">
+              <img
+                src="/meta-business-partner.png"
+                alt="Meta Business Partner"
+                height={22}
+                style={{ height: '14px', width: 'auto' }}
+              />
+            </div>
+          </div>
+
+          <div className="relative p-1">
+            <PhoneMockup />
+          </div>
+        </div>
+      </section>
+
+      <section id="ablauf" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
 
         <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
 
@@ -250,21 +282,41 @@ export default function HomePageV2() {
             </h2>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {steps.map((item) => {
+          <div className="grid gap-y-5 md:grid-cols-2 lg:grid-cols-[1fr_32px_1fr_32px_1fr_32px_1fr]">
+            {steps.map((item, index) => {
               const Icon = item.icon;
               return (
-                <article
-                  key={item.step}
-                  className="rounded-2xl border border-white/55 bg-white/46 p-5 shadow-[0_12px_34px_rgba(28,53,122,0.08),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-md transition-transform duration-300 hover:-translate-y-1 hover:bg-white/54"
-                >
-                  <p className="font-mono text-xs font-semibold tracking-widest text-[#5e6580]">{item.step}</p>
-                  <div className="mt-3 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/60 bg-white/40 text-[#1f3f90] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-md">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="mt-4 text-base font-semibold text-[#161a27]">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[#4b5268]">{item.description}</p>
-                </article>
+                <React.Fragment key={item.step}>
+                  <article
+                    className="relative overflow-hidden rounded-2xl border border-[#2a4ea7]/15 bg-white p-5 shadow-[0_12px_34px_rgba(28,53,122,0.08),inset_0_1px_0_rgba(255,255,255,0.55)] transition-transform duration-300 hover:-translate-y-1"
+                  >
+                    {/* Noise Textur */}
+                    <div className="pointer-events-none absolute inset-0 opacity-[0.14]" style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")`,
+                      backgroundSize: '200px 200px',
+                    }} />
+                    <p className="relative font-mono text-xs font-semibold tracking-widest text-[#1f3f90]">{item.step}</p>
+                    <div className="relative mt-3 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#2a4ea7]/15 bg-white text-[#171923] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="relative mt-4 text-base font-semibold text-[#161a27]">{item.title}</h3>
+                    <p className="relative mt-2 text-sm leading-relaxed text-[#4b5268]">{item.description}</p>
+                  </article>
+
+                  {index < steps.length - 1 && (
+                    <div key={`conn-${index}`} className="hidden lg:flex items-center justify-center">
+                      <svg width="100%" height="2" overflow="visible">
+                        <line
+                          x1="0" y1="1" x2="100%" y2="1"
+                          stroke="rgba(42,78,167,0.45)"
+                          strokeWidth="1.5"
+                          strokeDasharray="4 8"
+                          style={{ animation: 'dash-flow 2s linear infinite' }}
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
@@ -278,8 +330,10 @@ export default function HomePageV2() {
           style={{
             backgroundImage: 'radial-gradient(circle, rgba(36,80,178,0.32) 1.6px, transparent 1.6px)',
             backgroundSize: '18px 18px',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,1) 45%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%)',
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,1) 45%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%), linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 6%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.6) 94%, rgba(0,0,0,0) 100%)',
+            WebkitMaskComposite: 'destination-in',
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%), linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 6%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.6) 94%, rgba(0,0,0,0) 100%)',
+            maskComposite: 'intersect',
           }}
         />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
