@@ -144,7 +144,7 @@ export default function Guide_BewertungenSkalieren() {
         <blockquote className="my-9 rounded-2xl border-l-4 border-[#6b3a1e] bg-white p-6 shadow-[0_4px_16px_rgba(28,53,122,0.05)]">
           <p className="text-[17px] font-medium italic leading-relaxed text-[#2d3550]">
             „Bewertungen sind kein Resultat von Glück – sie sind das Resultat eines Systems.
-            Wer nicht fragt, bekommt keine. Wer fragt, bekommt fast immer eine."
+            Wer nicht fragt, bekommt keine. Wer fragt, bekommt fast immer eine.&rdquo;
           </p>
           <p className="mt-3 font-mono text-[12px] text-[#7485ad]">
             ReviewTrackers Consumer Report, 2025

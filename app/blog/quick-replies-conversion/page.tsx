@@ -155,7 +155,7 @@ export default function QuickRepliesConversion() {
           <p className="text-[17px] font-medium italic leading-relaxed text-[#2d3550]">
             „Menschen beantworten 6 Fragen in einem Chat, die sie in einem Formular niemals
             ausfüllen würden – weil es sich nach Hilfe anfühlt, nicht nach Hausaufgaben.
-            Quick Replies machen jeden Schritt noch leichter."
+            Quick Replies machen jeden Schritt noch leichter.&rdquo;
           </p>
           <p className="mt-3 font-mono text-[12px] text-[#7485ad]">
             Conversational Marketing Research, Qualified.com, 2024

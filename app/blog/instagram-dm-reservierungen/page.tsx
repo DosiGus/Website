@@ -148,7 +148,7 @@ export default function PlaybookReservierungen() {
           <p className="text-[17px] font-medium italic leading-relaxed text-[#2d3550]">
             „78&nbsp;% der Kunden kaufen beim ersten Anbieter, der antwortet.
             Automatisierte DMs antworten in unter 1,1 Sekunden –
-            jede Nacht, jedes Wochenende, auch während des Abendservices."
+            jede Nacht, jedes Wochenende, auch während des Abendservices.&rdquo;
           </p>
           <p className="mt-3 font-mono text-[12px] text-[#7485ad]">
             Heymarket Business Messaging Statistics, 2024

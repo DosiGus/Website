@@ -93,7 +93,7 @@ export default function ReminderDesignNoShows() {
         <p className="mt-4 text-[17px] leading-relaxed text-[#2d3550]">
           Die gute Nachricht: Das Problem ist lösbar. Automatisierte Reminder-Sequenzen
           reduzieren No-Show-Raten nachweislich um <strong className="text-[#171923]">38 bis 75&nbsp;%</strong> –
-          wenn sie richtig gebaut sind. „Richtig" bedeutet hier: das richtige Timing,
+          wenn sie richtig gebaut sind. „Richtig&rdquo; bedeutet hier: das richtige Timing,
           den richtigen Ton, und paradoxerweise: eine einfache Möglichkeit zum Absagen.
         </p>
 
@@ -169,7 +169,7 @@ export default function ReminderDesignNoShows() {
             „Wenn jemand aktiv bestätigt, löst das das psychologische Prinzip
             von Commitment und Konsistenz aus – wer einmal Ja gesagt hat,
             erscheint. Reminder sind kein Misstrauenssignal,
-            sie sind der Auslöser dieser Bestätigung."
+            sie sind der Auslöser dieser Bestätigung.&rdquo;
           </p>
           <p className="mt-3 font-mono text-[12px] text-[#7485ad]">
             Basierend auf Forschung zu Commitment-Effekten bei Terminvereinbarungen,

@@ -179,7 +179,7 @@ export default function GuideInstagramDmEinrichten() {
             „Laut Meta kommunizieren monatlich über 150 Millionen Nutzer mit
             Business-Accounts auf Instagram. Gleichzeitig bevorzugen 63&nbsp;% der
             Konsumenten Messenger-Kommunikation gegenüber E-Mail oder Telefon –
-            der Kanal ist also genau dort, wo deine Kunden sowieso schon sind."
+            der Kanal ist also genau dort, wo deine Kunden sowieso schon sind.&rdquo;
           </p>
           <p className="mt-3 font-mono text-[12px] text-[#7485ad]">
             Meta Business Insights, 2024

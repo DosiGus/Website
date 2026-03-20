@@ -74,8 +74,8 @@ export default function SpracheTonDmAutomatisierung() {
         {/* Intro */}
         <p className="text-[17px] leading-relaxed text-[#2d3550]">
           Jemand schreibt deinem Restaurant auf Instagram: „Hey, habt ihr am Samstag noch einen
-          Tisch frei?" Die automatisierte Antwort kommt prompt – in unter zwei Sekunden. Aber
-          sie lautet: <em className="text-[#171923]">„Ihre Anfrage wurde registriert. Bitte warten Sie auf Rückmeldung."</em>
+          Tisch frei?&rdquo; Die automatisierte Antwort kommt prompt – in unter zwei Sekunden. Aber
+          sie lautet: <em className="text-[#171923]">„Ihre Anfrage wurde registriert. Bitte warten Sie auf Rückmeldung.&rdquo;</em>
         </p>
         <p className="mt-4 text-[17px] leading-relaxed text-[#2d3550]">
           Technisch funktioniert das System. Emotional ist es ein Fehlschlag. Der Gast fühlt
@@ -162,7 +162,7 @@ export default function SpracheTonDmAutomatisierung() {
           <p className="text-[17px] font-medium italic leading-relaxed text-[#2d3550]">
             „Kunden reagieren nicht auf Technologie – sie reagieren auf Sprache.
             Ein warmer, persönlicher Ton in automatisierten Nachrichten wirkt wie ein
-            Verstärker für Vertrauen, Zufriedenheit und Wiederkaufabsicht."
+            Verstärker für Vertrauen, Zufriedenheit und Wiederkaufabsicht.&rdquo;
           </p>
           <p className="mt-3 font-mono text-[12px] text-[#7485ad]">
             Frontiers in Psychology, 2022 – Chatbot Communication Styles & Customer Satisfaction
@@ -354,7 +354,7 @@ Wenn eine Formulierung nicht zu allen drei passt, formuliere sie um.`,
                 <p className="text-[15px] leading-relaxed text-[#2d3550]">
                   „Guten Tag. Ihre Nachricht wurde empfangen. Bitte teilen Sie uns Datum,
                   Uhrzeit und Personenzahl für Ihre Reservierungsanfrage mit. Wir werden
-                  Ihre Anfrage schnellstmöglich bearbeiten."
+                  Ihre Anfrage schnellstmöglich bearbeiten.&rdquo;
                 </p>
               </div>
               <div className="rounded-2xl border border-green-200 bg-green-50 p-5">
@@ -363,7 +363,7 @@ Wenn eine Formulierung nicht zu allen drei passt, formuliere sie um.`,
                 </p>
                 <p className="text-[15px] leading-relaxed text-[#2d3550]">
                   „Hey {"{Vorname}"} 👋 Super, dass du schreibst! Für welchen Tag suchst
-                  du einen Tisch – und wie viele seid ihr?"
+                  du einen Tisch – und wie viele seid ihr?&rdquo;
                 </p>
               </div>
             </div>
@@ -382,7 +382,7 @@ Wenn eine Formulierung nicht zu allen drei passt, formuliere sie um.`,
                 <p className="text-[15px] leading-relaxed text-[#2d3550]">
                   „Ihre Reservierung wurde registriert. Datum: 22.03.2026, 19:00 Uhr, 3
                   Personen. Bei Fragen kontaktieren Sie uns. Stornierung ist möglich bis
-                  24h vorher."
+                  24h vorher.&rdquo;
                 </p>
               </div>
               <div className="rounded-2xl border border-green-200 bg-green-50 p-5">
@@ -392,7 +392,7 @@ Wenn eine Formulierung nicht zu allen drei passt, formuliere sie um.`,
                 <p className="text-[15px] leading-relaxed text-[#2d3550]">
                   „Perfekt, {"{Vorname}"} ✅ Dein Tisch ist reserviert: Samstag,
                   22.03. um 19 Uhr für 3 Personen. Wir freuen uns auf euch! Falls sich
-                  was ändert, schreib einfach CANCEL."
+                  was ändert, schreib einfach CANCEL.&rdquo;
                 </p>
               </div>
             </div>
@@ -410,7 +410,7 @@ Wenn eine Formulierung nicht zu allen drei passt, formuliere sie um.`,
                 </p>
                 <p className="text-[15px] leading-relaxed text-[#2d3550]">
                   „Erinnerung: Sie haben morgen eine Reservierung um 19:00 Uhr. Bitte
-                  erscheinen Sie pünktlich. Bei Stornierung kontaktieren Sie uns."
+                  erscheinen Sie pünktlich. Bei Stornierung kontaktieren Sie uns.&rdquo;
                 </p>
               </div>
               <div className="rounded-2xl border border-green-200 bg-green-50 p-5">
@@ -420,7 +420,7 @@ Wenn eine Formulierung nicht zu allen drei passt, formuliere sie um.`,
                 <p className="text-[15px] leading-relaxed text-[#2d3550]">
                   „Hey {"{Vorname}"} 😊 Nur kurz zur Erinnerung: Morgen Abend um 19 Uhr
                   erwartet euch euer Tisch! Wir freuen uns. Kannst du nicht? Einfach
-                  CANCEL schreiben."
+                  CANCEL schreiben.&rdquo;
                 </p>
               </div>
             </div>
@@ -439,7 +439,7 @@ Wenn eine Formulierung nicht zu allen drei passt, formuliere sie um.`,
                 <p className="text-[15px] leading-relaxed text-[#2d3550]">
                   „Sehr geehrte/r Kunde/Kundin, wir bitten Sie, uns eine Bewertung auf
                   Google zu hinterlassen. Klicken Sie auf folgenden Link: [Link]. Vielen
-                  Dank für Ihren Besuch."
+                  Dank für Ihren Besuch.&rdquo;
                 </p>
               </div>
               <div className="rounded-2xl border border-green-200 bg-green-50 p-5">
@@ -449,7 +449,7 @@ Wenn eine Formulierung nicht zu allen drei passt, formuliere sie um.`,
                 <p className="text-[15px] leading-relaxed text-[#2d3550]">
                   „Hey {"{Vorname}"} – hat es euch gefallen? 😊 Wenn ja, würden wir uns
                   riesig über eine kurze Google-Bewertung freuen – das hilft uns sehr.
-                  Hier geht es direkt hin: [Link]"
+                  Hier geht es direkt hin: [Link]&rdquo;
                 </p>
               </div>
             </div>

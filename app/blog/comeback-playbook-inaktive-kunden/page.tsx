@@ -168,7 +168,7 @@ export default function ComebackPlaybook() {
           <p className="text-[17px] font-medium italic leading-relaxed text-[#2d3550]">
             „30&nbsp;% der abgewanderten Kunden sind durch eine gezielte Reaktivierungskampagne
             zurückgewinnbar – vorausgesetzt, der erste Kontakt erfolgt zum richtigen Zeitpunkt
-            und mit der richtigen Botschaft."
+            und mit der richtigen Botschaft.&rdquo;
           </p>
           <p className="mt-3 font-mono text-[12px] text-[#7485ad]">
             Branchenanalyse Kundenreaktivierung, Bain &amp; Company / Harvard Business Review
