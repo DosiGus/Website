@@ -16,6 +16,7 @@ import FlowBuilderDemo from "../components/FlowBuilderDemo";
 import SolutionStats from "../components/SolutionStats";
 import IntegrationsStickyScroll from "../components/IntegrationsStickyScroll";
 import FaqAccordion from "../components/FaqAccordion";
+import ProduktSection from "../components/ProduktSection";
 
 const display = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -143,7 +144,7 @@ export default function HomePageV2() {
                 href="/demo"
                 className="inline-flex items-center gap-2 rounded-full bg-[#121624] px-6 py-3 text-sm font-semibold text-white shadow-[0_2px_20px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1e2d5a]"
               >
-                Demo testen
+                Demo ansehen
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
@@ -171,6 +172,8 @@ export default function HomePageV2() {
           </div>
         </div>
       </section>
+
+      <ProduktSection />
 
       <section id="ablauf" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
 
