@@ -11,30 +11,41 @@ export default function ProduktSection() {
   const textRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    let rafId: number
+    const container = textRef.current
+    if (!container) return
 
-    const update = () => {
-      if (!textRef.current) return
-      const readingLine = window.innerHeight * 0.65
-      const spans = textRef.current.querySelectorAll<HTMLSpanElement>('[data-word]')
-      spans.forEach((el) => {
-        const top = el.getBoundingClientRect().top
-        el.style.color = top < readingLine ? '#11131a' : '#c4cede'
-      })
-    }
+    const wordSpans = Array.from(container.querySelectorAll<HTMLElement>('[data-word]'))
+    if (!wordSpans.length) return
 
-    const onScroll = () => {
-      cancelAnimationFrame(rafId)
-      rafId = requestAnimationFrame(update)
-    }
+    // IntersectionObserver: Wort wird highlighted sobald es in den Viewport scrollt
+    // rootMargin '0px 0px -8% 0px' = Trigger knapp vor dem unteren Bildschirmrand
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const el = entry.target as HTMLElement
+          if (entry.isIntersecting) {
+            // Wort scrollt ins Bild → highlighten
+            el.style.color = '#11131a'
+          } else {
+            // Wort verlässt den Viewport — nur grau machen wenn es
+            // nach UNTEN rausgescrollt ist (= User scrollt nach oben)
+            if (entry.boundingClientRect.top > 0) {
+              el.style.color = '#a8bcd4'
+            }
+            // Wenn top < 0: Wort ist nach oben raus → bleibt highlighted
+          }
+        })
+      },
+      {
+        root: null,
+        rootMargin: '0px 0px -8% 0px',
+        threshold: 0,
+      }
+    )
 
-    window.addEventListener('scroll', onScroll, { passive: true })
-    update()
+    wordSpans.forEach((span) => observer.observe(span))
 
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      cancelAnimationFrame(rafId)
-    }
+    return () => observer.disconnect()
   }, [])
 
   return (
@@ -53,8 +64,8 @@ export default function ProduktSection() {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-[0.48fr_1fr] lg:items-start lg:gap-24">
 
-          {/* Left — label + heading + description, sticky on scroll */}
-          <div className="mx-auto w-full max-w-[360px] lg:sticky lg:top-28 lg:max-w-none">
+          {/* Left — label + h2, sticky on scroll */}
+          <div className="lg:sticky lg:top-28">
             <div className="flex items-center gap-4">
               <span className="h-px w-16 bg-[#7d9be2]" />
               <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#3159bb]">
@@ -69,29 +80,33 @@ export default function ProduktSection() {
             </h2>
           </div>
 
-          {/* Right — fließtext mit scroll-highlight animation */}
+          {/* Right — fließtext mit scroll-highlight */}
           <div ref={textRef} className="space-y-8">
-            {paragraphs.map((text, pi) => (
-              <p
-                key={pi}
-                className="text-2xl leading-[1.7] tracking-tight sm:text-3xl"
-                style={{ fontFamily: 'var(--font-home-display)' }}
-              >
-                {text.split(' ').map((word, wi) => (
-                  <span
-                    key={`${pi}-${wi}`}
-                    data-word
-                    style={{
-                      color: '#c4cede',
-                      transition: 'color 350ms ease-out',
-                    }}
-                  >
-                    {word}
-                    {wi < text.split(' ').length - 1 ? ' ' : ''}
-                  </span>
-                ))}
-              </p>
-            ))}
+            {paragraphs.map((text, pi) => {
+              const words = text.split(' ')
+              return (
+                <p
+                  key={pi}
+                  className="text-2xl leading-[1.7] tracking-tight sm:text-3xl"
+                  style={{ fontFamily: 'var(--font-home-display)' }}
+                >
+                  {words.map((word, wi) => (
+                    <span
+                      key={`${pi}-${wi}`}
+                      data-word
+                      style={{
+                        color: '#a8bcd4',
+                        transition: 'color 800ms ease-out',
+                        display: 'inline',
+                      }}
+                    >
+                      {word}
+                      {wi < words.length - 1 ? ' ' : ''}
+                    </span>
+                  ))}
+                </p>
+              )
+            })}
           </div>
 
         </div>
