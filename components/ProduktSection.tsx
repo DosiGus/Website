@@ -3,11 +3,11 @@
 import { useEffect, useRef } from 'react'
 
 const text =
-  'Jede unbeantwortete Nachricht kann eine verlorene Buchung bedeuten. Wesponde beantwortet Anfragen automatisch, qualifiziert Buchungswünsche und trägt Termine nahtlos in den Kalender ein – in den Kanälen, über die deine Kunden dich ohnehin kontaktieren. Das reduziert manuellen Aufwand und schafft mehr Zeit für persönlichen Service.'
+  'Jede unbeantwortete Nachricht kann eine verlorene Buchung bedeuten. Wesponde beantwortet Anfragen automatisch, qualifiziert Buchungswünsche und trägt Termine nahtlos in den Kalender ein. Das reduziert manuellen Aufwand und schafft mehr Zeit für persönlichen Service.'
 
 const words = text.split(' ')
 const PREHIGHLIGHTED = 3
-const DELAY_PER_WORD = 120 // ms between words on the same line
+const DELAY_PER_WORD = 180 // ms between words on the same line
 
 export default function ProduktSection() {
   const textRef = useRef<HTMLDivElement>(null)
@@ -123,7 +123,7 @@ export default function ProduktSection() {
                   data-word
                   style={{
                     color: wi < PREHIGHLIGHTED ? '#11131a' : '#a8bcd4',
-                    transition: 'color 350ms ease-out',
+                    transition: 'color 500ms ease-out',
                     display: 'inline',
                   }}
                 >

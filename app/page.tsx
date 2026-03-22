@@ -17,6 +17,7 @@ import SolutionStats from "../components/SolutionStats";
 import IntegrationsStickyScroll from "../components/IntegrationsStickyScroll";
 import FaqAccordion from "../components/FaqAccordion";
 import ProduktSection from "../components/ProduktSection";
+import KanaeleSection from "../components/KanaeleSection";
 
 const display = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -236,6 +237,8 @@ export default function HomePageV2() {
         </div>
       </section>
 
+      <KanaeleSection />
+
       <section id="flow-builder" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
         {/* Halftone dot background — fades top to bottom */}
         <div
@@ -261,7 +264,7 @@ export default function HomePageV2() {
               className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-[#11131a] sm:text-5xl"
               style={{ fontFamily: "var(--font-home-display)" }}
             >
-              Visuell bauen und Abläufe in Minuten erstellen.
+              Visuell bauen und Gesprächsabläufe in Minuten erstellen.
             </h2>
             <p className="mt-4 max-w-2xl text-sm text-[#46506a] sm:text-base">
               Starten Sie mit einer Vorlage und passen Sie Inhalte und Logik jederzeit flexibel an.
