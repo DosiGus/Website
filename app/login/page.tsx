@@ -31,12 +31,12 @@ export default function LoginPage({ searchParams }: { searchParams: { view?: str
     : "Melde dich an, um deine Buchungen und Flows zu verwalten.";
 
   return (
-    <div className="min-h-screen pt-[72px]">
-      <div className="flex min-h-[calc(100vh-72px)] flex-col lg:flex-row">
+    <div className="min-h-screen">
+      <div className="flex min-h-screen flex-col lg:flex-row">
 
         {/* ── Left: Brand Panel ─────────────────────────────────── */}
         <div
-          className="relative flex flex-col overflow-hidden px-8 py-10 lg:w-[44%] lg:justify-between lg:px-14 lg:py-16"
+          className="relative flex flex-col overflow-hidden px-8 pt-[72px] pb-10 lg:w-[44%] lg:justify-between lg:px-14 lg:pt-3 lg:pb-16"
           style={{
             background: "linear-gradient(150deg, #06101f 0%, #0c1c4a 45%, #183694 100%)",
           }}
