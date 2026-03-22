@@ -130,11 +130,11 @@ export default function PartnerLoginForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-[#2a4ea7]/15 bg-white p-6 shadow-[0_10px_30px_rgba(28,53,122,0.06)] sm:p-8"
+      className="rounded-2xl border border-[#2a4ea7]/15 bg-white p-6 shadow-[0_16px_40px_rgba(28,53,122,0.08)] sm:p-8"
     >
       <div className="space-y-5">
         {/* Tab Switcher */}
-        <div className="flex gap-1 rounded-xl bg-[#2a4ea7]/8 p-1">
+        <div className="flex gap-1 rounded-xl bg-[#f0f4fc] p-1">
           <button
             type="button"
             onClick={() => updateView("login")}
