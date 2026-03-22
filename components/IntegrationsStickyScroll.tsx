@@ -8,16 +8,16 @@ const SECTIONS = [
   {
     tag: 'Integrationen',
     label: 'Kalender Sync',
-    heading: 'Verfügbarkeit automatisch prüfen',
+    heading: 'Termine direkt in deinem Kalender.',
     description:
-      'Freie Slots prüfen, passende Zeit bestätigen und direkt im Kalender eintragen.',
+      'Wesponde prüft freie Slots in deinem Google Kalender und trägt bestätigte Buchungen automatisch ein – du siehst jeden Termin sofort, ohne manuell etwas übertragen zu müssen.',
   },
   {
     tag: null,
     label: 'Google Bewertungen',
     heading: 'Feedback nach dem Besuch anstoßen',
     description:
-      'Nach dem Termin automatisch freundlich nach einer Google-Bewertung fragen.',
+      'Versende nach jedem abgeschlossenen Termin eine persönliche Nachricht, die deine Kunden um ihr Feedback bittet – so bekommst du mehr Google-Rezensionen ohne Aufwand.',
   },
 ] as const;
 
@@ -144,16 +144,16 @@ export default function IntegrationsStickyScroll() {
       >
         {/* Left: natürlicher Scroll */}
         <div>
-          <div className="pt-[20vh] pb-[55vh]">
+          <div className="pt-[35vh] pb-[55vh]">
             <TextContent section={SECTIONS[0]} active={activeIndex === 0} fillRef={fill1Ref} />
           </div>
-          <div className="pt-[2vh] pb-[65vh]">
+          <div className="pt-[35vh] pb-[55vh]">
             <TextContent section={SECTIONS[1]} active={activeIndex === 1} fillRef={fill2Ref} />
           </div>
         </div>
 
         {/* Right: sticky Demo-Panel */}
-        <div className="sticky top-0 flex h-screen items-start pt-[20vh]">
+        <div className="sticky top-0 flex h-screen items-start pt-[30vh]">
           <div className="grid w-full">
 
             {/* Demo 1 — Calendar */}

@@ -458,7 +458,7 @@ export default function FlowBuilderDemo({ theme = 'dark' }: { theme?: 'dark' | '
     return (
       <>
         {/* Compact template strip */}
-        <div className={`flex items-center gap-2.5 border-b px-5 py-2.5 ${subtleBord} bg-[#f8f4ec]/50`}>
+        <div className={`flex items-center gap-2.5 border-b px-5 py-2.5 ${subtleBord} bg-white/50`}>
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#eef2ff] text-[#4f68a6]">
             <Layers className="h-3 w-3" />
           </div>
@@ -628,7 +628,7 @@ export default function FlowBuilderDemo({ theme = 'dark' }: { theme?: 'dark' | '
                 </div>
               </div>
 
-              <div className="flex h-[480px] flex-col lg:h-[500px] lg:flex-row">
+              <div className="flex h-[440px] flex-col lg:h-[500px] lg:flex-row">
                 {/* LEFT PANEL */}
                 <div className={`flex w-full flex-shrink-0 flex-col border-r ${subtleBord} bg-white/55 lg:w-[38%]`}>
                   <div className={`border-b px-5 py-3 ${subtleBord}`}>
@@ -642,8 +642,8 @@ export default function FlowBuilderDemo({ theme = 'dark' }: { theme?: 'dark' | '
                   {renderLightLeftPanel()}
                 </div>
 
-                {/* RIGHT PANEL: canvas */}
-                <div className="relative flex flex-1 flex-col overflow-hidden bg-white">
+                {/* RIGHT PANEL: canvas — hidden on mobile, visible on lg+ */}
+                <div className="relative hidden flex-1 flex-col overflow-hidden bg-white lg:flex">
                   <div
                     className="pointer-events-none absolute inset-0"
                     style={{
@@ -687,7 +687,7 @@ export default function FlowBuilderDemo({ theme = 'dark' }: { theme?: 'dark' | '
 
           {/* ══════════ DARK THEME ══════════ */}
           {!isLight && (
-            <div className="flex h-[500px] flex-col lg:h-[520px] lg:flex-row">
+            <div className="flex h-[440px] flex-col lg:h-[520px] lg:flex-row">
               <div className="flex w-full flex-shrink-0 flex-col border-r border-white/[0.08] bg-zinc-950 lg:w-[36%]">
                 <div className="border-b border-white/[0.08] px-5 py-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-300">
@@ -845,8 +845,8 @@ export default function FlowBuilderDemo({ theme = 'dark' }: { theme?: 'dark' | '
                 )}
               </div>
 
-              {/* Dark canvas */}
-              <div className="relative flex flex-1 flex-col overflow-hidden bg-[#080809]">
+              {/* Dark canvas — hidden on mobile, visible on lg+ */}
+              <div className="relative hidden flex-1 flex-col overflow-hidden bg-[#080809] lg:flex">
                 <div
                   className="pointer-events-none absolute inset-0"
                   style={{

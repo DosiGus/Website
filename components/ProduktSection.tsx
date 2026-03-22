@@ -80,13 +80,16 @@ export default function ProduktSection() {
   return (
     <section
       id="produkt"
-      className="relative overflow-hidden bg-[#f6f9ff] py-20 sm:py-24 lg:py-32"
+      className="relative overflow-hidden bg-white py-20 sm:py-24 lg:py-32"
     >
-      {/* Decorative radial glow */}
+      {/* Grid background mit Verlauf oben/unten */}
       <div
-        className="pointer-events-none absolute right-0 top-0 h-[600px] w-[600px] -translate-y-[20%] translate-x-[20%]"
+        className="pointer-events-none absolute inset-0 opacity-[0.32]"
         style={{
-          background: 'radial-gradient(circle, rgba(42,78,167,0.06) 0%, transparent 60%)',
+          backgroundImage: 'linear-gradient(rgba(42,78,167,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(42,78,167,0.06) 1px, transparent 1px)',
+          backgroundSize: '34px 34px',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 22%, black 100%)',
+          maskImage: 'linear-gradient(to bottom, transparent 0%, black 22%, black 100%)',
         }}
       />
 

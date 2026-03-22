@@ -37,24 +37,24 @@ const steps: { step: string; icon: LucideIcon; title: string; description: strin
     step: "01",
     icon: Link2,
     title: "Kanäle verbinden",
-    description: "Instagram und Kalender einmal koppeln. Danach läuft alles im Hintergrund.",
+    description: "Einmal einrichten, dauerhaft aktiv. Instagram und Kalender sind in wenigen Minuten verbunden.",
   },
   {
     step: "02",
     icon: Layers,
     title: "Flow auswählen",
-    description: "Mit einem Branchentemplate starten oder den Setup-Assistenten nutzen.",
+    description: "Wähle ein fertiges Template für deine Branche oder starte mit dem Setup-Assistenten – in wenigen Minuten ist dein Flow bereit.",
   },
   {
     step: "03",
     icon: Pencil,
     title: "Ton & Inhalte anpassen",
-    description: "Texte und Antwort-Buttons im visuellen Editor auf Ihren Betrieb zuschneiden.",
+    description: "Passe Inhalte, Ton und Antwort-Buttons im visuellen Editor an – ganz ohne technisches Wissen.",
   },
   {
     step: "04",
     icon: Zap,
-    title: "Live schalten",
+    title: "Aktivieren",
     description: "Flow aktivieren, direkt im Browser testen und sofort automatisch auf Anfragen antworten.",
   },
 ];
@@ -178,7 +178,15 @@ export default function HomePageV2() {
 
       <section id="ablauf" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
 
-        <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(42,78,167,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(42,78,167,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.32]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(42,78,167,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(42,78,167,0.06) 1px, transparent 1px)',
+            backgroundSize: '34px 34px',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+          }}
+        />
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 max-w-3xl sm:mb-10">
