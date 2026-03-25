@@ -19,12 +19,22 @@ export type FlowQuickReply = {
   targetNodeId: string | null;
 };
 
+// All valid node variants. This is the single source of truth for variant values
+// across the entire codebase — builder, webhook, templates, and lint all use this type.
+export type FlowNodeVariant =
+  | "message"
+  | "choice"
+  | "input"
+  | "confirmation"
+  | "link"
+  | "info";
+
 export type FlowNodeData = {
   text: string;
   imageUrl?: string | null;
   quickReplies: FlowQuickReply[];
   label?: string;
-  variant?: string;
+  variant?: FlowNodeVariant;
   inputMode?: "buttons" | "free_text";
   placeholder?: string;
   collects?: string;

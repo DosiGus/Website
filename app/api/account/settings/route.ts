@@ -37,8 +37,10 @@ export async function GET(request: Request) {
       );
     }
 
-    const calendar = normalizeCalendarSettings((data?.settings as any)?.calendar ?? null);
-    return NextResponse.json({ calendar, vertical: data?.vertical ?? null });
+    const settings = (data?.settings ?? {}) as Record<string, unknown>;
+    const calendar = normalizeCalendarSettings((settings as any)?.calendar ?? null);
+    const fallback_enabled = (settings as any)?.fallback_enabled !== false; // default true
+    return NextResponse.json({ calendar, vertical: data?.vertical ?? null, fallback_enabled });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "Forbidden") {
@@ -70,10 +72,12 @@ export async function PATCH(request: Request) {
     const body = (await request.json()) as {
       calendar?: CalendarSettings;
       vertical?: VerticalKey | null;
+      fallback_enabled?: boolean;
     };
     const wantsCalendar = body?.calendar !== undefined;
     const wantsVertical = body?.vertical !== undefined;
-    if (!wantsCalendar && !wantsVertical) {
+    const wantsFallback = body?.fallback_enabled !== undefined;
+    if (!wantsCalendar && !wantsVertical && !wantsFallback) {
       return NextResponse.json({ error: "Keine Einstellungen angegeben." }, { status: 400 });
     }
     if (wantsVertical && body.vertical !== null && !isVerticalKey(body.vertical)) {
@@ -85,7 +89,7 @@ export async function PATCH(request: Request) {
     };
     let nextCalendar: CalendarSettings | null = null;
 
-    if (wantsCalendar) {
+    if (wantsCalendar || wantsFallback) {
       const { data: account, error: loadError } = await supabase
         .from("accounts")
         .select("settings")
@@ -103,11 +107,16 @@ export async function PATCH(request: Request) {
       }
 
       const currentSettings = (account?.settings ?? {}) as Record<string, unknown>;
-      nextCalendar = normalizeCalendarSettings(body.calendar);
-      const nextSettings = {
-        ...currentSettings,
-        calendar: nextCalendar,
-      };
+      const nextSettings: Record<string, unknown> = { ...currentSettings };
+
+      if (wantsCalendar) {
+        nextCalendar = normalizeCalendarSettings(body.calendar);
+        nextSettings.calendar = nextCalendar;
+      }
+      if (wantsFallback) {
+        nextSettings.fallback_enabled = body.fallback_enabled;
+      }
+
       updatePayload.settings = nextSettings;
     }
 
@@ -150,6 +159,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({
       calendar: nextCalendar ?? undefined,
       vertical: wantsVertical ? body.vertical : undefined,
+      fallback_enabled: wantsFallback ? body.fallback_enabled : undefined,
     });
   } catch (error) {
     if (error instanceof Error) {

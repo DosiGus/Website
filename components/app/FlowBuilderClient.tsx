@@ -262,6 +262,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [showActivationModal, setShowActivationModal] = useState(false);
   const [triggerTestInput, setTriggerTestInput] = useState("");
   const [cockpitIssuesExpanded, setCockpitIssuesExpanded] = useState(false);
+  const [fallbackEnabled, setFallbackEnabled] = useState<boolean | null>(null);
   const [isAddMenuOpen, setAddMenuOpen] = useState(false);
   const [showFlowSettings, setShowFlowSettings] = useState(false);
   const { vertical } = useAccountVertical();
@@ -566,7 +567,27 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   }, [flowId, userId, getAccessToken]);
 
   useEffect(() => {
-    setLintWarnings(lintFlow(nodes, edges, triggers).warnings);
+    if (!userId) return;
+    async function fetchBotSettings() {
+      const token = await getAccessToken();
+      if (!token) return;
+      try {
+        const res = await fetch("/api/account/settings", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFallbackEnabled(data.fallback_enabled !== false);
+        }
+      } catch {
+        // non-critical — banner just won't show
+      }
+    }
+    fetchBotSettings();
+  }, [userId, getAccessToken]);
+
+  useEffect(() => {
+    setLintWarnings(lintFlow(nodes, edges, triggers, metadata).warnings);
   }, [nodes, edges, triggers]);
 
   // Open inspector when node or edge is selected — only in canvas (pro) mode
@@ -1784,6 +1805,21 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     <span className="font-medium">Bereit zur Aktivierung</span>
                   </div>
+                </>
+              )}
+
+              {/* Fallback-Nachrichten status */}
+              {fallbackEnabled !== null && (
+                <>
+                  <div className="h-4 w-px bg-white/10 hidden sm:block" />
+                  <button
+                    onClick={() => router.push("/app/settings")}
+                    className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    title="Fallback-Einstellungen öffnen"
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${fallbackEnabled ? "bg-emerald-500" : "bg-zinc-600"}`} />
+                    <span>Fallback {fallbackEnabled ? "aktiv" : "deaktiviert"}</span>
+                  </button>
                 </>
               )}
             </div>

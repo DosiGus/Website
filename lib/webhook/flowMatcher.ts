@@ -11,7 +11,7 @@ export type MatchedFlow = {
   metadata?: Record<string, unknown> | null;
 };
 
-function deriveFallbackStartNodeId(nodes: any[], edges: any[]): string | null {
+export function deriveFallbackStartNodeId(nodes: any[], edges: any[]): string | null {
   const targets = new Set(
     edges.map((edge) => String(edge?.target ?? "")).filter(Boolean),
   );
@@ -223,6 +223,129 @@ function matchKeyword(
   const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const boundaryRegex = new RegExp(`(^|\\s|[.,!?])${escaped}($|\\s|[.,!?])`, "i");
   return boundaryRegex.test(message);
+}
+
+/**
+ * Loads a specific flow by ID and returns it as a MatchedFlow.
+ * Used when we know exactly which flow to restart (e.g. "Neue Reservierung"
+ * after a previous booking — we restart the same flow that created it).
+ * Returns null if the flow doesn't exist or is no longer active.
+ */
+export async function loadFlowById(flowId: string): Promise<MatchedFlow | null> {
+  const supabase = createSupabaseServerClient();
+
+  const { data: flow, error } = await supabase
+    .from("flows")
+    .select("id, name, triggers, nodes, edges, metadata, status")
+    .eq("id", flowId)
+    .single();
+
+  if (error || !flow || flow.status !== "Aktiv") return null;
+
+  const nodes = (flow.nodes as any[]) ?? [];
+  const edges = (flow.edges as any[]) ?? [];
+  const triggers = (flow.triggers as FlowTrigger[]) ?? [];
+
+  const firstTrigger = triggers.find((t) => t.type === "KEYWORD");
+  const startNodeId =
+    firstTrigger?.startNodeId ?? deriveFallbackStartNodeId(nodes, edges);
+
+  if (!startNodeId) return null;
+
+  return {
+    flowId: flow.id,
+    flowName: flow.name,
+    triggerId: firstTrigger?.id ?? "__direct_load__",
+    startNodeId,
+    nodes,
+    edges,
+    metadata: flow.metadata ?? null,
+  };
+}
+
+const BOOKING_COLLECTS = new Set(["date", "time", "name", "guestcount"]);
+
+/**
+ * Finds the best booking/reservation flow for an account without keyword matching.
+ * Used when a user explicitly requests a new booking (e.g. via "Neue Reservierung" button)
+ * regardless of the keyword used — works for Gastro ("reservieren"), Fitness ("termin"),
+ * Beauty ("buchen"), etc.
+ *
+ * Scoring:
+ *  +3  metadata.output_config.type === "reservation" (explicit reservation flow)
+ *  +2  flow has nodes with collects in [date, time, name, guestCount]
+ *  +1  any active flow (last-resort fallback when account has exactly one flow)
+ *
+ * Returns null if no active flow with a resolvable startNodeId exists.
+ */
+export async function findBookingFlow(accountId: string): Promise<MatchedFlow | null> {
+  const supabase = createSupabaseServerClient();
+
+  const { data: flows, error } = await supabase
+    .from("flows")
+    .select("id, name, triggers, nodes, edges, metadata")
+    .eq("account_id", accountId)
+    .eq("status", "Aktiv");
+
+  if (error || !flows || flows.length === 0) {
+    return null;
+  }
+
+  const candidates: Array<MatchedFlow & { score: number }> = [];
+
+  for (const flow of flows) {
+    const nodes = (flow.nodes as any[]) ?? [];
+    const edges = (flow.edges as any[]) ?? [];
+    const triggers = (flow.triggers as FlowTrigger[]) ?? [];
+    const meta = (flow.metadata ?? {}) as Record<string, unknown>;
+
+    // Resolve startNodeId: prefer explicit trigger.startNodeId, then fallback
+    const firstTrigger = triggers.find((t) => t.type === "KEYWORD");
+    const startNodeId =
+      firstTrigger?.startNodeId ??
+      deriveFallbackStartNodeId(nodes, edges);
+
+    if (!startNodeId) continue;
+
+    const triggerId = firstTrigger?.id ?? "__force_new__";
+
+    // Score by booking relevance
+    let score = 1; // base: any active flow
+
+    if ((meta as any)?.output_config?.type === "reservation") {
+      score += 3;
+    }
+
+    const hasBookingNodes = nodes.some((n: any) =>
+      BOOKING_COLLECTS.has(String(n?.data?.collects ?? "").toLowerCase())
+    );
+    if (hasBookingNodes) score += 2;
+
+    candidates.push({
+      flowId: flow.id,
+      flowName: flow.name,
+      triggerId,
+      startNodeId,
+      nodes,
+      edges,
+      metadata: flow.metadata ?? null,
+      score,
+    });
+  }
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => b.score - a.score);
+  const best = candidates[0];
+  return {
+    flowId: best.flowId,
+    flowName: best.flowName,
+    triggerId: best.triggerId,
+    startNodeId: best.startNodeId,
+    nodes: best.nodes,
+    edges: best.edges,
+    metadata: best.metadata ?? null,
+  };
 }
 
 /**

@@ -16,7 +16,7 @@ import {
   sendInstagramMessageWithImage,
 } from "../../../../lib/meta/instagramApi";
 import { recordMessageFailure } from "../../../../lib/meta/messageFailures";
-import { findMatchingFlow, listTriggerKeywords, parseQuickReplyPayload } from "../../../../lib/webhook/flowMatcher";
+import { findMatchingFlow, findBookingFlow, loadFlowById, listTriggerKeywords, parseQuickReplyPayload, deriveFallbackStartNodeId } from "../../../../lib/webhook/flowMatcher";
 import { executeFlowNode, handleQuickReplySelection, handleFreeTextInput } from "../../../../lib/webhook/flowExecutor";
 import { logger, createRequestLogger } from "../../../../lib/logger";
 import {
@@ -28,7 +28,7 @@ import {
   mergeVariables,
   ExtractedVariables,
 } from "../../../../lib/webhook/variableExtractor";
-import { ConversationMetadata, FlowMetadata, FlowOutputConfig } from "../../../../lib/flowTypes";
+import { ConversationMetadata, FlowMetadata, FlowOutputConfig, FlowTrigger } from "../../../../lib/flowTypes";
 import {
   canCreateReservation,
   createReservationFromVariables,
@@ -529,20 +529,13 @@ async function changeToMessagingEvent(
   };
 }
 
-const CONFIRMATION_NODE_KEYWORDS = [
-  "confirm", "confirmed", "bestätig", "bestaetigt",
-  "gebucht", "abschluss", "abgeschlossen", "fertig", "done",
-  "reservation-done", "booking-done",
-];
-
-function nodeIsConfirmation(nodeId: string, nodeLabel: string, nodeVariant: string): boolean {
-  const idLower = nodeId.toLowerCase();
-  const labelLower = nodeLabel.toLowerCase();
+// Primary source of truth: the explicit variant field set in the Flow Builder.
+// "confirmation" is the canonical value; "confirmed" is kept as a legacy alias
+// for flows created before this was standardized.
+// Keyword-based detection was removed — it was fragile and non-deterministic.
+function nodeIsConfirmation(_nodeId: string, _nodeLabel: string, nodeVariant: string): boolean {
   const variantLower = nodeVariant.toLowerCase();
-  return (
-    variantLower === "confirmed" ||
-    CONFIRMATION_NODE_KEYWORDS.some((k) => idLower.includes(k) || labelLower.includes(k))
-  );
+  return variantLower === "confirmation" || variantLower === "confirmed";
 }
 
 /**
@@ -674,7 +667,7 @@ async function processMessagingEvent(
   // Get or create conversation
   let { data: conversation } = await supabase
     .from("conversations")
-    .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version")
+    .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version, last_message_at")
     .eq("integration_id", integration.id)
     .eq("instagram_sender_id", senderId)
     .single();
@@ -699,7 +692,7 @@ async function processMessagingEvent(
           ignoreDuplicates: true,
         },
       )
-      .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version")
+      .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version, last_message_at")
       .maybeSingle();
 
     if (convError) {
@@ -712,7 +705,7 @@ async function processMessagingEvent(
     if (!conversation) {
       const { data: existingConversation, error: existingError } = await supabase
         .from("conversations")
-        .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version")
+        .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version, last_message_at")
         .eq("integration_id", integration.id)
         .eq("instagram_sender_id", senderId)
         .single();
@@ -743,7 +736,7 @@ async function processMessagingEvent(
         state_version: conversationVersion + 1,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", conversation.id)
+      .eq("id", conversation!.id)
       .eq("state_version", conversationVersion)
       .select("state_version")
       .maybeSingle();
@@ -779,6 +772,62 @@ async function processMessagingEvent(
 
     if (updated) {
       conversation.contact_id = contactId;
+    }
+  }
+
+  // === STALE CONVERSATION RESET ===
+  // Wenn eine Konversation einen aktiven Flow-State hat, aber seit >24h keine Aktivität
+  // mehr war, wird der State zurückgesetzt bevor die neue Nachricht verarbeitet wird.
+  // Verhindert: Bot setzt wochenlange Konversationen fort, nutzt alte Variablen,
+  // fragt "Und wie viele Gäste?" obwohl der Gast längst vergessen hat warum er schrieb.
+  const CONVERSATION_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 Stunden
+  if (conversation.current_flow_id && conversation.current_node_id) {
+    const lastActivity = conversation.last_message_at
+      ? new Date(conversation.last_message_at).getTime()
+      : 0; // null = noch nie eine Nachricht geschrieben → Pflichtfeld fehlt → ebenfalls zurücksetzen
+    const isStale = Date.now() - lastActivity > CONVERSATION_TIMEOUT_MS;
+
+    if (isStale) {
+      const staleFlowId = conversation.current_flow_id;
+      const staleMeta = (conversation.metadata ?? {}) as ConversationMetadata;
+      const resetMeta: ConversationMetadata = {
+        ...staleMeta,
+        variables: {},
+        reservationId: undefined,
+        flowCompleted: undefined,
+      };
+
+      try {
+        const resetDone = await updateConversationState(
+          {
+            current_flow_id: null,
+            current_node_id: null,
+            metadata: resetMeta,
+            status: "active",
+          },
+          "Failed to reset stale conversation"
+        );
+
+        if (resetDone) {
+          conversation = {
+            ...conversation,
+            current_flow_id: null,
+            current_node_id: null,
+            metadata: resetMeta,
+          };
+          await reqLogger.info("webhook", "Stale conversation auto-reset", {
+            metadata: {
+              conversationId: conversation.id,
+              staleFlowId,
+              lastActivity: conversation.last_message_at,
+              idleHours: Math.round((Date.now() - lastActivity) / 3_600_000),
+            },
+          });
+        }
+      } catch {
+        // Non-critical: bei Konflikt (concurrent request) einfach weiter mit altem State
+        await reqLogger.warn("webhook", "Stale conversation reset skipped due to concurrent update");
+      }
     }
   }
 
@@ -925,6 +974,84 @@ async function processMessagingEvent(
 
   let allowMarkProcessed = true;
   try {
+
+  // === ESCAPE HANDLER ===
+  // Must run before any variable extraction or flow processing.
+  // If a customer types an escape keyword while in an active flow,
+  // we reset their conversation so they can start fresh — no dead ends.
+  // Only fires on plain text messages (not quick reply button clicks).
+  const ESCAPE_KEYWORDS = new Set([
+    "stopp", "stop", "abbrechen", "abbruch", "neustart", "neu starten",
+    "von vorne", "nochmal von vorne", "reset", "hilfe", "help",
+    "beenden", "ende", "cancel", "quit",
+  ]);
+
+  const isInActiveFlow = Boolean(
+    conversation.current_flow_id && conversation.current_node_id
+  );
+  const normalizedEscapeText = messageText.toLowerCase().trim();
+  const isEscapeMessage =
+    messageType === "text" &&
+    messageText.length > 0 &&
+    ESCAPE_KEYWORDS.has(normalizedEscapeText);
+
+  if (isEscapeMessage && isInActiveFlow) {
+    await reqLogger.info("webhook", "Escape keyword received — resetting conversation", {
+      metadata: {
+        keyword: normalizedEscapeText,
+        previousFlowId: conversation.current_flow_id,
+        previousNodeId: conversation.current_node_id,
+      },
+    });
+
+    const resetMetadata: ConversationMetadata = {
+      variables: {},
+      reservationId: undefined,
+      flowCompleted: undefined,
+      reviewFlowId: undefined,
+      reviewRequestId: undefined,
+    };
+
+    await updateConversationState(
+      {
+        current_flow_id: null,
+        current_node_id: null,
+        metadata: resetMetadata,
+        status: "active",
+      },
+      "Failed to reset conversation on escape"
+    );
+
+    const triggerKeywords = await listTriggerKeywords(accountId, 3);
+    const keywordHint =
+      triggerKeywords.length > 0
+        ? ` Schreib z.B. "${triggerKeywords[0]}" um neu zu starten.`
+        : "";
+
+    const escapeText = `Kein Problem! ✋ Ich habe den Vorgang abgebrochen.${keywordHint}`;
+
+    const escapeQuickReplies = triggerKeywords.map((kw) => ({
+      label: kw.charAt(0).toUpperCase() + kw.slice(1),
+      payload: kw,
+    }));
+
+    const escapeSendResult = await sendInstagramMessage({
+      recipientId: senderId,
+      text: escapeText,
+      quickReplies: escapeQuickReplies,
+      accessToken,
+    });
+
+    if (!escapeSendResult.success) {
+      await reqLogger.warn("webhook", "Failed to send escape confirmation", {
+        metadata: { error: escapeSendResult.error, code: escapeSendResult.code },
+      });
+    }
+
+    await markMessageProcessed();
+    return;
+  }
+
   // Extract and merge variables from the incoming message
   // NOTE: This is mutable because it may be reset when a new flow starts
   let existingMetadata = (conversation.metadata || {}) as ConversationMetadata;
@@ -1168,11 +1295,54 @@ async function processMessagingEvent(
   let matchedFlowId: string | null = conversation.current_flow_id;
   let matchedNodeId: string | null = null;
   let matchedFlowMetadata: FlowMetadata | null = null;
+  let matchedFlowNodes: any[] | null = null;
   // True when the executed node is the confirmation/end step of a reservation flow
   let executedNodeIsConfirmation = false;
 
+  // === HAUPTMENÜ HANDLER ===
+  // User clicked the "Hauptmenü" button — go back to the flow's start node.
+  // Handled before any other quick reply logic so the __HAUPTMENU__ payload
+  // is never misinterpreted as a regular node-targeting payload.
+  if (quickReplyPayload === "__HAUPTMENU__" && conversation.current_flow_id) {
+    const { data: homeFlow } = await supabase
+      .from("flows")
+      .select("nodes, edges, triggers, metadata")
+      .eq("id", conversation.current_flow_id)
+      .single();
+
+    if (homeFlow) {
+      const homeTriggers = (homeFlow.triggers as FlowTrigger[]) ?? [];
+      const homeStartNodeId =
+        homeTriggers.find((t) => t.startNodeId)?.startNodeId ??
+        deriveFallbackStartNodeId(homeFlow.nodes as any[], homeFlow.edges as any[]);
+
+      if (homeStartNodeId) {
+        // Clear variables so the user starts fresh from the main menu
+        mergedVariables = {};
+        flowResponse = executeFlowNode(
+          homeStartNodeId,
+          homeFlow.nodes as any[],
+          homeFlow.edges as any[],
+          conversation.current_flow_id,
+          {}
+        );
+        matchedFlowId = conversation.current_flow_id;
+        matchedNodeId = homeStartNodeId;
+        matchedFlowMetadata = (homeFlow.metadata as FlowMetadata) ?? null;
+        matchedFlowNodes = (homeFlow.nodes as any[]) ?? null;
+
+        await reqLogger.info("webhook", "User returned to flow main menu", {
+          metadata: {
+            flowId: conversation.current_flow_id,
+            startNodeId: homeStartNodeId,
+          },
+        });
+      }
+    }
+  }
+
   // Handle quick reply continuation
-  if (quickReplyPayload && conversation.current_flow_id) {
+  if (!flowResponse && quickReplyPayload && conversation.current_flow_id) {
     const parsed = parseQuickReplyPayload(quickReplyPayload);
 
     if (parsed) {
@@ -1194,6 +1364,7 @@ async function processMessagingEvent(
         matchedFlowId = parsed.flowId;
         matchedNodeId = parsed.nodeId;
         matchedFlowMetadata = (flow.metadata as FlowMetadata) ?? null;
+        matchedFlowNodes = (flow.nodes as any[]) ?? null;
 
         // Detect if the target node is the confirmation/final step
         const targetNode = (flow.nodes as any[]).find((n: any) => n.id === parsed.nodeId);
@@ -1256,6 +1427,7 @@ async function processMessagingEvent(
         matchedFlowId = conversation.current_flow_id;
         matchedNodeId = freeTextResult.executedNodeId;
         matchedFlowMetadata = (currentFlow.metadata as FlowMetadata) ?? null;
+        matchedFlowNodes = (currentFlow.nodes as any[]) ?? null;
 
         // Detect if the executed node is a confirmation node
         const ftTargetNode = (currentFlow.nodes as any[]).find((n: any) => n.id === freeTextResult.executedNodeId);
@@ -1295,7 +1467,7 @@ async function processMessagingEvent(
       supabase
         .from("reservations")
         .select(
-          "id, guest_name, reservation_date, reservation_time, guest_count, status, google_event_id, google_calendar_id, contact_id",
+          "id, guest_name, reservation_date, reservation_time, guest_count, status, google_event_id, google_calendar_id, contact_id, flow_id",
         )
         .eq("account_id", accountId)
         .in("status", ["pending", "confirmed"])
@@ -1453,10 +1625,12 @@ async function processMessagingEvent(
     const forceNewReservation = quickReplyPayload === "NEUE_RESERVIERUNG" ||
                                  quickReplyPayload === "FORCE_NEW_RESERVATION";
 
-    // If user clicked "Neue Reservierung", treat it as a reservation request
+    // If user clicked "Neue Reservierung / Neuer Termin", find the best booking flow directly
+    // without keyword matching — works for all verticals (Gastro, Fitness, Beauty).
+    let forcedBookingFlow = null;
     if (forceNewReservation) {
-      messageText = "reservieren"; // Trigger the reservation flow
-      // Clear existing variables for fresh reservation
+      const previousReservationId = existingMetadata.reservationId;
+      // Clear existing variables for fresh booking
       mergedVariables = {};
       existingVariables = {};
       existingMetadata = {
@@ -1475,8 +1649,24 @@ async function processMessagingEvent(
         return;
       }
 
-      await reqLogger.info("webhook", "User requested new reservation, metadata cleared", {
-        metadata: { previousReservationId: existingMetadata.reservationId },
+      // Restart the exact flow that created the previous reservation (if known),
+      // otherwise fall back to findBookingFlow scoring.
+      // This is vertical-agnostic: works for any industry regardless of trigger keywords.
+      const previousReservation = await resolveExistingReservation();
+      if (previousReservation?.flow_id) {
+        forcedBookingFlow = await loadFlowById(previousReservation.flow_id);
+      }
+      if (!forcedBookingFlow) {
+        forcedBookingFlow = await findBookingFlow(accountId);
+      }
+
+      await reqLogger.info("webhook", "User requested new booking, metadata cleared", {
+        metadata: {
+          previousReservationId,
+          strategy: previousReservation?.flow_id ? "exact_flow_restart" : "booking_flow_scoring",
+          foundBookingFlow: forcedBookingFlow?.flowId ?? null,
+          foundBookingFlowName: forcedBookingFlow?.flowName ?? null,
+        },
       });
     }
 
@@ -1544,7 +1734,7 @@ async function processMessagingEvent(
       }
     }
 
-    const matchedFlowCandidate = await findMatchingFlow(accountId, messageText);
+    const matchedFlowCandidate = forcedBookingFlow ?? await findMatchingFlow(accountId, messageText);
     const canStartNewFlow =
       !conversation.current_flow_id ||
       !conversation.current_node_id ||
@@ -1602,6 +1792,7 @@ async function processMessagingEvent(
       matchedFlowId = matchedFlow.flowId;
       matchedNodeId = matchedFlow.startNodeId;
       matchedFlowMetadata = (matchedFlow.metadata as FlowMetadata) ?? null;
+      matchedFlowNodes = (matchedFlow.nodes as any[]) ?? null;
 
       await reqLogger.info("webhook", "Flow matched", {
         metadata: {
@@ -1622,10 +1813,15 @@ async function processMessagingEvent(
     mergedVariables.date &&
     !executedNodeIsConfirmation
   ) {
+    // Primary: check the node's `collects` field — works for all flows including UUID-based ones.
+    // Fallback: legacy node-ID pattern matching for flows created before the `collects` field existed.
+    const executedNode = matchedFlowNodes?.find((n: any) => n.id === matchedNodeId);
+    const collectsTime = String(executedNode?.data?.collects ?? "").toLowerCase() === "time";
     const nodeIdLower = matchedNodeId.toLowerCase();
-    const isTimeAskNode =
+    const legacyPatternMatch =
       (nodeIdLower.includes("time") || nodeIdLower.includes("uhrzeit")) &&
       !nodeIdLower.includes("custom");
+    const isTimeAskNode = collectsTime || legacyPatternMatch;
 
     if (isTimeAskNode) {
       try {
@@ -1675,6 +1871,78 @@ async function processMessagingEvent(
         // On any error: silently fall through with original quick replies
       }
     }
+  }
+
+  // === HAUPTMENÜ BUTTON INJECTION ===
+  // Appends a "Hauptmenü" quick reply to every non-terminal flow response.
+  // This gives users a visible, one-tap way out of any mid-flow step without
+  // needing to know an escape keyword.
+  //
+  // Not added when:
+  // - Flow has ended (isEndOfFlow) — no more interaction expected
+  // - No active flow — button would have no target to return to
+  // - Already 13 quick replies — Instagram's hard limit
+  // - Button already present — avoid duplicates on re-renders
+  // - Executed node is the confirmation step — the flow is completing, don't interrupt
+  if (
+    flowResponse &&
+    !flowResponse.isEndOfFlow &&
+    matchedFlowId &&
+    !executedNodeIsConfirmation &&
+    flowResponse.quickReplies.length < 13 &&
+    !flowResponse.quickReplies.some((qr) => qr.payload === "__HAUPTMENU__")
+  ) {
+    flowResponse = {
+      ...flowResponse,
+      quickReplies: [
+        ...flowResponse.quickReplies,
+        { label: "🏠 Hauptmenü", payload: "__HAUPTMENU__" },
+      ],
+    };
+  }
+
+  // === FALLBACK: Kein Flow hat gematcht und kein aktiver Flow ===
+  // Verhindert das "Bot schweigt"-Problem. Nur für Text- und Quick-Reply-Nachrichten
+  // (Bilder werden still ignoriert — niemand erwartet eine Antwort auf ein Foto).
+  // Respektiert die Account-Einstellung "fallback_enabled" (Standard: true).
+  let fallbackEnabled = true;
+  if (!flowResponse && messageType !== "image") {
+    const { data: accountSettings } = await supabase
+      .from("accounts")
+      .select("settings")
+      .eq("id", accountId)
+      .single();
+    const settings = (accountSettings?.settings ?? {}) as Record<string, unknown>;
+    fallbackEnabled = settings?.fallback_enabled !== false;
+  }
+
+  if (!flowResponse && messageType !== "image" && fallbackEnabled) {
+    const fallbackKeywords = await listTriggerKeywords(accountId, 6);
+
+    let fallbackText: string;
+    if (fallbackKeywords.length > 0) {
+      const keywordHints = fallbackKeywords.slice(0, 3).map((k) => `"${k}"`).join(", ");
+      fallbackText = `Hallo! 👋 Das habe ich leider nicht verstanden. Schreib z.B. ${keywordHints} und ich helfe dir gerne weiter.`;
+    } else {
+      fallbackText =
+        "Hallo! 👋 Das habe ich leider nicht verstanden. Bitte versuche es mit einer anderen Nachricht.";
+    }
+
+    const fallbackQuickReplies = fallbackKeywords.map((kw) => ({
+      label: kw.charAt(0).toUpperCase() + kw.slice(1),
+      payload: kw,
+    }));
+
+    flowResponse = {
+      text: fallbackText,
+      quickReplies: fallbackQuickReplies,
+      nextNodeId: null,
+      isEndOfFlow: false,
+    };
+
+    await reqLogger.info("webhook", "No flow matched — sending fallback response", {
+      metadata: { messageText, fallbackKeywords },
+    });
   }
 
   // Send response if we have one

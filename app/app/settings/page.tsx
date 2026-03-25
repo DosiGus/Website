@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock, Building2, ChevronDown } from "lucide-react";
+import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock, Building2, ChevronDown, Bot } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../lib/supabaseBrowserClient";
 import { getDefaultCalendarSettings, type CalendarSettings } from "../../../lib/google/settings";
 import { VERTICAL_OPTIONS, type VerticalKey, getBookingLabels } from "../../../lib/verticals";
@@ -34,6 +34,10 @@ export default function SettingsPage() {
   const [verticalSaving, setVerticalSaving] = useState(false);
   const [verticalNotice, setVerticalNotice] = useState<string | null>(null);
   const [verticalError, setVerticalError] = useState<string | null>(null);
+  const [fallbackEnabled, setFallbackEnabled] = useState(true);
+  const [fallbackSaving, setFallbackSaving] = useState(false);
+  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
+  const [fallbackError, setFallbackError] = useState<string | null>(null);
   const labels = useMemo(() => getBookingLabels(vertical), [vertical]);
 
   type TeamRole = "owner" | "admin" | "member" | "viewer";
@@ -158,6 +162,7 @@ export default function SettingsPage() {
       const payload = await response.json();
       setCalendarForm(payload.calendar ?? getDefaultCalendarSettings());
       setVertical(payload.vertical ?? null);
+      setFallbackEnabled(payload.fallback_enabled !== false); // default true
     } catch {
       setCalendarError("Kalender-Einstellungen konnten nicht geladen werden.");
     } finally {
@@ -310,6 +315,43 @@ export default function SettingsPage() {
       setVerticalError("Branche konnte nicht gespeichert werden.");
     } finally {
       setVerticalSaving(false);
+    }
+  };
+
+  const handleFallbackToggle = async (nextValue: boolean) => {
+    setFallbackSaving(true);
+    setFallbackNotice(null);
+    setFallbackError(null);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setFallbackError("Bitte erneut anmelden.");
+      setFallbackSaving(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/account/settings", {
+        method: "PATCH",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ fallback_enabled: nextValue }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setFallbackError(payload?.error || "Einstellung konnte nicht gespeichert werden.");
+        setFallbackSaving(false);
+        return;
+      }
+      setFallbackEnabled(nextValue);
+      setFallbackNotice(nextValue ? "Fallback-Nachrichten aktiviert." : "Fallback-Nachrichten deaktiviert.");
+      setTimeout(() => setFallbackNotice(null), 3000);
+    } catch {
+      setFallbackError("Einstellung konnte nicht gespeichert werden.");
+    } finally {
+      setFallbackSaving(false);
     }
   };
 
@@ -739,6 +781,59 @@ export default function SettingsPage() {
                       )}
                     </div>
                   </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bot-Verhalten */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
+          <button
+            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
+            onClick={() => toggleCard("bot")}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600">
+              <Bot className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-white text-sm">Bot-Verhalten</div>
+              <div className="text-xs text-zinc-500 mt-0.5">Steuere, wie der Bot auf unbekannte Nachrichten reagiert</div>
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold shrink-0 ${fallbackEnabled ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-500/10 text-zinc-400"}`}>
+              {fallbackEnabled ? "Fallback an" : "Fallback aus"}
+            </span>
+            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "bot" ? "rotate-180" : ""}`} />
+          </button>
+          {openCard === "bot" && (
+            <div className="px-5 pb-5 border-t border-white/5">
+              <div className="pt-4 space-y-4">
+                <label className="flex items-start justify-between gap-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 cursor-pointer transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-white">Automatische Fallback-Nachricht</span>
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                      Wenn jemand deiner Instagram-Seite schreibt und keiner deiner Abläufe passt, antwortet der Bot automatisch mit einem freundlichen Hinweis und zeigt deine verfügbaren Optionen als Buttons an.<br />
+                      <span className="text-zinc-600 mt-1 block">Deaktivieren wenn du lieber keine automatische Antwort auf unbekannte Nachrichten senden möchtest.</span>
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={fallbackEnabled}
+                    disabled={fallbackSaving}
+                    onChange={(e) => handleFallbackToggle(e.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-zinc-600 bg-zinc-700 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 disabled:opacity-50 cursor-pointer"
+                  />
+                </label>
+
+                {fallbackNotice && (
+                  <p className="flex items-center gap-1.5 text-xs text-emerald-400">
+                    <CheckCircle className="h-3.5 w-3.5" /> {fallbackNotice}
+                  </p>
+                )}
+                {fallbackError && (
+                  <p className="flex items-center gap-1.5 text-xs text-red-400">
+                    <AlertTriangle className="h-3.5 w-3.5" /> {fallbackError}
+                  </p>
                 )}
               </div>
             </div>

@@ -1,4 +1,37 @@
-import type { FlowMetadata, FlowTrigger } from "./flowTypes";
+import type { FlowMetadata, FlowTrigger, FlowNodeVariant } from "./flowTypes";
+
+// Strict type for template node data.
+// variant is required — TypeScript will error at compile time if a developer
+// forgets to set it or uses an invalid value (e.g. "message" on a confirmation node).
+type TemplateNodeData = {
+  label: string;
+  text: string;
+  variant: FlowNodeVariant;
+  inputMode?: "buttons" | "free_text";
+  quickReplies?: Array<{
+    id: string;
+    label: string;
+    payload: string;
+    targetNodeId: string | null;
+  }>;
+  collects?: string;
+  placeholder?: string;
+  imageUrl?: string;
+};
+
+type TemplateNode = {
+  id: string;
+  type?: string;
+  position: { x: number; y: number };
+  data: TemplateNodeData;
+};
+
+type TemplateEdge = {
+  id: string;
+  source: string;
+  target: string;
+  data?: { condition?: string; tone?: string; quickReplyId?: string };
+};
 
 export type FlowTemplate = {
   id: string;
@@ -6,8 +39,8 @@ export type FlowTemplate = {
   name: string;
   vertical: string;
   description: string;
-  nodes: any[];
-  edges: any[];
+  nodes: TemplateNode[];
+  edges: TemplateEdge[];
   triggers: FlowTrigger[];
   metadata?: FlowMetadata;
 };
@@ -249,7 +282,7 @@ export const fallbackTemplates: FlowTemplate[] = [
         data: {
           label: "Reservierung bestätigt",
           text: "Vielen Dank! 🎉 Deine Reservierung ist bestätigt.\n\nWir freuen uns auf deinen Besuch! Falls du Fragen hast oder die Reservierung ändern möchtest, schreib uns einfach.\n\nBis bald! 👋",
-          variant: "message",
+          variant: "confirmation",
           quickReplies: [
             { id: "qr-done-menu", label: "Speisekarte ansehen", payload: "menu", targetNodeId: "info-menu" },
             { id: "qr-done-hours", label: "Öffnungszeiten", payload: "hours", targetNodeId: "info-hours" },
@@ -640,7 +673,7 @@ export const fallbackTemplates: FlowTemplate[] = [
         data: {
           label: "Termin bestätigt",
           text: "Dein Termin ist gebucht! 🎉\n\nWir freuen uns auf dich! Du erhältst eine Bestätigung per SMS.\n\nBitte komm ca. 5 Minuten vorher. Bei Verhinderung sag bitte 24h vorher ab.\n\nBis bald! 💇‍♀️",
-          variant: "message",
+          variant: "confirmation",
           quickReplies: [
             { id: "qr-done-prices", label: "Preisliste", payload: "prices", targetNodeId: "info-prices" },
             { id: "qr-done-hours", label: "Öffnungszeiten", payload: "hours", targetNodeId: "info-hours" },
@@ -1054,7 +1087,7 @@ export const fallbackTemplates: FlowTemplate[] = [
         data: {
           label: "Anfrage bestätigt",
           text: "Vielen Dank! ✅ Ihre Terminanfrage ist eingegangen.\n\nWir melden uns schnellstmöglich mit einer Terminbestätigung.\n\nBitte bringen Sie zum Termin mit:\n• Versichertenkarte\n• Überweisung (falls vorhanden)\n• Aktuelle Medikamentenliste\n\nBis bald! 👋",
-          variant: "message",
+          variant: "confirmation",
           quickReplies: [
             { id: "qr-done-hours", label: "Sprechzeiten", payload: "zeiten", targetNodeId: "info-hours" },
             { id: "qr-done-prescription", label: "Rezept anfordern", payload: "rezept", targetNodeId: "prescription-flow" },

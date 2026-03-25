@@ -1,5 +1,60 @@
 # Wesponde - Letzte Updates
 
+**Letzte Session:** 20. März 2026
+**Status:** Marketing Site Komplett-Überarbeitung (Blog, Pricing, Integrations-Scroll)
+
+---
+
+## Was wurde gemacht (11.–20. März 2026) — Marketing Site Überarbeitung
+
+### Blog-Seite Redesign (`components/BlogClient.tsx`, `app/blog/page.tsx`)
+- `app/blog/page.tsx` auf schmalen Import-Wrapper reduziert (metadata bleibt Server Component)
+- Neue `'use client'` Komponente `BlogClient.tsx` mit:
+  - Hero: `linear-gradient(135deg, #0a1a55 0%, #2a4ea7 22%, #ffffff 83%)` (links=blau, rechts=weiß)
+  - Kategorie-Filter-Pills: Alle / Playbooks / Best Practice / Guides mit echter `useState`-Filterlogik
+  - Featured-Card (groß) nur bei "Alle" sichtbar, sonst gleichwertiges 3-Spalten-Grid
+  - `onClick={() => setActive(label)}` auf Pills, gefilterte Render-Logik per `.filter()`
+  - 9 Artikel definiert als typisiertes Array mit `tag: "Playbook" | "Best Practice" | "Guide"`
+
+### 9 neue Blog-Artikel (alle in `app/blog/*/page.tsx`)
+Alle Artikel: vollständig ausgearbeitete Inhalte, echte Statistiken (MIT, Harvard, Meta-Daten), keine Competitor-Namen — nur generische Begriffe wie "Automatisierungstools", "Messaging-Plattformen"
+
+**Playbooks (3):**
+- `app/blog/instagram-dm-reservierungen/page.tsx` — 7-Schritt-Playbook, 50% mehr Reservierungen
+- `app/blog/neukunden-aktivierung-playbook/page.tsx` — Neukunden via DM gewinnen
+- `app/blog/comeback-playbook-inaktive-kunden/page.tsx` — Inaktive Kunden reaktivieren (~540 Zeilen)
+
+**Best Practices (3):**
+- `app/blog/reminder-design-no-shows/page.tsx` — Reminder-Design gegen No-Shows
+- `app/blog/sprache-ton-dm-automatisierung/page.tsx` — Sprache & Ton in DM-Automatisierung, inkl. Gut/Schlecht-Vergleich (~655 Zeilen)
+- `app/blog/quick-replies-conversion/page.tsx` — Quick Replies für höhere Conversion, DM-Mockup UI
+
+**Guides (3):**
+- `app/blog/bewertungen-skalieren/page.tsx` — Google Bewertungen skalieren
+- `app/blog/instagram-dm-automatisierung-einrichten/page.tsx` — Schritt-für-Schritt Einrichtung, Checklisten-Muster
+- `app/blog/flow-builder-trigger-variablen/page.tsx` — Trigger & Variablen im Flow Builder (~937 Zeilen, Tailwind Flow-Diagramm)
+
+### Pricing-Seite Komplett-Redesign (`app/pricing/page.tsx`)
+- 3 Tiers: **Free** (€0), **Premium** (€39/Mo, highlighted dark navy `#0a1a55`), **Enterprise** (Auf Anfrage)
+- CSS Grid Subgrid für button-alignment über alle 3 Karten:
+  - Outer Grid: `gridTemplateRows: "repeat(6, auto)"`
+  - Jede Karte: `lg:row-span-6` + `gridTemplateRows: "subgrid"` (6 interne Zeilen: Badge, Header, Preis, Beschreibung, CTA, Features)
+- FAQ-Sektion: `FaqAccordion`-Komponente (identisch zur Homepage FAQ), 2-Spalten-Layout + Kontakt-Card rechts
+- Trust Strip: `flex items-center justify-center gap-6` — alles in einer Zeile (kein Wrap mehr)
+- Inhalte: Free max 50 Konversationen/Mo, Premium unlimitiert + Kalender + Reviews + Priority Support, Enterprise Whitelabel + Dedizierter Manager
+
+### IntegrationsStickyScroll Fine-Tuning (`components/IntegrationsStickyScroll.tsx`)
+- Erster Text-Block: `pt-[35vh] pb-[55vh]`
+- Zweiter Text-Block ("Google Bewertungen"): `pt-[35vh] pb-[55vh]`
+- Sticky Panel rechts: `sticky top-0 flex h-screen items-start pt-[30vh]`
+- Effekt: "Google Bewertungen" erscheint beim Sticky-Release auf gleicher Höhe wie rechte Demo-Darstellung
+
+### TypeScript-Lesson (TS-Escape in Template-Strings)
+- Problem: `tip: "... Keywords ("BUCHEN", "TISCH") ..."` verursachte TS-Parse-Fehler
+- Fix: `\"BUCHEN\"` (escaped quotes innerhalb doppelt-quotierter Strings)
+
+---
+
 **Letzte Session:** 26. Februar 2026
 **Status:** Homepage-Feinschliff (Google Kalender Demo, Flow Builder Demo, Animation-Timing)
 

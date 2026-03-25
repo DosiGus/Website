@@ -4,6 +4,7 @@ import { defaultMetadata } from "../../../../lib/defaultFlow";
 import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../lib/rateLimit";
 import { z } from "zod";
 import { createRequestLogger } from "../../../../lib/logger";
+import { lintFlow } from "../../../../lib/flowLint";
 
 const flowPutSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
@@ -100,6 +101,43 @@ export async function PUT(
             code: "CONFLICT",
           },
           { status: 409 },
+        );
+      }
+    }
+
+    // Server-side lint gate: block activation if flow has blocking issues
+    if (body.status === "Aktiv") {
+      let lintNodes = body.nodes as any[] | undefined;
+      let lintEdges = body.edges as any[] | undefined;
+      let lintTriggers = body.triggers as any[] | undefined;
+      let lintMetadata = body.metadata as any | undefined;
+
+      // If any structural field is missing from body, fetch current DB state
+      if (!lintNodes || !lintEdges || !lintTriggers) {
+        const { data: currentFlow } = await supabase
+          .from("flows")
+          .select("nodes, edges, triggers, metadata")
+          .eq("id", params.id)
+          .eq("account_id", accountId)
+          .single();
+
+        lintNodes = lintNodes ?? (currentFlow?.nodes as any[]) ?? [];
+        lintEdges = lintEdges ?? (currentFlow?.edges as any[]) ?? [];
+        lintTriggers = lintTriggers ?? (currentFlow?.triggers as any[]) ?? [];
+        lintMetadata = lintMetadata ?? (currentFlow?.metadata as any) ?? {};
+      }
+
+      const { warnings } = lintFlow(lintNodes ?? [], lintEdges ?? [], lintTriggers ?? [], lintMetadata);
+      const blockingWarnings = warnings.filter((w) => w.severity === "warning");
+
+      if (blockingWarnings.length > 0) {
+        return NextResponse.json(
+          {
+            error: "Dieser Flow kann nicht aktiviert werden, weil er noch Fehler enthält.",
+            code: "LINT_FAILED",
+            warnings: blockingWarnings,
+          },
+          { status: 422 },
         );
       }
     }

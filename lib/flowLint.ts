@@ -1,5 +1,5 @@
-import { Edge, Node } from "reactflow";
-import type { FlowTrigger, FlowQuickReply } from "./flowTypes";
+import type { Edge, Node } from "reactflow";
+import type { FlowTrigger, FlowQuickReply, FlowMetadata } from "./flowTypes";
 
 export type FlowLintSeverity = "info" | "warning";
 
@@ -58,6 +58,7 @@ export function lintFlow(
   nodes: Node[],
   edges: Edge[],
   triggers: FlowTrigger[] = [],
+  metadata?: FlowMetadata,
 ): FlowLintResult {
   const warnings: FlowLintWarning[] = [];
 
@@ -111,6 +112,30 @@ export function lintFlow(
         );
       }
     });
+  }
+
+  // === CONFIRMATION NODE CHECK ===
+  // A reservation flow must have at least one node with variant "confirmation".
+  // Without it, the webhook will never create a reservation — the flow runs but
+  // nothing gets saved. This is the single most critical structural requirement.
+  const isReservationFlow = metadata?.output_config?.type === "reservation" ||
+    nodes.some((n) => {
+      const collects = String((n.data as any)?.collects ?? "");
+      return ["date", "time", "name", "guestCount"].includes(collects);
+    });
+
+  const hasConfirmationNode = nodes.some(
+    (n) => String((n.data as any)?.variant ?? "").toLowerCase() === "confirmation"
+  );
+
+  if (isReservationFlow && !hasConfirmationNode) {
+    warnings.push(
+      buildWarning("Kein Abschluss-Schritt vorhanden", {
+        suggestion: "Dein Flow sammelt Buchungsdaten, aber hat keinen Abschluss-Schritt. Ohne diesen wird die Reservierung nie gespeichert. Füge einen Schritt hinzu und stelle seinen Typ auf 'Bestätigung'.",
+        action: "Abschluss-Schritt hinzufügen",
+        severity: "warning",
+      }),
+    );
   }
 
   // === EDGE CHECKS ===

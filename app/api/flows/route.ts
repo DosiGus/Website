@@ -20,10 +20,16 @@ const flowPostSchema = z.object({
 }).strict();
 
 // Minimal structural schemas for template validation
+const VALID_NODE_VARIANTS = ["message", "choice", "input", "confirmation", "link", "info"] as const;
+
 const templateNodeSchema = z.object({
   id: z.string().min(1),
   position: z.object({ x: z.number(), y: z.number() }),
-  data: z.record(z.string(), z.any()),
+  data: z.object({
+    label: z.string().optional(),
+    text: z.string().optional(),
+    variant: z.enum(VALID_NODE_VARIANTS).optional(),
+  }).passthrough(),
 }).passthrough();
 
 const templateEdgeSchema = z.object({
@@ -40,11 +46,31 @@ const templateTriggerSchema = z.object({
   }),
 }).passthrough();
 
+const RESERVATION_COLLECTS = new Set(["name", "date", "time", "guestCount"]);
+
 const templateDataSchema = z.object({
   nodes: z.array(templateNodeSchema).min(1).max(500),
   edges: z.array(templateEdgeSchema).max(2000),
   triggers: z.array(templateTriggerSchema).max(50).optional(),
-});
+  metadata: z.record(z.string(), z.any()).optional(),
+}).refine(
+  (data) => {
+    // If this is a reservation template (collects booking fields),
+    // it must have exactly one node with variant "confirmation".
+    // Without it, reservations are never saved — the flow runs but nothing persists.
+    const isReservationTemplate =
+      (data.metadata as any)?.output_config?.type === "reservation" ||
+      data.nodes.some((n) => RESERVATION_COLLECTS.has(String(n.data?.collects ?? "")));
+
+    if (!isReservationTemplate) return true;
+
+    return data.nodes.some((n) => n.data?.variant === "confirmation");
+  },
+  {
+    message:
+      "Reservierungs-Templates müssen einen Abschluss-Schritt haben (variant: 'confirmation'). Ohne diesen werden Reservierungen nie gespeichert.",
+  }
+);
 
 export async function GET(request: Request) {
   try {
@@ -131,6 +157,7 @@ export async function POST(request: Request) {
           nodes: codeTemplate.nodes,
           edges: codeTemplate.edges,
           triggers: codeTemplate.triggers,
+          metadata: codeTemplate.metadata ?? {},
         });
         if (validation.success) {
           nodesToUse = codeTemplate.nodes as any;
@@ -155,6 +182,7 @@ export async function POST(request: Request) {
             nodes: template.nodes,
             edges: template.edges,
             triggers: template.triggers,
+            metadata: template.metadata ?? {},
           });
           if (validation.success) {
             nodesToUse = template.nodes as any;
