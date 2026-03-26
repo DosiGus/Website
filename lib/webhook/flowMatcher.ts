@@ -57,7 +57,7 @@ export async function findMatchingFlow(
   // Load all active flows for this account
   const { data: flows, error } = await supabase
     .from("flows")
-    .select("id, name, triggers, nodes, edges, metadata")
+    .select("id, name, triggers, nodes, edges, metadata, updated_at")
     .eq("account_id", accountId)
     .eq("status", "Aktiv");
 
@@ -71,7 +71,7 @@ export async function findMatchingFlow(
   }
 
   const normalizedMessage = messageText.toLowerCase().trim();
-  const matches: Array<MatchedFlow & { score: number }> = [];
+  const matches: Array<MatchedFlow & { score: number; updatedAt: string }> = [];
 
   // Check each flow's triggers and score matches
   for (const flow of flows) {
@@ -110,6 +110,7 @@ export async function findMatchingFlow(
           edges: flow.edges,
           metadata: flow.metadata ?? null,
           score: matchScore,
+          updatedAt: flow.updated_at ?? "",
         });
       }
     }
@@ -119,7 +120,16 @@ export async function findMatchingFlow(
     return null;
   }
 
-  matches.sort((a, b) => b.score - a.score);
+  // Primary sort: highest score wins.
+  // Tiebreaker 1: lower metadata.priority wins (operator-controlled ordering).
+  // Tiebreaker 2: most recently updated flow wins (deterministic fallback).
+  matches.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const aPriority = (a.metadata as any)?.priority ?? 999;
+    const bPriority = (b.metadata as any)?.priority ?? 999;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    return b.updatedAt.localeCompare(a.updatedAt);
+  });
   const best = matches[0];
   return {
     flowId: best.flowId,
@@ -367,4 +377,76 @@ export function parseQuickReplyPayload(
   }
 
   return null;
+}
+
+export type CrossFlowConflict = {
+  keyword: string;
+  matchType: string;
+  conflictingFlowId: string;
+  conflictingFlowName: string;
+};
+
+/**
+ * Checks if any keywords in the given triggers overlap with keywords in other
+ * active flows of the same account. Returns one entry per conflicting keyword.
+ *
+ * Used at flow activation to warn the operator — non-blocking, informational only.
+ */
+export async function findCrossFlowConflicts(
+  accountId: string,
+  currentFlowId: string,
+  triggers: FlowTrigger[]
+): Promise<CrossFlowConflict[]> {
+  if (!triggers || triggers.length === 0) return [];
+
+  // Collect keywords from the current flow being activated
+  const currentKeywords = new Map<string, string>(); // normalized → matchType
+  for (const trigger of triggers) {
+    if (trigger.type !== "KEYWORD") continue;
+    const matchType = trigger.config?.matchType ?? "CONTAINS";
+    for (const kw of trigger.config?.keywords ?? []) {
+      const normalized = String(kw).toLowerCase().trim();
+      if (normalized) currentKeywords.set(normalized, matchType);
+    }
+  }
+
+  if (currentKeywords.size === 0) return [];
+
+  const supabase = createSupabaseServerClient();
+  const { data: otherFlows, error } = await supabase
+    .from("flows")
+    .select("id, name, triggers")
+    .eq("account_id", accountId)
+    .eq("status", "Aktiv")
+    .neq("id", currentFlowId);
+
+  if (error || !otherFlows) return [];
+
+  const conflicts: CrossFlowConflict[] = [];
+  const seen = new Set<string>(); // deduplicate by keyword+flowId
+
+  for (const flow of otherFlows) {
+    const otherTriggers = (flow.triggers as FlowTrigger[]) ?? [];
+    for (const trigger of otherTriggers) {
+      if (trigger.type !== "KEYWORD") continue;
+      for (const kw of trigger.config?.keywords ?? []) {
+        const normalized = String(kw).toLowerCase().trim();
+        if (!normalized) continue;
+        if (!currentKeywords.has(normalized)) continue;
+
+        const dedupeKey = `${normalized}:${flow.id}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+
+        conflicts.push({
+          keyword: kw,
+          matchType: currentKeywords.get(normalized) ?? "CONTAINS",
+          conflictingFlowId: flow.id,
+          conflictingFlowName: flow.name,
+        });
+      }
+    }
+  }
+
+  return conflicts;
 }

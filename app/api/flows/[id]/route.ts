@@ -5,6 +5,17 @@ import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../lib/r
 import { z } from "zod";
 import { createRequestLogger } from "../../../../lib/logger";
 import { lintFlow } from "../../../../lib/flowLint";
+import { findCrossFlowConflicts } from "../../../../lib/webhook/flowMatcher";
+
+// Plan-based active flow limits.
+// Plan is read from accounts.settings.plan (defaults to "free" if absent or unrecognized).
+// These limits are intentionally conservative to drive upgrade conversions.
+const ACTIVE_FLOW_LIMITS: Record<string, number> = {
+  free:       1,
+  premium:    5,
+  enterprise: 50,
+};
+const DEFAULT_PLAN = "free";
 
 const flowPutSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
@@ -39,6 +50,19 @@ export async function GET(
 
     if (error) {
       return NextResponse.json({ error: "Flow nicht gefunden" }, { status: 404 });
+    }
+
+    // Include conflict warnings on initial load for active flows so the builder
+    // can surface them immediately without waiting for the first save.
+    if (data.status === "Aktiv") {
+      const conflictWarnings = await findCrossFlowConflicts(
+        accountId,
+        params.id,
+        (data.triggers as any[]) ?? []
+      );
+      if (conflictWarnings.length > 0) {
+        return NextResponse.json({ ...data, conflict_warnings: conflictWarnings });
+      }
     }
 
     return NextResponse.json(data);
@@ -105,6 +129,41 @@ export async function PUT(
       }
     }
 
+    let conflictWarnings: import("../../../../lib/webhook/flowMatcher").CrossFlowConflict[] = [];
+
+    // Plan-based active flow limit — checked first, before lint, to surface
+    // business-relevant feedback immediately and avoid unnecessary DB work.
+    if (body.status === "Aktiv") {
+      // Run account plan lookup and active-flow count in parallel
+      const [{ data: accountRow }, { count: activeFlowCount }] = await Promise.all([
+        supabase.from("accounts").select("settings").eq("id", accountId).single(),
+        supabase
+          .from("flows")
+          .select("id", { count: "exact", head: true })
+          .eq("account_id", accountId)
+          .eq("status", "Aktiv")
+          .neq("id", params.id), // exclude the flow being updated (already active → not double-counted)
+      ]);
+
+      const accountPlan = String((accountRow?.settings as any)?.plan ?? DEFAULT_PLAN).toLowerCase();
+      const maxActiveFlows = ACTIVE_FLOW_LIMITS[accountPlan] ?? ACTIVE_FLOW_LIMITS[DEFAULT_PLAN];
+
+      if ((activeFlowCount ?? 0) >= maxActiveFlows) {
+        const planLabel = accountPlan === "free"
+          ? "Free"
+          : accountPlan.charAt(0).toUpperCase() + accountPlan.slice(1);
+        return NextResponse.json(
+          {
+            error: `Dein ${planLabel}-Plan erlaubt maximal ${maxActiveFlows} aktive${maxActiveFlows === 1 ? "n" : ""} Flow${maxActiveFlows === 1 ? "" : "s"}. Bitte deaktiviere einen bestehenden Flow, um diesen zu aktivieren.`,
+            code: "PLAN_LIMIT_EXCEEDED",
+            limit: maxActiveFlows,
+            plan: accountPlan,
+          },
+          { status: 403 },
+        );
+      }
+    }
+
     // Server-side lint gate: block activation if flow has blocking issues
     if (body.status === "Aktiv") {
       let lintNodes = body.nodes as any[] | undefined;
@@ -140,6 +199,13 @@ export async function PUT(
           { status: 422 },
         );
       }
+
+      // Cross-flow conflict check — non-blocking, returned as informational warnings
+      conflictWarnings = await findCrossFlowConflicts(
+        accountId,
+        params.id,
+        (lintTriggers ?? []) as any[]
+      );
     }
 
     const update: Record<string, unknown> = {
@@ -165,7 +231,11 @@ export async function PUT(
     }
 
     // Return new updated_at so client can track it for next optimistic lock check
-    return NextResponse.json({ success: true, updated_at: updatedFlow?.updated_at });
+    return NextResponse.json({
+      success: true,
+      updated_at: updatedFlow?.updated_at,
+      ...(conflictWarnings.length > 0 ? { conflict_warnings: conflictWarnings } : {}),
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "Forbidden") {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });

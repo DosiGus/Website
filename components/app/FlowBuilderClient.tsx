@@ -26,6 +26,8 @@ import {
 import {
   CalendarCheck,
   CheckCircle2,
+  Copy,
+  Download,
   Edit2,
   ExternalLink,
   Focus,
@@ -38,6 +40,7 @@ import {
   Sparkles,
   Trash2,
   TriangleAlert,
+  Upload,
   X,
   Zap,
 } from "lucide-react";
@@ -241,6 +244,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [lintWarnings, setLintWarnings] = useState<FlowLintWarning[]>([]);
+  const [serverLintErrors, setServerLintErrors] = useState<FlowLintWarning[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [inlineEditNodeId, setInlineEditNodeId] = useState<string | null>(null);
@@ -263,6 +267,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [triggerTestInput, setTriggerTestInput] = useState("");
   const [cockpitIssuesExpanded, setCockpitIssuesExpanded] = useState(false);
   const [fallbackEnabled, setFallbackEnabled] = useState<boolean | null>(null);
+  const [conflictWarnings, setConflictWarnings] = useState<Array<{ keyword: string; conflictingFlowName: string }>>([]);
   const [isAddMenuOpen, setAddMenuOpen] = useState(false);
   const [showFlowSettings, setShowFlowSettings] = useState(false);
   const { vertical } = useAccountVertical();
@@ -272,6 +277,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const lastSavedSnapshotRef = useRef<string>("");
   // Optimistic locking: tracks the server's updated_at that the client last saw
   const serverUpdatedAtRef = useRef<string>("");
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const getAccessToken = useCallback(async () => {
     const {
@@ -357,24 +363,52 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       );
       if (!confirmed) return;
     }
+    const guestCountRequired = vertical === "gastro" || !vertical;
     const newRequiredFields =
       newType === "reservation"
-        ? (vertical === "gastro" || !vertical ? ["name", "date", "time", "guestCount"] : ["name", "date", "time"])
+        ? (guestCountRequired ? ["name", "date", "time", "guestCount"] : ["name", "date", "time"])
         : [];
+    // When switching to reservation for non-gastro verticals, guestCount isn't required
+    // but must still default to 1 so bookings are created correctly.
+    const newDefaults =
+      newType === "reservation" && !guestCountRequired ? { guestCount: 1 } : undefined;
     setMetadata((prev) => ({
       ...prev,
-      output_config: { type: newType, requiredFields: newRequiredFields } as FlowOutputConfig,
+      output_config: {
+        type: newType,
+        requiredFields: newRequiredFields,
+        ...(newDefaults ? { defaults: newDefaults } : {}),
+      } as FlowOutputConfig,
     }));
     setHasUnsavedChanges(true);
   };
 
   const handleToggleRequiredField = (field: string) => {
-    const current = requiredFields;
-    const next = current.includes(field) ? current.filter((f) => f !== field) : [...current, field];
-    setMetadata((prev) => ({
-      ...prev,
-      output_config: { ...((prev.output_config as FlowOutputConfig) ?? {}), requiredFields: next } as FlowOutputConfig,
-    }));
+    const isRemoving = requiredFields.includes(field);
+    const next = isRemoving
+      ? requiredFields.filter((f) => f !== field)
+      : [...requiredFields, field];
+    setMetadata((prev) => {
+      const prevConfig = (prev.output_config as FlowOutputConfig) ?? {};
+      const prevDefaults = { ...(prevConfig.defaults ?? {}) };
+      // Auto-manage guestCount default: set to 1 when removed from required (so bookings
+      // are still created with 1 person), clear the default when added back to required.
+      if (field === "guestCount") {
+        if (isRemoving) {
+          prevDefaults.guestCount = 1;
+        } else {
+          delete prevDefaults.guestCount;
+        }
+      }
+      return {
+        ...prev,
+        output_config: {
+          ...prevConfig,
+          requiredFields: next,
+          ...(Object.keys(prevDefaults).length > 0 ? { defaults: prevDefaults } : {}),
+        } as FlowOutputConfig,
+      };
+    });
     setHasUnsavedChanges(true);
   };
 
@@ -547,6 +581,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       setNodes(nodesToUse);
       setTriggers(triggersToUse);
       setMetadata(metadataToUse);
+      if (Array.isArray((data as any).conflict_warnings) && (data as any).conflict_warnings.length > 0) {
+        setConflictWarnings((data as any).conflict_warnings);
+      }
       setLoading(false);
       setErrorMessage(null);
       try {
@@ -1204,6 +1241,12 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           if (responseData.updated_at) {
             serverUpdatedAtRef.current = responseData.updated_at;
           }
+          // Show cross-flow keyword conflict warnings if any (non-blocking)
+          if (responseData.conflict_warnings?.length > 0) {
+            setConflictWarnings(responseData.conflict_warnings);
+          } else {
+            setConflictWarnings([]);
+          }
           lastSavedSnapshotRef.current = JSON.stringify({
             flowName,
             status,
@@ -1227,6 +1270,28 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         );
         setSaveState("error");
         // Don't auto-clear — user must consciously reload
+      } else if (response.status === 422) {
+        const error = await response.json().catch(() => ({}));
+        if (error.code === "LINT_FAILED") {
+          // Server blocked activation due to lint errors — revert status and surface warnings
+          setStatus("Entwurf");
+          const warnings: FlowLintWarning[] = Array.isArray(error.warnings) ? error.warnings : [];
+          setServerLintErrors(warnings);
+          setCockpitIssuesExpanded(true);
+        } else {
+          setErrorMessage(error.error ?? "Ungültige Anfrage");
+        }
+        setSaveState("error");
+        setTimeout(() => setSaveState("idle"), 4000);
+      } else if (response.status === 403) {
+        const error = await response.json().catch(() => ({}));
+        if (error.code === "PLAN_LIMIT_EXCEEDED") {
+          // Revert local status to Entwurf — activation was rejected by the server
+          setStatus("Entwurf");
+        }
+        setErrorMessage(error.error ?? "Nicht autorisiert");
+        setSaveState("error");
+        setTimeout(() => setSaveState("idle"), 6000);
       } else {
         const error = await response.json().catch(() => ({}));
         setErrorMessage(error.error ?? "Speichern fehlgeschlagen");
@@ -1268,6 +1333,42 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       setExporting(false);
     }
   }, [flowId, getAccessToken]);
+
+  const handleImport = useCallback(async (file: File) => {
+    const token = await getAccessToken();
+    if (!token) return;
+    try {
+      const text = await file.text();
+      const imported = JSON.parse(text);
+      if (!Array.isArray(imported.nodes) || !Array.isArray(imported.edges)) {
+        setErrorMessage("Ungültige Flow-Datei. Bitte eine gültige Wesponde-Flow-JSON-Datei wählen.");
+        return;
+      }
+      const response = await fetch("/api/flows", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          name: `${imported.name ?? "Importierter Flow"} (Import)`,
+          nodes: imported.nodes ?? [],
+          edges: imported.edges ?? [],
+          triggers: imported.triggers ?? [],
+          metadata: imported.metadata ?? {},
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        setErrorMessage(err.error ?? "Import fehlgeschlagen.");
+        return;
+      }
+      const { id } = await response.json();
+      router.push(`/app/flows/${id}`);
+    } catch {
+      setErrorMessage("Ungültige Flow-Datei. Bitte eine gültige Wesponde-Flow-JSON-Datei wählen.");
+    }
+  }, [getAccessToken, router]);
 
   const duplicateSelectedNode = useCallback(() => {
     if (!selectedNode) return;
@@ -1557,6 +1658,61 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
             {/* Right: Actions */}
             <div className="flex flex-wrap items-center gap-3">
+              {/* Export / Import */}
+              <button
+                onClick={handleExport}
+                disabled={exporting || loading}
+                title="Flow als JSON exportieren"
+                className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-zinc-300 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5" />
+                {exporting ? "..." : "Export"}
+              </button>
+              <button
+                onClick={() => importInputRef.current?.click()}
+                disabled={loading}
+                title="Flow aus JSON importieren (erstellt neuen Flow)"
+                className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-zinc-300 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white disabled:opacity-50"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Import
+              </button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImport(file);
+                  e.target.value = "";
+                }}
+              />
+
+              {/* View Mode Toggle */}
+              <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-0.5">
+                <button
+                  onClick={() => setBuilderMode("simple")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                    builderMode === "simple"
+                      ? "bg-white/10 text-white"
+                      : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  Liste
+                </button>
+                <button
+                  onClick={() => setBuilderMode("pro")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                    builderMode === "pro"
+                      ? "bg-white/10 text-white"
+                      : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  Canvas
+                </button>
+              </div>
+
               {/* Preview Button */}
               <button
                 onClick={() => {
@@ -1665,6 +1821,9 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                         >
                           <span className={`h-1.5 w-1.5 rounded-full ${requiredFields.includes(key) ? "bg-indigo-400" : "bg-zinc-600"}`} />
                           {label}
+                          {key === "guestCount" && !requiredFields.includes(key) && (
+                            <span className="text-zinc-600">· Standard: 1</span>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -1824,6 +1983,38 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               )}
             </div>
 
+            {/* Cross-flow keyword conflict warnings */}
+            {conflictWarnings.length > 0 && status === "Aktiv" && (
+              <div className="mt-2 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    <TriangleAlert className="h-3.5 w-3.5 mt-0.5 shrink-0 text-orange-400" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-orange-300">Keyword-Konflikt mit anderen aktiven Flows</p>
+                      <p className="text-xs text-orange-300/60 mt-0.5">
+                        Folgende Keywords existieren auch in anderen aktiven Flows. Bei Gleichstand gewinnt der zuletzt bearbeitete Flow.
+                      </p>
+                      <ul className="mt-1.5 space-y-0.5">
+                        {conflictWarnings.map((c, i) => (
+                          <li key={i} className="text-xs text-orange-300/80">
+                            <span className="font-mono bg-orange-500/10 px-1 rounded">{c.keyword}</span>
+                            {" "}→ auch in <span className="font-semibold">{c.conflictingFlowName}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setConflictWarnings([])}
+                    className="text-orange-400/60 hover:text-orange-300 transition-colors shrink-0 text-xs leading-none"
+                    title="Schließen"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Expanded lint warnings */}
             {cockpitIssuesExpanded && lintWarnings.length > 0 && (
               <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 space-y-2">
@@ -1858,22 +2049,68 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
         {/* Canvas Area */}
         <div className="mx-auto max-w-screen-2xl px-6 pb-6">
-          <div className="h-[calc(100vh-200px)] min-h-[500px] overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
-            <FlowListBuilder
-              nodes={nodes}
-              edges={edges}
-              startNodeIds={startNodeIds}
-              triggers={triggers}
-              onOpenTriggerModal={() => openTriggerModal()}
-              onNodesChange={handleListNodesChange}
-              onEdgesChange={handleListEdgesChange}
-              selectedNodeId={selectedNodeId}
-              onSelectNode={setSelectedNodeId}
-              onOpenInspector={handleOpenInspector}
-              onAddNode={addNode}
-              onDeleteNode={handleDeleteNode}
-            />
-          </div>
+          {builderMode === "simple" ? (
+            <div className="h-[calc(100vh-200px)] min-h-[500px] overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
+              <FlowListBuilder
+                nodes={nodes}
+                edges={edges}
+                startNodeIds={startNodeIds}
+                triggers={triggers}
+                onOpenTriggerModal={() => openTriggerModal()}
+                onNodesChange={handleListNodesChange}
+                onEdgesChange={handleListEdgesChange}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={setSelectedNodeId}
+                onOpenInspector={handleOpenInspector}
+                onAddNode={addNode}
+                onDeleteNode={handleDeleteNode}
+              />
+            </div>
+          ) : (
+            <div className="relative">
+              {/* Multi-select action bar — appears when 2+ nodes are selected */}
+              {selection.nodes.length > 1 && (
+                <div className="absolute left-1/2 top-4 z-10 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-white/20 bg-zinc-900/95 px-4 py-2.5 shadow-2xl backdrop-blur-sm">
+                  <span className="text-sm font-semibold text-white">
+                    {selection.nodes.length} Schritte ausgewählt
+                  </span>
+                  <div className="h-4 w-px bg-white/10" />
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    Kopieren
+                  </button>
+                  <button
+                    onClick={deleteSelection}
+                    className="flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-400 transition-colors hover:bg-rose-500/20"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Löschen
+                  </button>
+                  <div className="h-4 w-px bg-white/10" />
+                  <span className="text-xs text-zinc-500">oder ⌫ Delete</span>
+                </div>
+              )}
+              <FlowBuilderCanvas
+                nodes={displayNodes}
+                edges={decoratedEdges}
+                onNodesChange={handleNodesChange}
+                onEdgesChange={handleEdgesChange}
+                onConnect={handleConnect}
+                onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+                onNodeDoubleClick={(_, node) => {
+                  setSelectedNodeId(node.id);
+                  setInspectorOpen(true);
+                }}
+                onEdgeClick={(_, edge) => setSelectedEdgeId(edge.id)}
+                onSelectionChange={handleSelectionChange}
+                onInit={setReactFlowInstance}
+                onFitView={() => reactFlowInstance?.fitView({ padding: 0.2, duration: 600 })}
+              />
+            </div>
+          )}
 
           {/* Inline Editor Overlay */}
           {inlineEditNodeId && (
@@ -1969,6 +2206,45 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         </div>
       )}
 
+      {/* Server Lint Error Modal — shown when server rejects activation due to lint failures */}
+      {serverLintErrors.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl animate-scale-in">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/15">
+                <TriangleAlert className="h-5 w-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Flow kann nicht aktiviert werden</h3>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Der Server hat die Aktivierung abgewiesen. Bitte behebe die folgenden Probleme zuerst.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {serverLintErrors.map((w, i) => (
+                <div key={i} className="rounded-lg border border-rose-500/20 bg-rose-500/5 px-3 py-2.5">
+                  <p className="text-xs font-semibold text-rose-300">{w.message}</p>
+                  {w.suggestion && (
+                    <p className="mt-0.5 text-xs text-rose-300/60">{w.suggestion}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6">
+              <button
+                onClick={() => setServerLintErrors([])}
+                className="w-full rounded-xl bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 transition-colors"
+              >
+                Verstanden — Flow bearbeiten
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Inspector Slide-Over */}
       <InspectorSlideOver
         isOpen={isInspectorOpen}
@@ -2009,6 +2285,10 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         onNodeSelect={setSelectedNodeId}
         lintWarnings={lintWarnings}
         onFocusWarning={focusWarning}
+        outputType={outputType}
+        requiredFields={requiredFields}
+        onToggleFlowType={handleToggleFlowType}
+        onToggleRequiredField={handleToggleRequiredField}
         saveState={saveState}
       />
 

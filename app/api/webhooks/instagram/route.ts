@@ -35,6 +35,7 @@ import {
   getMissingReservationFields,
 } from "../../../../lib/webhook/reservationCreator";
 import { cancelGoogleCalendarEvent } from "../../../../lib/google/calendar";
+import { sendReservationNotification } from "../../../../lib/email/reservationNotification";
 import { type SlotSuggestion, getAvailableSlotsForDate } from "../../../../lib/google/availability";
 import { decryptToken, encryptToken, isEncryptedToken } from "../../../../lib/security/tokenEncryption";
 import {
@@ -123,6 +124,48 @@ function formatDisplayDate(dateStr: string): string {
     return `${day}.${month}.${year}`;
   }
   return dateStr;
+}
+
+/**
+ * Finds the node in a flow that collects a given field key.
+ * Uses node.data.collects as primary source of truth.
+ * Falls back to node.id pattern matching for legacy templates without collects field.
+ */
+function findCollectionNodeForField(nodes: any[], field: string): any | null {
+  // Primary: explicit collects field
+  const byCollects = nodes.find((n: any) => {
+    const rawCollects = String(n?.data?.collects ?? "").trim();
+    return rawCollects === field && rawCollects !== "__custom_empty__";
+  });
+  if (byCollects) return byCollects;
+
+  // Fallback: legacy node.id pattern matching
+  return nodes.find((n: any) => {
+    const nk = String(n.id ?? "").toLowerCase();
+    switch (field) {
+      case "name":            return nk.includes("name");
+      case "date":            return nk.includes("date");
+      case "time":            return nk.includes("time");
+      case "guestCount":      return nk.includes("guest");
+      case "phone":           return nk.includes("phone") || nk.includes("telefon") || nk.includes("nummer");
+      case "email":           return nk.includes("email") || nk.includes("mail");
+      case "specialRequests": return nk.includes("special") || nk.includes("wunsch") || nk.includes("wünsch") || nk.includes("notiz");
+      default:                return false;
+    }
+  }) ?? null;
+}
+
+/**
+ * Formats a stored variable value for display in a correction Quick Reply label.
+ * Keeps labels short enough to fit Instagram's Quick Reply button limits.
+ */
+function formatVariableForCorrection(key: string, value: unknown): string {
+  if (key === "date" && typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return formatDisplayDate(value);
+  }
+  const str = String(value ?? "");
+  // Truncate only very long values (for text body display, not button labels)
+  return str.length > 30 ? str.slice(0, 28) + "…" : str;
 }
 
 const NAME_INPUT_BLACKLIST = [
@@ -383,6 +426,8 @@ async function handleProcessingError(
   await reqLogger.logError("webhook", error, "Failed to process messaging event", {
     metadata: { instagramAccountId },
   });
+  // Guest notification is handled inside processMessagingEvent's own catch block
+  // using the already-loaded accessToken — no redundant DB query needed here.
 }
 
 async function enqueueConflictRetry(
@@ -602,6 +647,12 @@ async function processMessagingEvent(
       await reqLogger.info("webhook", "Resolved userId from account owner (integration.user_id was null)", {
         metadata: { accountId },
       });
+    } else {
+      // userId is still null after all fallbacks. Non-reservation flows continue normally.
+      // Reservation creation will be blocked with a guest-facing error (see guard below).
+      await reqLogger.warn("webhook", "userId could not be resolved — reservation creation will fail if triggered", {
+        metadata: { accountId },
+      });
     }
   }
   reqLogger.setAccountId(accountId);
@@ -664,12 +715,12 @@ async function processMessagingEvent(
     });
   }
 
-  // Get or create conversation
+  // Get or create conversation — lookup via channel_sender_id (channel-agnostic primary key)
   let { data: conversation } = await supabase
     .from("conversations")
     .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version, last_message_at")
     .eq("integration_id", integration.id)
-    .eq("instagram_sender_id", senderId)
+    .eq("channel_sender_id", senderId)
     .single();
 
   if (!conversation) {
@@ -681,14 +732,14 @@ async function processMessagingEvent(
           account_id: accountId,
           integration_id: integration.id,
           contact_id: contactId,
-          instagram_sender_id: senderId,
+          instagram_sender_id: senderId,  // kept for Instagram; null for other channels
           channel: "instagram_dm",
-          channel_sender_id: senderId,
+          channel_sender_id: senderId,    // primary lookup key
           status: "active",
           metadata: {},
         },
         {
-          onConflict: "integration_id,instagram_sender_id",
+          onConflict: "integration_id,channel,channel_sender_id",
           ignoreDuplicates: true,
         },
       )
@@ -707,7 +758,7 @@ async function processMessagingEvent(
         .from("conversations")
         .select("id, current_flow_id, current_node_id, metadata, contact_id, channel_sender_id, state_version, last_message_at")
         .eq("integration_id", integration.id)
-        .eq("instagram_sender_id", senderId)
+        .eq("channel_sender_id", senderId)
         .single();
 
       if (existingError || !existingConversation) {
@@ -1094,19 +1145,25 @@ async function processMessagingEvent(
   // Merge new variables with existing ones
   let mergedVariables = mergeVariables(existingVariables, newVariables);
 
+  // Loaded once and reused for both the collects-slot check and free-text continuation,
+  // eliminating a redundant DB round-trip per message in active conversations.
+  let currentActiveFlow: { nodes: any; edges: any; metadata: any } | null = null;
+
   // Determine what the current node is collecting via the `collects` field (primary source of truth).
   // Falls back to node.id pattern matching for backwards-compatibility with older template flows.
   const overrideVariables: ExtractedVariables = {};
   if (messageText && conversation.current_flow_id && conversation.current_node_id) {
-    const { data: flowForCollects } = await supabase
+    const { data: loadedActiveFlow } = await supabase
       .from("flows")
-      .select("nodes")
+      .select("nodes, edges, metadata")
       .eq("id", conversation.current_flow_id)
       .single();
 
+    currentActiveFlow = loadedActiveFlow ?? null;
+
     let collectsKey: string | null = null;
-    if (Array.isArray(flowForCollects?.nodes)) {
-      const curNode = (flowForCollects.nodes as any[]).find(
+    if (Array.isArray(currentActiveFlow?.nodes)) {
+      const curNode = (currentActiveFlow.nodes as any[]).find(
         (n: any) => n.id === conversation.current_node_id
       );
       const rawCollects = String(curNode?.data?.collects ?? "").trim();
@@ -1290,6 +1347,149 @@ async function processMessagingEvent(
     }
   }
 
+  // === CORRECTION HANDLER ===
+  // Handles in-flow correction keywords so guests can fix typos without aborting the entire flow.
+  //
+  //  "nochmal"               → clears the variable the current node was collecting and re-asks
+  //                            the same question (same current_node_id, no state advance).
+  //  "ändern" / "korrigieren" → shows a summary of all collected variables as Quick Reply
+  //                            buttons so the guest can pick which field to correct.
+  //
+  // Must run after currentActiveFlow is loaded (collects-check block above) so we can
+  // inspect node.data.collects without an extra DB query.
+  // Only fires on plain text messages while in an active flow.
+  if (messageType === "text" && isInActiveFlow && currentActiveFlow && conversation.current_node_id && conversation.current_flow_id) {
+    const correctionText = messageText.toLowerCase().trim();
+
+    // ── "nochmal": clear last collected variable and re-ask the same question ──────────────────
+    if (correctionText === "nochmal") {
+      // Determine the collects key for the current node (same logic as the collects-check above)
+      let redoCollectsKey: string | null = null;
+      if (Array.isArray(currentActiveFlow.nodes)) {
+        const curNode = (currentActiveFlow.nodes as any[]).find(
+          (n: any) => n.id === conversation.current_node_id
+        );
+        const rawCollects = String(curNode?.data?.collects ?? "").trim();
+        if (rawCollects && rawCollects !== "__custom_empty__") {
+          redoCollectsKey = rawCollects;
+        }
+        // Backwards-compat: derive from node.id when collects field is absent
+        if (!redoCollectsKey) {
+          const nk = conversation.current_node_id.toLowerCase();
+          if (nk.includes("name"))                                             redoCollectsKey = "name";
+          else if (nk.includes("date"))                                        redoCollectsKey = "date";
+          else if (nk.includes("time"))                                        redoCollectsKey = "time";
+          else if (nk.includes("guest"))                                       redoCollectsKey = "guestCount";
+          else if (nk.includes("phone") || nk.includes("telefon"))             redoCollectsKey = "phone";
+          else if (nk.includes("email") || nk.includes("mail"))                redoCollectsKey = "email";
+          else if (nk.includes("special") || nk.includes("wunsch"))            redoCollectsKey = "specialRequests";
+        }
+      }
+
+      // Clear the variable this node was collecting
+      const redoVars = { ...mergedVariables };
+      if (redoCollectsKey) delete redoVars[redoCollectsKey];
+      mergedVariables = redoVars;
+
+      // Re-execute the current node (same question, same position — no state advance)
+      const redoResponse = executeFlowNode(
+        conversation.current_node_id,
+        currentActiveFlow.nodes as any[],
+        currentActiveFlow.edges as any[],
+        conversation.current_flow_id,
+        mergedVariables
+      );
+
+      if (redoResponse) {
+        // Persist the cleared variable to DB (current_node_id stays unchanged)
+        const redoMetadata: ConversationMetadata = { ...existingMetadata, variables: mergedVariables };
+        const redoUpdated = await updateConversationState(
+          { metadata: redoMetadata },
+          "Failed to update metadata on redo"
+        );
+        if (!redoUpdated) {
+          await reqLogger.warn("webhook", "Redo metadata update skipped due to version conflict");
+        }
+
+        const redoSendResult = await sendInstagramMessage({
+          recipientId: senderId,
+          text: redoResponse.text,
+          quickReplies: redoResponse.quickReplies,
+          accessToken,
+        });
+        if (!redoSendResult.success) {
+          await reqLogger.warn("webhook", "Failed to send redo response", {
+            metadata: { error: redoSendResult.error, code: redoSendResult.code },
+          });
+        }
+
+        await reqLogger.info("webhook", "Redo: re-asking current question", {
+          metadata: { nodeId: conversation.current_node_id, clearedField: redoCollectsKey ?? "(none)" },
+        });
+
+        await markMessageProcessed();
+        return;
+      }
+    }
+
+    // ── "ändern" / "korrigieren": show variable summary with per-field correction Quick Replies ─
+    if (correctionText === "ändern" || correctionText === "korrigieren" || correctionText === "falsch") {
+      // Labels kept intentionally short (≤ 11 chars) to stay well within Instagram's
+      // Quick Reply label limit (~20 chars). Current values are shown in the message
+      // text body instead — better UX, no truncation issues.
+      const FIELD_LABELS: Record<string, string> = {
+        name:            "👤 Name",
+        date:            "📅 Datum",
+        time:            "⏰ Uhrzeit",
+        guestCount:      "👥 Personen",
+        phone:           "📞 Telefon",
+        email:           "📧 E-Mail",
+        specialRequests: "📝 Notizen",
+      };
+
+      const collectedKeys = (Object.keys(FIELD_LABELS) as Array<keyof typeof FIELD_LABELS>).filter(
+        (key) => mergedVariables[key] !== undefined && mergedVariables[key] !== null && mergedVariables[key] !== ""
+      );
+
+      if (collectedKeys.length === 0) {
+        await sendInstagramMessage({
+          recipientId: senderId,
+          text: "Es wurden noch keine Angaben gesammelt, die du ändern könntest.",
+          quickReplies: [],
+          accessToken,
+        });
+      } else {
+        // Show current values in the message body, not in button labels
+        const summaryLines = collectedKeys.map(
+          (key) => `${FIELD_LABELS[key]}: ${formatVariableForCorrection(key, mergedVariables[key])}`
+        );
+        const amendText =
+          `Deine bisherigen Angaben:\n\n${summaryLines.join("\n")}\n\nWas möchtest du ändern? ` +
+          `Tippe 'nochmal' um die letzte Frage zu wiederholen.`;
+
+        // Buttons are short field-name labels (≤ 11 chars each) — no label length issues
+        const correctionReplies = collectedKeys.map((key) => ({
+          label: FIELD_LABELS[key],
+          payload: `__CORRECT_${key}__`,
+        }));
+
+        await sendInstagramMessage({
+          recipientId: senderId,
+          text: amendText,
+          quickReplies: correctionReplies.slice(0, 12), // Instagram allows max 13 Quick Replies
+          accessToken,
+        });
+      }
+
+      await reqLogger.info("webhook", "Correction menu shown to user", {
+        metadata: { fields: collectedKeys.map((key) => `__CORRECT_${key}__`) },
+      });
+
+      await markMessageProcessed();
+      return;
+    }
+  }
+
   // Determine response
   let flowResponse = null;
   let matchedFlowId: string | null = conversation.current_flow_id;
@@ -1337,6 +1537,88 @@ async function processMessagingEvent(
             startNodeId: homeStartNodeId,
           },
         });
+      }
+    }
+  }
+
+  // === CORRECT_FIELD QUICK REPLY HANDLER ===
+  // Handles __CORRECT_<field>__ payloads generated by the "ändern" correction menu.
+  // Finds the node responsible for collecting the requested field, clears the stored
+  // variable, and re-executes that node — effectively sending the user back to that question.
+  // This sets flowResponse + matchedNodeId so the normal send+state-persist path handles the rest.
+  if (
+    !flowResponse &&
+    quickReplyPayload?.startsWith("__CORRECT_") &&
+    quickReplyPayload.endsWith("__") &&
+    isInActiveFlow &&
+    conversation.current_flow_id
+  ) {
+    // Extract field name from payload, e.g. "__CORRECT_date__" → "date"
+    const fieldToCorrect = quickReplyPayload.slice("__CORRECT_".length, -2);
+
+    // Reuse the already-loaded flow (from collects-check block) or fetch it now
+    let correctionFlowData: { nodes: any; edges: any; metadata: any } | null = currentActiveFlow;
+    if (!correctionFlowData) {
+      const { data: fetchedFlow } = await supabase
+        .from("flows")
+        .select("nodes, edges, metadata")
+        .eq("id", conversation.current_flow_id)
+        .single();
+      correctionFlowData = fetchedFlow ?? null;
+    }
+
+    if (correctionFlowData && Array.isArray(correctionFlowData.nodes)) {
+      const correctionNode = findCollectionNodeForField(correctionFlowData.nodes as any[], fieldToCorrect);
+
+      if (correctionNode) {
+        // Clear the variable being corrected
+        const correctedVars = { ...mergedVariables };
+        delete correctedVars[fieldToCorrect];
+        mergedVariables = correctedVars;
+
+        // Re-execute the node that collects this field (asks the question again)
+        const correctionResponse = executeFlowNode(
+          correctionNode.id,
+          correctionFlowData.nodes as any[],
+          correctionFlowData.edges as any[],
+          conversation.current_flow_id,
+          mergedVariables
+        );
+
+        if (correctionResponse) {
+          flowResponse = correctionResponse;
+          matchedFlowId = conversation.current_flow_id;
+          matchedNodeId = correctionNode.id;
+          matchedFlowMetadata = (correctionFlowData.metadata as FlowMetadata) ?? null;
+          matchedFlowNodes = (correctionFlowData.nodes as any[]) ?? null;
+
+          // Persist the cleared variable now; current_node_id is updated later by the normal send path
+          const correctionMetadata: ConversationMetadata = { ...existingMetadata, variables: mergedVariables };
+          const corrMetaUpdated = await updateConversationState(
+            { metadata: correctionMetadata },
+            "Failed to update metadata on field correction"
+          );
+          if (!corrMetaUpdated) {
+            await reqLogger.warn("webhook", "Field correction metadata update skipped due to version conflict");
+          }
+
+          await reqLogger.info("webhook", "Field correction: re-asking for field", {
+            metadata: { field: fieldToCorrect, correctionNodeId: correctionNode.id },
+          });
+        }
+      } else {
+        // No node found for this field — send a graceful fallback
+        await reqLogger.warn("webhook", "No collection node found for field correction", {
+          metadata: { field: fieldToCorrect, flowId: conversation.current_flow_id },
+        });
+        flowResponse = {
+          text: "Dieses Feld konnte ich leider nicht finden. Tippe 'nochmal' um die letzte Frage zu wiederholen.",
+          quickReplies: [],
+          nextNodeId: null,
+          isEndOfFlow: false,
+        };
+        matchedFlowId = conversation.current_flow_id;
+        matchedNodeId = null;
       }
     }
   }
@@ -1391,12 +1673,8 @@ async function processMessagingEvent(
 
   // If no quick reply match but user is in an active flow, try free text continuation
   if (!flowResponse && messageText && conversation.current_flow_id && conversation.current_node_id) {
-    // Load the current flow
-    const { data: currentFlow } = await supabase
-      .from("flows")
-      .select("nodes, edges, metadata")
-      .eq("id", conversation.current_flow_id)
-      .single();
+    // Reuse the flow already loaded during the collects-slot check above — no extra DB query.
+    const currentFlow = currentActiveFlow;
 
     if (currentFlow) {
       const currentNode = Array.isArray(currentFlow.nodes)
@@ -1463,6 +1741,15 @@ async function processMessagingEvent(
 
   const resolveExistingReservation = async () => {
     const reservationContactId = contactId ?? conversation.contact_id ?? null;
+
+    // Only consider reservations from yesterday onwards as "active".
+    // Without this filter, a reservation from months ago that was never marked
+    // "completed" would permanently block the guest from making a new booking.
+    // -1 day buffer covers UTC/CET timezone edge cases (German accounts are UTC+1/+2).
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 1);
+    const cutoffDateStr = cutoff.toISOString().split("T")[0]; // YYYY-MM-DD
+
     const buildReservationQuery = () =>
       supabase
         .from("reservations")
@@ -1471,6 +1758,7 @@ async function processMessagingEvent(
         )
         .eq("account_id", accountId)
         .in("status", ["pending", "confirmed"])
+        .gte("reservation_date", cutoffDateStr)
         .order("created_at", { ascending: false })
         .limit(1);
 
@@ -1512,8 +1800,16 @@ async function processMessagingEvent(
     return legacyReservation ?? null;
   };
 
-  // If still no response, try to match a new flow
-  if (!flowResponse && messageText) {
+  // If still no response, try to match a new flow.
+  // Special reservation payloads (NEUE_RESERVIERUNG, CANCEL/KEEP/FORCE) must be handled
+  // even when messageText is empty — some Meta client versions omit message.text on QR clicks.
+  const hasSpecialReservationPayload =
+    quickReplyPayload === "NEUE_RESERVIERUNG" ||
+    quickReplyPayload === "FORCE_NEW_RESERVATION" ||
+    quickReplyPayload === "CANCEL_EXISTING_RESERVATION" ||
+    quickReplyPayload === "KEEP_EXISTING_RESERVATION";
+
+  if (!flowResponse && (messageText || hasSpecialReservationPayload)) {
     // Handle special payloads for existing reservation management
     if (quickReplyPayload === "CANCEL_EXISTING_RESERVATION") {
       // User wants to cancel their existing reservation
@@ -1734,7 +2030,8 @@ async function processMessagingEvent(
       }
     }
 
-    const matchedFlowCandidate = forcedBookingFlow ?? await findMatchingFlow(accountId, messageText);
+    const matchedFlowCandidate = forcedBookingFlow ??
+      (messageText ? await findMatchingFlow(accountId, messageText) : null);
     const canStartNewFlow =
       !conversation.current_flow_id ||
       !conversation.current_node_id ||
@@ -1826,7 +2123,10 @@ async function processMessagingEvent(
     if (isTimeAskNode) {
       try {
         const availableSlots = await getAvailableSlotsForDate(accountId, mergedVariables.date);
-        if (availableSlots.length > 0 && flowResponse.quickReplies.length > 0) {
+        // null = no Google Calendar connected → skip injection, leave flow text unchanged
+        if (availableSlots === null) {
+          // intentional no-op: operator hasn't connected Google Calendar
+        } else if (availableSlots.length > 0 && flowResponse.quickReplies.length > 0) {
           // Find the payload used by standard time buttons (pointing to the next step)
           const nextPayload = flowResponse.quickReplies.find(
             (qr) => !qr.label.toLowerCase().includes("andere"),
@@ -2231,6 +2531,24 @@ async function processMessagingEvent(
         }
 
         if (shouldCreateReservation && canCreateReservation(reservationVariables, outputConfig.requiredFields)) {
+          // Guard: userId must be non-null — reservations.user_id is NOT NULL in the DB schema.
+          // If we reach here with userId = null, the insert would crash. Instead, surface a
+          // guest-facing error and return early so the confirmation message is not sent.
+          if (!userId) {
+            await reqLogger.error("webhook", "Cannot create reservation: userId is null after all fallbacks", {
+              metadata: { accountId, flowId: matchedFlowId },
+            });
+            const technicalErrorMsg =
+              "Es gab ein technisches Problem. Bitte versuche es erneut oder kontaktiere uns direkt.";
+            await sendInstagramMessage({
+              recipientId: senderId,
+              text: technicalErrorMsg,
+              quickReplies: [],
+              accessToken,
+            });
+            return;
+          }
+
           const reservationResult = await createReservationFromVariables(
             userId,
             accountId,
@@ -2265,6 +2583,13 @@ async function processMessagingEvent(
                 variables: reservationVariables,
               },
             });
+
+            // Notify account owner — fire-and-forget, never blocks the response
+            void sendReservationNotification(
+              accountId,
+              reservationVariables,
+              reservationResult.reservationId
+            );
 
             if (reservationResult.warning === "calendar_error") {
               const calendarWarningMessage =
@@ -2587,7 +2912,22 @@ async function processMessagingEvent(
   }
   } catch (error) {
     if (error instanceof ConversationStateConflictError) {
+      // Conflict errors get retried — don't notify the guest yet
       allowMarkProcessed = false;
+    } else {
+      // Best-effort: notify the guest using the already-loaded accessToken.
+      // This works even if the original error was a DB failure, because
+      // accessToken was decrypted from memory before the main processing block.
+      try {
+        await sendInstagramMessage({
+          recipientId: senderId,
+          text: "Es tut mir leid, es gab einen technischen Fehler. Bitte versuche es in einem Moment erneut.",
+          quickReplies: [],
+          accessToken,
+        });
+      } catch {
+        // Silently ignore — the original error is already logged by the outer handler
+      }
     }
     throw error;
   } finally {

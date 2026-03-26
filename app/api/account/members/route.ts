@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireAccountMember } from "../../../../lib/apiAuth";
 import { createSupabaseServerClient } from "../../../../lib/supabaseServerClient";
 import { createRequestLogger } from "../../../../lib/logger";
+import { checkRateLimit, rateLimitHeaders, RATE_LIMITS } from "../../../../lib/rateLimit";
+import { sendEmail } from "../../../../lib/email/resend";
 
 const ROLE_VALUES = ["owner", "admin", "member", "viewer"] as const;
 type AccountRole = (typeof ROLE_VALUES)[number];
@@ -83,6 +85,239 @@ export async function GET(request: Request) {
     }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+}
+
+export async function POST(request: Request) {
+  try {
+    const { user, accountId, role, supabase } = await requireAccountMember(request);
+    const supabaseAdmin = createSupabaseServerClient();
+    const reqLogger = createRequestLogger("api", user.id, accountId);
+
+    if (role !== "owner" && role !== "admin") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
+
+    const rateLimit = await checkRateLimit(`invite:${accountId}`, RATE_LIMITS.strict);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
+    }
+
+    const body = (await request.json()) as { email?: string; role?: string };
+    const inviteEmail = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const inviteRole = body?.role;
+
+    if (!inviteEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) {
+      return NextResponse.json({ error: "Ungültige E-Mail-Adresse." }, { status: 400 });
+    }
+    if (!isAccountRole(inviteRole) || inviteRole === "owner") {
+      return NextResponse.json({ error: "Ungültige Rolle. Erlaubt: admin, member, viewer." }, { status: 400 });
+    }
+
+    const { data: account } = await supabase
+      .from("accounts")
+      .select("name")
+      .eq("id", accountId)
+      .single();
+    const accountName = (account as { name?: string } | null)?.name ?? "Wesponde";
+
+    // Check if user already exists in auth.users
+    const { data: existingAuthUsers } = await supabaseAdmin
+      .schema("auth")
+      .from("users")
+      .select("id, email")
+      .eq("email", inviteEmail)
+      .limit(1);
+
+    const existingAuthUser = (existingAuthUsers as Array<{ id: string; email: string }> | null)?.[0] ?? null;
+
+    if (existingAuthUser) {
+      // Check if already a member of this account
+      const { data: existingMember } = await supabaseAdmin
+        .from("account_members")
+        .select("id")
+        .eq("account_id", accountId)
+        .eq("user_id", existingAuthUser.id)
+        .maybeSingle();
+
+      if (existingMember) {
+        return NextResponse.json(
+          { error: "Diese Person ist bereits Mitglied dieses Accounts." },
+          { status: 400 }
+        );
+      }
+
+      const { error: insertError } = await supabaseAdmin
+        .from("account_members")
+        .insert({ account_id: accountId, user_id: existingAuthUser.id, role: inviteRole });
+
+      if (insertError) {
+        await reqLogger.error("api", `Failed to add account member: ${insertError.message}`);
+        return NextResponse.json({ error: "Mitglied konnte nicht hinzugefügt werden." }, { status: 500 });
+      }
+
+      const inviterName = (user as any).user_metadata?.full_name ?? user.email ?? "Ein Administrator";
+      void sendEmail({
+        to: [inviteEmail],
+        subject: `Du wurdest zu ${accountName} auf Wesponde hinzugefügt`,
+        html: buildInviteEmail({ type: "added", inviterName, accountName, role: inviteRole }),
+      });
+
+      await reqLogger.info("api", "Account member added directly", {
+        metadata: { accountId, targetEmail: inviteEmail, role: inviteRole },
+      });
+      return NextResponse.json({ message: "Mitglied hinzugefügt.", added: true }, { status: 201 });
+    }
+
+    // User doesn't exist yet — send Supabase invite
+    const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(inviteEmail, {
+      data: {
+        invited_account_id: accountId,
+        invited_role: inviteRole,
+        invited_account_name: accountName,
+      },
+    });
+
+    if (inviteError) {
+      await reqLogger.error("api", `Failed to send invite: ${inviteError.message}`);
+      return NextResponse.json(
+        { error: "Einladung konnte nicht gesendet werden. Bitte versuche es erneut." },
+        { status: 500 }
+      );
+    }
+
+    await reqLogger.info("api", "Account member invited (new user)", {
+      metadata: { accountId, targetEmail: inviteEmail, role: inviteRole },
+    });
+    return NextResponse.json({ message: "Einladung gesendet.", invited: true }, { status: 201 });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { user, accountId, role, supabase } = await requireAccountMember(request);
+    const supabaseAdmin = createSupabaseServerClient();
+    const reqLogger = createRequestLogger("api", user.id, accountId);
+
+    if (role !== "owner" && role !== "admin") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
+
+    const body = (await request.json()) as { userId?: string };
+    const targetUserId = body?.userId;
+
+    if (!targetUserId) {
+      return NextResponse.json({ error: "userId fehlt." }, { status: 400 });
+    }
+
+    // Can't remove yourself
+    if (targetUserId === user.id) {
+      return NextResponse.json({ error: "Du kannst dich nicht selbst entfernen." }, { status: 400 });
+    }
+
+    const { data: targetMember } = await supabaseAdmin
+      .from("account_members")
+      .select("user_id, role")
+      .eq("account_id", accountId)
+      .eq("user_id", targetUserId)
+      .single();
+
+    if (!targetMember) {
+      return NextResponse.json({ error: "Mitglied nicht gefunden." }, { status: 404 });
+    }
+
+    // Only owner can remove other owners
+    if (targetMember.role === "owner" && role !== "owner") {
+      return NextResponse.json({ error: "Nur Owner können Owner entfernen." }, { status: 403 });
+    }
+
+    // Ensure at least one owner remains
+    if (targetMember.role === "owner") {
+      const { count: ownerCount } = await supabaseAdmin
+        .from("account_members")
+        .select("user_id", { count: "exact", head: true })
+        .eq("account_id", accountId)
+        .eq("role", "owner");
+
+      if ((ownerCount ?? 0) <= 1) {
+        return NextResponse.json(
+          { error: "Mindestens ein Owner muss bestehen bleiben." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const { error: deleteError } = await supabaseAdmin
+      .from("account_members")
+      .delete()
+      .eq("account_id", accountId)
+      .eq("user_id", targetUserId);
+
+    if (deleteError) {
+      await reqLogger.error("api", `Failed to remove account member: ${deleteError.message}`);
+      return NextResponse.json({ error: "Mitglied konnte nicht entfernt werden." }, { status: 500 });
+    }
+
+    await reqLogger.info("api", "Account member removed", {
+      metadata: { accountId, targetUserId },
+    });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+}
+
+function buildInviteEmail({
+  type,
+  inviterName,
+  accountName,
+  role,
+}: {
+  type: "added" | "invited";
+  inviterName: string;
+  accountName: string;
+  role: string;
+}): string {
+  const roleLabel: Record<string, string> = {
+    admin: "Admin",
+    member: "Mitarbeiter",
+    viewer: "Viewer",
+  };
+  const roleText = roleLabel[role] ?? role;
+  const appUrl = process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL ?? "https://wesponde.com";
+
+  if (type === "added") {
+    return `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#171923">
+        <h2 style="color:#2450b2">Du bist jetzt Teil von ${accountName}</h2>
+        <p>${inviterName} hat dich als <strong>${roleText}</strong> zu <strong>${accountName}</strong> auf Wesponde hinzugefügt.</p>
+        <p>Du kannst dich jetzt einloggen und den Account verwalten.</p>
+        <a href="${appUrl}/app" style="display:inline-block;background:#121624;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;margin-top:16px">
+          Zu Wesponde
+        </a>
+        <p style="margin-top:32px;color:#67718a;font-size:12px">Wesponde · DM-Automatisierung für deinen Betrieb</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#171923">
+      <h2 style="color:#2450b2">Einladung zu ${accountName}</h2>
+      <p>Du wurdest eingeladen, <strong>${accountName}</strong> auf Wesponde als <strong>${roleText}</strong> zu verwalten.</p>
+      <p>Erstelle deinen Account und du hast sofort Zugriff.</p>
+      <p style="margin-top:32px;color:#67718a;font-size:12px">Wesponde · DM-Automatisierung für deinen Betrieb</p>
+    </div>
+  `;
 }
 
 export async function PATCH(request: Request) {

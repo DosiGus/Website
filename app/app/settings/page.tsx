@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock, Building2, ChevronDown, Bot } from "lucide-react";
+import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock, Building2, ChevronDown, Bot, UserPlus, Trash2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../lib/supabaseBrowserClient";
 import { getDefaultCalendarSettings, type CalendarSettings } from "../../../lib/google/settings";
 import { VERTICAL_OPTIONS, type VerticalKey, getBookingLabels } from "../../../lib/verticals";
@@ -21,10 +21,16 @@ export default function SettingsPage() {
   const [teamError, setTeamError] = useState<string | null>(null);
   const [teamNotice, setTeamNotice] = useState<string | null>(null);
   const [teamSavingId, setTeamSavingId] = useState<string | null>(null);
+  const [teamRemovingId, setTeamRemovingId] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
   const [canManageTeam, setCanManageTeam] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "member" | "viewer">("member");
+  const [inviting, setInviting] = useState(false);
+  const [inviteNotice, setInviteNotice] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [calendarLoading, setCalendarLoading] = useState(true);
   const [calendarSaving, setCalendarSaving] = useState(false);
   const [calendarNotice, setCalendarNotice] = useState<string | null>(null);
@@ -214,6 +220,79 @@ export default function SettingsPage() {
       setTeamError("Rolle konnte nicht aktualisiert werden.");
     } finally {
       setTeamSavingId(null);
+    }
+  };
+
+  const inviteMember = async () => {
+    if (!canManageTeam || !inviteEmail.trim()) return;
+    setInviting(true);
+    setInviteError(null);
+    setInviteNotice(null);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setInviteError("Bitte erneut anmelden.");
+      setInviting(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/account/members", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setInviteError(payload?.error ?? "Einladung fehlgeschlagen.");
+        return;
+      }
+      setInviteNotice(payload.added ? "Mitglied hinzugefügt." : "Einladung gesendet.");
+      setInviteEmail("");
+      if (payload.added) loadTeam();
+    } catch {
+      setInviteError("Einladung fehlgeschlagen.");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const removeMember = async (memberId: string) => {
+    if (!canManageTeam) return;
+    setTeamRemovingId(memberId);
+    setTeamError(null);
+    setTeamNotice(null);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setTeamError("Bitte erneut anmelden.");
+      setTeamRemovingId(null);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/account/members", {
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ userId: memberId }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setTeamError(payload?.error ?? "Entfernen fehlgeschlagen.");
+        return;
+      }
+      setTeamMembers((prev) => prev.filter((item) => item.userId !== memberId));
+      setTeamNotice("Mitglied entfernt.");
+    } catch {
+      setTeamError("Mitglied konnte nicht entfernt werden.");
+    } finally {
+      setTeamRemovingId(null);
     }
   };
 
@@ -896,7 +975,7 @@ export default function SettingsPage() {
                             </div>
                             {secondary && <div className="text-xs text-zinc-500">{secondary}</div>}
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             {canManageTeam ? (
                               <select
                                 value={member.role}
@@ -912,6 +991,16 @@ export default function SettingsPage() {
                               <span className="rounded-lg bg-white/10 px-3 py-1 text-xs font-medium text-zinc-300">
                                 {ROLE_LABELS[member.role]}
                               </span>
+                            )}
+                            {canManageTeam && !isCurrentUser && (currentUserRole === "owner" || member.role !== "owner") && (
+                              <button
+                                onClick={() => removeMember(member.userId)}
+                                disabled={teamRemovingId === member.userId}
+                                title="Mitglied entfernen"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-500 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-400 disabled:opacity-40"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
                             )}
                           </div>
                         </div>
@@ -929,6 +1018,51 @@ export default function SettingsPage() {
                 )}
                 {!teamLoading && !teamError && canManageTeam && ownerCount <= 1 && (
                   <p className="text-xs text-zinc-500">Mindestens ein Owner muss bestehen bleiben.</p>
+                )}
+
+                {/* Invite form — only for owner/admin */}
+                {!teamLoading && canManageTeam && (
+                  <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+                    <p className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Teammitglied einladen
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="email"
+                        placeholder="E-Mail-Adresse"
+                        value={inviteEmail}
+                        onChange={(e) => { setInviteEmail(e.target.value); setInviteError(null); setInviteNotice(null); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") inviteMember(); }}
+                        disabled={inviting}
+                        className="flex-1 rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/30 disabled:opacity-60"
+                      />
+                      <select
+                        value={inviteRole}
+                        onChange={(e) => setInviteRole(e.target.value as "admin" | "member" | "viewer")}
+                        disabled={inviting}
+                        className="app-select disabled:opacity-60"
+                      >
+                        <option value="admin">Admin</option>
+                        <option value="member">Mitarbeiter</option>
+                        <option value="viewer">Viewer</option>
+                      </select>
+                      <button
+                        onClick={inviteMember}
+                        disabled={inviting || !inviteEmail.trim()}
+                        className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        {inviting ? "Wird gesendet…" : "Einladen"}
+                      </button>
+                    </div>
+                    {inviteError && (
+                      <p className="text-xs text-rose-400">{inviteError}</p>
+                    )}
+                    {inviteNotice && (
+                      <p className="text-xs text-emerald-400">{inviteNotice}</p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

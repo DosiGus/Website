@@ -396,9 +396,9 @@ create table if not exists public.conversations (
   account_id uuid not null references public.accounts(id) on delete cascade,
   integration_id uuid not null references public.integrations(id) on delete cascade,
   contact_id uuid references public.contacts(id) on delete set null,
-  instagram_sender_id text not null,
+  instagram_sender_id text,          -- nullable (war NOT NULL bis 2026-03-26); bleibt für Instagram befüllt
   channel text default 'instagram_dm',
-  channel_sender_id text,
+  channel_sender_id text,            -- primärer channel-agnostischer Lookup-Key (immer befüllt)
   current_flow_id uuid references public.flows(id) on delete set null,
   current_node_id text,
   status text not null default 'active' check (status in ('active', 'closed', 'paused')),
@@ -416,8 +416,10 @@ create index if not exists conversations_integration_id_idx on public.conversati
 create index if not exists conversations_instagram_sender_id_idx on public.conversations(instagram_sender_id);
 create index if not exists conversations_contact_id_idx on public.conversations(contact_id);
 create index if not exists conversations_channel_idx on public.conversations(channel);
-create unique index if not exists conversations_integration_sender_idx
-  on public.conversations(integration_id, instagram_sender_id);
+-- Channel-agnostischer Unique-Index (ersetzt conversations_integration_sender_idx ab 2026-03-26)
+create unique index if not exists conversations_integration_channel_sender_idx
+  on public.conversations(integration_id, channel, channel_sender_id)
+  where channel_sender_id is not null;
 create index if not exists conversations_metadata_idx
   on public.conversations using gin(metadata);
 
@@ -503,12 +505,24 @@ create table if not exists public.message_failures (
   attempts integer,
   flow_id uuid references public.flows(id) on delete set null,
   node_id text,
+  -- Retry tracking (added 2026-03-26)
+  retry_count integer not null default 0,
+  next_retry_at timestamptz,   -- null = eligible immediately; set to future time for backoff
+  resolved_at timestamptz,     -- set when a retry succeeds; null = still pending
   created_at timestamptz default now()
 );
+
+-- Migration for existing databases: run once in Supabase SQL editor
+-- alter table public.message_failures add column if not exists retry_count integer not null default 0;
+-- alter table public.message_failures add column if not exists next_retry_at timestamptz;
+-- alter table public.message_failures add column if not exists resolved_at timestamptz;
 
 create index if not exists message_failures_integration_id_idx on public.message_failures(integration_id);
 create index if not exists message_failures_conversation_id_idx on public.message_failures(conversation_id);
 create index if not exists message_failures_created_at_idx on public.message_failures(created_at desc);
+-- Partial index for the retry cron query — only unresolved retryable failures
+create index if not exists message_failures_retry_idx on public.message_failures(next_retry_at, retry_count)
+  where retryable = true and resolved_at is null;
 
 alter table public.message_failures enable row level security;
 

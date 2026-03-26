@@ -8,7 +8,8 @@ import useAccountVertical from "../../lib/useAccountVertical";
 
 interface Conversation {
   id: string;
-  instagram_sender_id: string;
+  instagram_sender_id: string | null;  // nullable seit 2026-03-26
+  channel_sender_id: string | null;    // primärer channel-agnostischer Key
   status: string;
   current_flow_id: string | null;
   current_node_id: string | null;

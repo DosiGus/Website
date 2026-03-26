@@ -148,15 +148,17 @@ function nodeIsConfirmation(nodeId, nodeLabel, nodeVariant): boolean {
 
 ---
 
-#### 8. Keine Benachrichtigung für Account-Owner bei neuer Reservierung
+#### ~~8. Keine Benachrichtigung für Account-Owner bei neuer Reservierung~~ ✅ ERLEDIGT 2026-03-25
 
-**Datei:** `lib/webhook/reservationCreator.ts` / kein Email-Service dafür vorhanden
+**Umgesetzt:**
+- Neue Datei `lib/email/reservationNotification.ts` mit `sendReservationNotification(accountId, variables, reservationId)`.
+- Lädt Owner-Email: `account_members` WHERE `role = "owner"` → `supabase.auth.admin.getUserById()`.
+- Schickt HTML-Email via Resend mit: Gast-Name, Datum, Uhrzeit, Personenanzahl, Telefon/Email/Notizen (optional), Dashboard-Link-Button.
+- Fire-and-forget: `void sendReservationNotification(...)` — blockiert den Webhook-Response nie. Alle Fehler werden geloggt, nie geworfen.
+- Aufruf in `app/api/webhooks/instagram/route.ts` direkt nach dem Success-Log, vor dem Calendar-Warning-Check.
+- Auch wenn Resend nicht konfiguriert ist (kein API-Key): stiller Fallback via `sendEmail()` — kein Crash.
 
-**Problem:** Das Kernversprechen ist passive Automatisierung. Eine Reservierung wird erstellt während der Betreiber nicht am Computer ist. Aber es gibt **keine Email**, **kein Push**, **kein Dashboard-Badge** wenn eine neue Reservierung eintrifft. Der Betreiber muss aktiv das Dashboard öffnen.
-
-Konsequenz: Betreiber merkten beim Pilottest nicht, dass Reservierungen ankamen → sie glaubten der Bot funktioniere nicht → Churn.
-
-**Fix:** Nach erfolgreichem `createReservationFromVariables()` → Email über Resend an den Account-Owner senden. Template: Gast-Name, Datum, Uhrzeit, Personenanzahl, Link zum Dashboard. Resend ist bereits im Stack (für Token-Expiry-Alerts).
+**Dateien:** `lib/email/reservationNotification.ts` (neu), `app/api/webhooks/instagram/route.ts`
 
 ---
 
@@ -164,128 +166,228 @@ Konsequenz: Betreiber merkten beim Pilottest nicht, dass Reservierungen ankamen 
 
 ---
 
-#### 9. Cross-Flow Trigger-Konflikte: keine Warnung, kein UI, kein Schutz
+#### ~~9. Cross-Flow Trigger-Konflikte: keine Warnung, kein UI, kein Schutz~~ ✅ ERLEDIGT 2026-03-25
 
-**Datei:** `lib/flowLint.ts` / `lib/webhook/flowMatcher.ts`
+**Umgesetzt:**
 
-**Problem:** Ein Betreiber hat Flow A ("Reservierung") mit Trigger `"reservieren"` (CONTAINS) und Flow B ("FAQ") mit Trigger `"reservieren"` (CONTAINS). Beim Webhook-Eingang: beide matchen mit gleichem Score. `matches.sort((a, b) => b.score - a.score)` → die Reihenfolge nach dem Sort bei Gleichstand ist **nicht deterministisch** (abhängig von DB-Fetch-Reihenfolge).
+**Deterministischer Tiebreaker (`lib/webhook/flowMatcher.ts`):**
+- `findMatchingFlow` selektiert jetzt `updated_at` aus der DB.
+- Sort: Primary = höchster Score, Tiebreaker = `updated_at` (neuerer Flow gewinnt via `localeCompare`). Kein zufälliges Verhalten mehr bei Score-Gleichstand.
 
-`flowLint.ts` prüft nur einen Flow isoliert — keine cross-Flow Prüfung. Im Flow Builder sieht der Betreiber keinerlei Warnung.
+**Cross-Flow Konflikt-Erkennung:**
+- Neue Funktion `findCrossFlowConflicts(accountId, currentFlowId, triggers)` in `lib/webhook/flowMatcher.ts`.
+- Lädt alle anderen aktiven Flows des Accounts, vergleicht Keywords normalisiert (lowercase+trim), gibt `CrossFlowConflict[]` zurück.
+- Dedupliziert: ein Eintrag pro Keyword+Flow-Kombination.
 
-**Fix (Backend):** Im `findMatchingFlow`: bei Score-Gleichstand nach `updated_at` (neuerer Flow gewinnt) als deterministischen Tiebreaker sortieren. Im `lintFlow` (oder als separater API-Endpoint): alle aktiven Flows des Accounts laden und Keyword-Überschneidungen melden.
+**API-Integration (`app/api/flows/[id]/route.ts`):**
+- PUT-Handler führt nach erfolgreichem Lint-Gate einen Conflict-Check durch.
+- Nicht-blockend: Flow wird trotzdem aktiviert. Konflikte landen als `conflict_warnings` in der Response.
+- Response-Shape: `{ success: true, updated_at, conflict_warnings?: CrossFlowConflict[] }`.
 
-**Fix (API):** Bei Flow-Aktivierung (`status: "Aktiv"`) alle anderen aktiven Flows des Accounts laden und prüfen ob Keyword-Konflikte existieren → als `warning` in der Response zurückgeben (kein Blocker, aber sichtbar).
+**FlowBuilder UI (`components/app/FlowBuilderClient.tsx`):**
+- Neuer State `conflictWarnings` — wird nach jedem Save aus der Response befüllt (oder geleert wenn keine Konflikte).
+- Dismissibles Warning-Panel unterhalb des Cockpits wenn `conflictWarnings.length > 0 && status === "Aktiv"`.
+- Zeigt jedes konfliktierendes Keyword + Name des anderen Flows. Operator kann direkt sehen wo der Konflikt liegt und ihn beheben.
+- Autoclearing: wenn der Operator das Keyword entfernt und der nächste Autosave läuft, verschwindet das Panel automatisch.
 
----
-
-#### 10. Extra DB-Query für `collects`-Feld in jedem Freitext-Message-Processing
-
-**Datei:** `app/api/webhooks/instagram/route.ts` (Zeile ~973)
-
-```typescript
-const { data: flowForCollects } = await supabase
-  .from("flows")
-  .select("nodes")
-  .eq("id", conversation.current_flow_id)
-  .single();
-```
-
-**Problem:** Für jede eingehende Nachricht wenn eine aktive Konversation besteht: 1 extra DB-Roundtrip um die Nodes des aktuellen Flows zu laden (nur um `node.data.collects` zu lesen). Der Flow wird kurz danach für die Freitext-Verarbeitung nochmals geladen (Zeile ~1224). Das ist **2 redundante DB-Queries für denselben Flow** pro Nachricht.
-
-**Fix:** Die beiden Flow-Loads zusammenführen. Den Flow einmal laden, dann für beide Zwecke (collects + freeTextResult) nutzen.
+**Dateien:** `lib/webhook/flowMatcher.ts`, `app/api/flows/[id]/route.ts`, `components/app/FlowBuilderClient.tsx`
 
 ---
 
-#### 11. `reservations.user_id NOT NULL` kann bei neuen Accounts scheitern
+#### ~~10. Extra DB-Query für `collects`-Feld in jedem Freitext-Message-Processing~~ ✅ ERLEDIGT 2026-03-25
 
-**Datei:** `app/api/webhooks/instagram/route.ts` (Zeile ~600)
-
-**Problem:** `integration.user_id` kann null sein (nach Multi-Tenant-Migration). Der Fallback lädt den Account-Owner aus `account_members`. Wenn der Owner-Query fehlschlägt oder kein Owner existiert → `userId = null` → die Reservierungs-Insert schlägt mit NOT NULL constraint fehl (Fehler wird nur geloggt, User bekommt ggf. keine Bestätigung oder eine falsche Fehlermeldung).
-
-**Fix:** Wenn `userId` null ist nach Fallback → Error loggen + dem Gast mitteilen: *"Es gab ein technisches Problem. Bitte versuche es erneut oder kontaktiere uns direkt."* Statt einfach fortzufahren und auf DB-Ebene zu crashen.
-
----
-
-#### 12. Veraltete Reservierung blockiert neuen Flow (Zeitfenster zu weit)
-
-**Datei:** `app/api/webhooks/instagram/route.ts` (Zeile ~1295)
-
-```typescript
-.in("status", ["pending", "confirmed"])
-// kein Datum-Filter
-```
-
-**Problem:** Die Abfrage für "hat der Gast eine aktive Reservierung?" sucht nach Status `pending` oder `confirmed` — ohne Datum-Einschränkung. Eine Reservierung von vor 6 Monaten die nie auf "completed" gesetzt wurde (z.B. Betreiber vergessen), blockiert den Gast daran eine neue Reservierung zu machen. Er bekommt immer: *"Du hast bereits eine aktive Reservierung"*.
-
-**Fix:** Datum-Filter hinzufügen: nur Reservierungen in der Zukunft (ab heute) oder maximal X Tage zurück als "aktiv" betrachten. Z.B. `reservation_date >= today - 1 day`.
-
----
-
-#### 13. Kein Mechanismus für Korrekturen/Neustart im laufenden Flow
-
-**Datei:** Fehlt komplett
-
-**Problem:** Ein Gast hat im Datum-Node versehentlich "Montag" eingegeben, meint aber Dienstag. Es gibt keine Möglichkeit zurückzugehen oder einen Wert zu korrigieren. Der einzige Weg: Flow komplett abbrechen (aber Abbruch fehlt auch, siehe TODO #2) und von vorne starten.
-
-**Fix:** Keyword "ändern" oder "korrigieren" → zeigt die bisher gesammelten Variablen an mit Option, einzelne zu korrigieren. Oder Keyword "nochmal" → löscht die letzte Variable und wiederholt die letzte Frage.
-
----
-
-#### 14. Slot-Injection überschreibt Flow-Text hart — kein Fallback bei Kalender-Fehler
-
-**Datei:** `app/api/webhooks/instagram/route.ts` (Zeile ~1657)
-
-```typescript
-flowResponse = {
-  ...flowResponse,
-  text: `⏰ Für ${formattedDate} sind folgende Zeiten frei:\n\n...`,
-  quickReplies: slotReplies,
-};
-```
-
-**Problem:** Wenn der Betreiber keinen Google Calendar verbunden hat und `getAvailableSlotsForDate()` keinen Fehler wirft aber leere Slots zurückgibt → wird der Original-Flow-Text durch eine generische Warnung ersetzt: *"Für dieses Datum sind momentan keine freien Zeiten im Kalender verfügbar."* Das ist verwirrend wenn der Betreiber gar keinen Kalender hat — der Gast denkt alles ist ausgebucht.
-
-**Fix:** Prüfen ob der Account überhaupt einen Google Calendar verbunden hat. Wenn nicht → keine Slot-Injection, Flow-Text unverändert lassen.
-
----
-
-#### 15. Verarbeitungsfehler im Webhook werden nicht zum Gast kommuniziert
+**Umgesetzt:**
+- `let currentActiveFlow` vor dem collects-Block deklariert (außerhalb beider `if`-Blöcke).
+- Erster Query: `select("nodes")` → `select("nodes, edges, metadata")` — deckt jetzt beide Anwendungsfälle ab.
+- Zweiter Query (free-text block): komplett entfernt, ersetzt durch `const currentFlow = currentActiveFlow`.
+- Ergebnis: **1 DB-Query statt 2** für jede Nachricht in einer aktiven Konversation. Kein Logik-Change.
+- Bedingungs-Analyse: collects läuft immer wenn `messageText + current_flow_id + current_node_id` → free-text hat dieselben Bedingungen + `!flowResponse` → free-text ist ein echter Subset. Wenn free-text läuft, hat collects immer schon geladen.
+- Bekannter Trade-off: Bei DB-Fehler im collects-Query → `currentActiveFlow = null` → free-text überspringt ebenfalls. Vorher: free-text hatte eigenen Query (unabhängiger Retry). Akzeptiert: wenn Supabase in einem Request einmal versagt, ist ein zweiter Versuch Millisekunden später unwahrscheinlich erfolgreich. Praktischer Impact: minimal.
 
 **Datei:** `app/api/webhooks/instagram/route.ts`
 
-**Problem:** Wenn während des Flow-Processings ein unerwarteter Fehler auftritt (z.B. DB-Fehler, Calendar-API-Down), wird der Fehler geloggt aber der Gast bekommt keine Rückmeldung. Aus Gast-Sicht: Bot schweigt auf seine Nachricht.
+---
 
-**Fix:** Im `handleProcessingError` (der nicht-Conflict-Branch) → versuchen eine generische Fehlermeldung an den Gast zu senden: *"Es tut mir leid, es gab einen technischen Fehler. Bitte versuche es in einem Moment erneut."*
+#### ~~11. `reservations.user_id NOT NULL` kann bei neuen Accounts scheitern~~ ✅ ERLEDIGT 2026-03-25
+
+**Umgesetzt (2-Schichten-Guard):**
+
+**Schicht 1 — Frühzeitiges Warning (non-blocking):**
+- Nach dem Fallback-Block: wenn `userId` nach `integration.user_id` UND Owner-Fallback immer noch null → `reqLogger.warn()`.
+- Non-fatal: Bot läuft weiter für Nicht-Reservierungs-Flows (FAQ, Info etc.).
+
+**Schicht 2 — Guard direkt vor DB-Insert (blocking für Reservierungen):**
+- Direkt in `if (shouldCreateReservation && canCreateReservation(...))` VOR `createReservationFromVariables()`.
+- Wenn `!userId`: `reqLogger.error()` → `sendInstagramMessage()` mit *"Es gab ein technisches Problem. Bitte versuche es erneut oder kontaktiere uns direkt."* → `return`.
+- Verhindert den DB-Crash (NOT NULL constraint) und gibt dem Gast eine klare Fehlermeldung statt Schweigen.
+- Die Confirmation-Nachricht des Flows wird nicht gesendet (kein false-positive "Reservierung bestätigt").
+
+**Datei:** `app/api/webhooks/instagram/route.ts`
 
 ---
 
-#### 16. Kein Schutz gegen Aktivierung von mehr als X Flows gleichzeitig
+#### ~~12. Veraltete Reservierung blockiert neuen Flow (Zeitfenster zu weit)~~ ✅ ERLEDIGT 2026-03-25
 
-**Datei:** `app/api/flows/[id]/route.ts`
+**Umgesetzt:**
+- In `resolveExistingReservation()`: `cutoffDateStr = heute - 1 Tag` (YYYY-MM-DD) berechnet.
+- `.gte("reservation_date", cutoffDateStr)` zur `buildReservationQuery()` hinzugefügt.
+- Gilt für alle 3 Aufrufe von `buildReservationQuery()` gleichzeitig (contact_id-Pfad, Legacy-Pfad, Instagram-Sender-Pfad) — eine Änderung, alle Pfade abgedeckt.
+- `-1 Tag` Puffer: deckt UTC/CET Timezone-Edge-Cases ab (deutsche Accounts = UTC+1/+2).
+- Reservierungen ab gestern/heute/Zukunft → weiterhin geblockt ✅
+- Reservierungen von vor 2+ Tagen → nicht mehr geblockt ✅
 
-**Problem:** Es gibt keine Begrenzung wie viele Flows gleichzeitig aktiv sein können. Im Free-Tier-Plan sollte z.B. max. 1 aktiver Flow erlaubt sein, im Premium max. 5. Aktuell kann ein Free-Tier-Nutzer unbegrenzt Flows aktivieren. Das hat Konsequenzen für Performance (jede Nachricht lädt alle aktiven Flows und prüft alle Trigger).
-
-**Fix:** Bei Aktivierung (`status: "Aktiv"`) → aktive Flows des Accounts zählen → Plan-Limit prüfen → wenn überschritten: 403 mit klarer Fehlermeldung.
-
----
-
-#### 17. `NEUE_RESERVIERUNG` Quick Reply startet keinen Flow wenn `messageText` leer ist
-
-**Datei:** `app/api/webhooks/instagram/route.ts` (Zeile ~1457)
-
-**Problem:** Bei `forceNewReservation = true` wird `messageText = "reservieren"` gesetzt. Aber kurz davor: `if (!flowResponse && messageText)` — der messageText ist zu dem Zeitpunkt noch der originale Payload-String (kein echter Text). Wenn das Quick-Reply-Payload `"NEUE_RESERVIERUNG"` ist und `event.message.text` leer war → `messageText = ""` → die `if (!flowResponse && messageText)` Bedingung ist false → der neue Flow startet nicht.
-
-**Fix:** Nach dem `forceNewReservation`-Block sicherstellen dass `messageText` gesetzt ist, bevor in den Flow-Matching-Zweig eingegangen wird. Die Reihenfolge der Bedingungen prüfen.
+**Datei:** `app/api/webhooks/instagram/route.ts`
 
 ---
 
-#### 18. Kein Retry-Mechanismus für fehlgeschlagene Instagram-Nachrichten
+#### ~~13. Kein Mechanismus für Korrekturen/Neustart im laufenden Flow~~ ✅ ERLEDIGT 2026-03-25
 
-**Datei:** `lib/meta/messageFailures.ts` / `app/api/webhooks/instagram/route.ts`
+**Umgesetzt (3-Schichten-Architektur):**
 
-**Problem:** `recordMessageFailure()` speichert fehlgeschlagene Nachrichten in der DB (`retryable: true/false`). Aber es gibt keinen Cron-Job oder QStash-Job der diese Failures aufgreift und retried. Die Tabelle füllt sich, aber nichts passiert damit.
+**Schicht 1 — Neue Helper-Funktionen (module-level, `route.ts`):**
+- `findCollectionNodeForField(nodes, field)`: findet den Flow-Node der ein bestimmtes Feld sammelt.
+  - Primary: `node.data.collects === field` (Sentinel `__custom_empty__` wird ignoriert).
+  - Fallback: Legacy node.id Pattern-Matching (für alte Templates ohne `collects`-Feld).
+- `formatVariableForCorrection(key, value)`: formatiert Variablen kurz genug für Quick Reply Labels.
+  - Datum: `"2026-03-15"` → `"15.03.2026"` (via `formatDisplayDate`).
+  - Andere Felder: max. 14 Zeichen, dann `"…"`.
 
-**Fix:** Cron-Job der alle X Minuten `retryable = true` Failures prüft, die älter als Y Sekunden sind (um sofortige Doppel-Sends zu vermeiden) und versucht sie zu resenden. Max. 3 Retry-Attempts.
+**Schicht 2 — Correction Handler** (nach `currentActiveFlow`-Laden, vor Response-Bestimmung):
+
+*"nochmal"* → Re-ask Current Question:
+- Ermittelt `collects`-Key des `current_node_id` (Primary: `node.data.collects`, Fallback: node.id Pattern).
+- Löscht die zugehörige Variable aus `mergedVariables`.
+- Führt `executeFlowNode(current_node_id, ...)` erneut aus → selbe Frage wird neu gestellt.
+- `current_node_id` bleibt unverändert — der Flow-State wird nicht vorangeschaltet.
+- Speichert geklärte Variable via `updateConversationState({ metadata })` → return early.
+
+*"ändern" / "korrigieren" / "falsch"* → Variable Summary:
+- Iteriert über `FIELD_LABELS` (name, date, time, guestCount, phone, email, specialRequests).
+- Erstellt Quick Reply Button für jede gesammelte Variable: Label = `"📅 Datum: 15.03.2026"`, Payload = `__CORRECT_date__`.
+- Sendet "Was möchtest du ändern?" mit max. 12 Buttons.
+- Wenn noch keine Variablen gesammelt: freundliche Meldung.
+
+**Schicht 3 — `__CORRECT_<field>__` Quick Reply Handler** (nach `__HAUPTMENU__`, vor normalem QR Handler):
+- Extrahiert `field` aus Payload (z.B. `"__CORRECT_date__"` → `"date"`).
+- Lädt Flow (bevorzugt `currentActiveFlow` um Extra-DB-Query zu vermeiden).
+- Ruft `findCollectionNodeForField(nodes, field)` auf.
+- Löscht `mergedVariables[field]`.
+- Führt `executeFlowNode(correctionNode.id, ...)` aus → setzt `flowResponse` + `matchedNodeId`.
+- Persistiert geklärte Variable via `updateConversationState` (vor dem normalen Send-Path).
+- `current_node_id` wird via normalen Send-Path auf `correctionNode.id` gesetzt.
+- Graceful Fallback: wenn Node nicht gefunden → "Dieses Feld konnte ich leider nicht finden. Tippe 'nochmal'…"
+
+**UX-Flow Beispiel:**
+1. Gast ist bei "Wie viele Personen?" und tippt "nochmal" → selbe Frage wird erneut gestellt, guestCount gecleart.
+2. Gast tippt "ändern" → Bot zeigt "Was möchtest du ändern?" mit Buttons für Name, Datum, Uhrzeit.
+3. Gast klickt "📅 Datum: 15.03." → Bot löscht Datum und stellt die Datums-Frage erneut.
+4. Gast antwortet mit neuem Datum → Flow geht weiter als wäre nichts gewesen.
+
+**Datei:** `app/api/webhooks/instagram/route.ts`
+
+---
+
+#### ~~14. Slot-Injection überschreibt Flow-Text hart — kein Fallback bei Kalender-Fehler~~ ✅ ERLEDIGT 2026-03-25
+
+**Umgesetzt:**
+- Root cause: `getGoogleAccessToken()` wirft `"Google Kalender ist nicht verbunden."` → wird in `getAvailableSlotsForDate()` gefangen → gibt `[]` zurück → Webhook sieht `[]` und schreibt irreführende "keine freien Zeiten"-Warnung.
+- Fix in `lib/google/availability.ts`: `getAvailableSlotsForDate` gibt jetzt `string[] | null` zurück. `null` = kein Kalender verbunden (explizites Signal), `[]` = Kalender verbunden aber Datum ausgebucht, `[...]` = freie Slots vorhanden.
+- Fix im Webhook: `if (availableSlots === null)` → no-op (Flow-Text bleibt unverändert). Nur der `[]`-Zweig zeigt die Warnung.
+- Nur ein Aufrufer (`app/api/webhooks/instagram/route.ts`) → Return-Type-Änderung ist safe.
+
+**Dateien:** `lib/google/availability.ts`, `app/api/webhooks/instagram/route.ts`
+
+---
+
+#### ~~15. Verarbeitungsfehler im Webhook werden nicht zum Gast kommuniziert~~ ✅ ERLEDIGT 2026-03-25
+
+**Umgesetzt (robuste Enterprise-Lösung):**
+- Benachrichtigung direkt im `catch`-Block von `processMessagingEvent()` — nutzt bereits im Speicher vorhandene Variablen (`accessToken`, `senderId`), kein DB-Query nötig.
+- `ConversationStateConflictError` → kein Notify (wird via QStash retried, kein false-positive für den Gast).
+- Alle anderen Fehler → best-effort `sendInstagramMessage()` mit Text: *"Es tut mir leid, es gab einen technischen Fehler. Bitte versuche es in einem Moment erneut."*
+- Vollständig fire-and-forget: `sendInstagramMessage`-Aufruf in eigenem `try/catch` — wenn auch das fehlschlägt, wird es ignoriert.
+- `handleProcessingError()` ist reines Logging + Conflict-Retry (kein DB-Re-Query für Access-Token) — robuster bei DB-Ausfällen, da keine zweite Supabase-Abfrage im Fehlerfall.
+
+**Warum diese Lösung besser als `handleProcessingError`-Ansatz:**
+- Der ursprüngliche Plan war: in `handleProcessingError` die Integration per DB-Query laden und den Token entschlüsseln. Problem: wenn der ursprüngliche Fehler ein DB-Ausfall war, schlägt auch dieser zweite DB-Query fehl. Die jetzige Lösung hat keinen DB-Kontakt im Fehlerfall — `accessToken` und `senderId` sind bereits im Scope von `processMessagingEvent`.
+
+**Datei:** `app/api/webhooks/instagram/route.ts`
+
+---
+
+#### ~~16. Kein Schutz gegen Aktivierung von mehr als X Flows gleichzeitig~~ ✅ ERLEDIGT 2026-03-26
+
+**Umgesetzt (Backend + Client):**
+
+**Backend (`app/api/flows/[id]/route.ts`):**
+- Konstanten: `ACTIVE_FLOW_LIMITS = { free: 1, premium: 5, enterprise: 50 }`, `DEFAULT_PLAN = "free"`.
+- Plan aus `accounts.settings.plan` (lowercase, Fallback: `"free"`).
+- Check VOR dem Lint-Gate — Business-relevantes Feedback zuerst, keine unnötige Lint-Arbeit.
+- Zwei Queries **parallel** via `Promise.all`: `accounts.settings` + `flows` COUNT mit `.neq("id", params.id)` (kein Doppelzählen bei Re-Aktivierung).
+- Bei Limit überschritten → **403** mit `code: "PLAN_LIMIT_EXCEEDED"`, `limit`, `plan` + German error string (Singular/Plural korrekt).
+
+**Client (`components/app/FlowBuilderClient.tsx`):**
+- Neuer `else if (response.status === 403)` Branch in `handleSave`.
+- Bei `code === "PLAN_LIMIT_EXCEEDED"`: `setStatus("Entwurf")` — lokale Aktivierung zurückgesetzt.
+- 6s Anzeigedauer (statt 4s) — längere Fehlermeldung braucht mehr Lesezeit.
+
+**Dateien:** `app/api/flows/[id]/route.ts`, `components/app/FlowBuilderClient.tsx`
+
+---
+
+#### ~~17. `NEUE_RESERVIERUNG` Quick Reply startet keinen Flow wenn `messageText` leer ist~~ ✅ ERLEDIGT 2026-03-26
+
+**Problem:** Die äußere Bedingung `if (!flowResponse && messageText)` gated den gesamten Block wo NEUE_RESERVIERUNG, CANCEL_EXISTING_RESERVATION und KEEP_EXISTING_RESERVATION verarbeitet werden. Manche Meta-Client-Versionen schicken bei Quick Reply Klicks kein `message.text` → `messageText = ""` → der Block wurde übersprungen → Flow startet nicht.
+
+**Fix (`app/api/webhooks/instagram/route.ts`):**
+- Neues `hasSpecialReservationPayload` Boolean vor dem Block definiert (deckt NEUE_RESERVIERUNG, FORCE_NEW_RESERVATION, CANCEL_EXISTING_RESERVATION, KEEP_EXISTING_RESERVATION ab).
+- Bedingung: `if (!flowResponse && (messageText || hasSpecialReservationPayload))` — Special Payloads bypassen die `messageText`-Prüfung.
+- Zusätzlicher Guard: `findMatchingFlow(accountId, messageText)` wird nur aufgerufen wenn `messageText` nicht leer ist — verhindert unnötige DB-Query bei leerem Text.
+
+---
+
+#### ~~18. Kein Retry-Mechanismus für fehlgeschlagene Instagram-Nachrichten~~ ✅ ERLEDIGT 2026-03-26
+
+**Umgesetzt (vollständige Retry-Pipeline):**
+
+**DB-Schema (`supabase/schema.sql`):**
+- 3 neue Spalten in `message_failures`: `retry_count integer not null default 0`, `next_retry_at timestamptz`, `resolved_at timestamptz`.
+- Partial Index: `CREATE INDEX message_failures_retry_idx ON message_failures(next_retry_at, retry_count) WHERE retryable = true AND resolved_at IS NULL` — macht Cron-Query O(failures) statt O(table).
+- Migration-SQL im Schema kommentiert (Anweisung: in Supabase SQL Editor ausführen).
+
+**`lib/meta/messageFailures.ts`:**
+- `recordMessageFailure()` setzt bei Insert: `retry_count: 0`, `resolved_at: null`.
+- Bei `retryable: true`: `next_retry_at = jetzt + 2 min` — verhindert sofortigen Doppel-Send (Race mit dem Original-Versuch).
+- Bei `retryable: false`: `next_retry_at = null` — Cron ignoriert diesen Eintrag.
+
+**`app/api/cron/message-retry/route.ts` (neu):**
+- `MAX_RETRIES = 3`, exponentieller Backoff: `[2min, 10min, 60min]` (Index = retry_count vor dem nächsten Versuch).
+- `BATCH_SIZE = 50` — verhindert Timeout auf Vercels 10s Function Limit.
+- Bearer-Token-Auth via `CRON_SECRET` (gleicher Mechanismus wie `meta/refresh`-Cron).
+- Fetch: `retryable = true`, `resolved_at IS NULL`, `retry_count < 3`, `next_retry_at <= now` — nutzt Partial Index.
+- Token-Caching: `Map<integrationId, token | null>` — verhindert N+1 Queries pro Batch (eine Supabase-Query pro Integration, nicht pro Failure).
+- Image-Type Skipped: URLs können abgelaufen sein — sicher überspringen.
+- Bei Erfolg: `resolved_at = now` gesetzt.
+- Bei Fehler (< MAX_RETRIES): `retry_count++`, `next_retry_at = now + backoff[newCount]`.
+- Bei Erschöpfung (= MAX_RETRIES): `retry_count = MAX_RETRIES`, `resolved_at` bleibt `null` — für Ops-Sichtbarkeit in Logs.
+- Response: `{ processed, retried, failed, skipped }`.
+
+**`vercel.json`:**
+- `{ "path": "/api/cron/message-retry", "schedule": "*/5 * * * *" }` — läuft alle 5 Minuten.
+
+**Offen (manuell):** Migration SQL muss einmalig in Supabase SQL Editor ausgeführt werden:
+```sql
+ALTER TABLE message_failures
+  ADD COLUMN IF NOT EXISTS retry_count integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS next_retry_at timestamptz,
+  ADD COLUMN IF NOT EXISTS resolved_at timestamptz;
+
+CREATE INDEX IF NOT EXISTS message_failures_retry_idx
+  ON public.message_failures(next_retry_at, retry_count)
+  WHERE retryable = true AND resolved_at IS NULL;
+```
+
+**Dateien:** `supabase/schema.sql`, `lib/meta/messageFailures.ts`, `app/api/cron/message-retry/route.ts` (neu), `vercel.json`
 
 ---
 
@@ -293,39 +395,157 @@ flowResponse = {
 
 ---
 
-#### 19. Team-Invite-UI fehlt (DB-Struktur vorhanden)
+#### ~~19. Team-Invite-UI fehlt (DB-Struktur vorhanden)~~ ✅ ERLEDIGT 2026-03-26
 
-`account_members` Tabelle + Rollen-System (owner/admin/member/viewer) sind vollständig implementiert. Es fehlt nur die UI zum Einladen von Teammitgliedern und ein Backend-Endpoint der eine Invite-Email verschickt.
+**Umgesetzt (Backend + Auth + UI):**
+
+**Backend (`app/api/account/members/route.ts`):**
+- `POST /api/account/members`: Einladen per E-Mail + Rolle (admin/member/viewer, nicht owner).
+  - Rate-limit: strict (20/min).
+  - Bestehender Auth-User → direkt zu `account_members` hinzufügen (Service-Role-Insert) + Benachrichtigungs-Email via Resend.
+  - Neuer User → `supabaseAdmin.auth.admin.inviteUserByEmail(email, { data: { invited_account_id, invited_role } })` → Supabase sendet Invite-Email.
+- `DELETE /api/account/members`: Mitglied entfernen (Owner/Admin only). Guards: kein Selbst-Entfernen, kein Owner-Entfernen ohne Owner-Rolle, letzter Owner bleibt bestehen.
+- `buildInviteEmail()`: HTML-Email (Deutsch) für beide Szenarien (hinzugefügt vs. eingeladen).
+
+**Auth Callback (`app/auth/callback/route.ts`):**
+- Nach `exchangeCodeForSession`: prüft `session.user.user_metadata.invited_account_id` + `invited_role`.
+- Wenn vorhanden: fügt User via Service-Role in `account_members` ein (idempotent: kein Doppel-Insert).
+- Fehler werden geloggt, blockieren den Auth-Flow nicht.
+- Damit funktioniert der vollständige Invite-Flow: Invite-Email → Signup → automatisch Mitglied des einladenden Accounts.
+
+**Settings UI (`app/app/settings/page.tsx`):**
+- Invite-Formular (E-Mail + Rollen-Select + Einladen-Button) im Team-Akkordeon — nur für Owner/Admin sichtbar.
+- Remove-Button (🗑️) auf jedem Member-Item — respektiert Berechtigungsregeln (kein Selbst-Entfernen, kein Owner-Entfernen durch Admins).
+- States: `inviteEmail`, `inviteRole`, `inviting`, `inviteNotice`, `inviteError`, `teamRemovingId`.
+- Enter-Key in E-Mail-Input triggert Einladung.
+
+**Bekannte Einschränkung:** Eingeladene neue User bekommen vom Signup-Trigger automatisch auch einen eigenen Account erstellt. Ohne Account-Switcher-UI haben sie in der aktuellen App-Version nur Zugriff auf ihren eigenen Account. Die Mitgliedschaft im einladenden Account ist korrekt gespeichert und wird bei einer zukünftigen Account-Switcher-Implementierung sofort funktionieren.
+
+**Dateien:** `app/api/account/members/route.ts`, `app/auth/callback/route.ts`, `app/app/settings/page.tsx`
 
 ---
 
-#### 20. Flow Export/Import UI fehlt (API vorhanden)
+#### ~~20. Flow Export/Import UI fehlt (API vorhanden)~~ ✅ ERLEDIGT 2026-03-26
 
-`app/api/flows/[id]/export/route.ts` existiert. UI im Flow Builder fehlt. Würde es erlauben Flows zwischen Accounts zu teilen oder als Backup zu exportieren.
+**Umgesetzt (`components/app/FlowBuilderClient.tsx`):**
+- **Export:** Button "⬇ Export" in der Toolbar → ruft `GET /api/flows/[id]/export` auf → Download als `flow-[id].json`. `exporting` State verhindert Doppelklick. `handleExport` war bereits implementiert, fehlte nur der UI-Button.
+- **Import:** Button "⬆ Import" in der Toolbar → öffnet Hidden-File-Input (`.json`-Filter) → liest Datei, validiert Mindeststruktur (`nodes`/`edges` müssen Arrays sein) → `POST /api/flows` mit importierten Daten + Name als `"[Originalname] (Import)"` → Redirect auf neuen Flow.
+- `importInputRef` (useRef) + Hidden `<input type="file" accept=".json">` — `e.target.value = ""` nach Import-Start damit dieselbe Datei erneut gewählt werden kann.
+- Fehlerbehandlung: ungültige JSON → `setErrorMessage("Ungültige Flow-Datei...")`, API-Fehler → Fehlermeldung aus Response.
+- F5-Eintrag ebenfalls als erledigt markiert.
 
----
-
-#### 21. Output-Config nicht editierbar im Builder
-
-`FlowMetadata.output_config` (welche Felder sind Pflichtfelder für die Reservierungserstellung) wird auto-gesetzt und ist im UI nicht konfigurierbar. Ein Fitness-Studio das kein `guestCount` braucht kann das nicht abschalten. Ein Beauty-Salon der statt `date` nur `time` braucht kann das nicht einstellen.
-
----
-
-#### 22. Supabase SMTP nicht konfiguriert
-
-Auth-Emails (Password-Reset, Email-Bestätigung) gehen über den Standard-Supabase-Sender. Diese landen häufig im Spam. Eigener Resend-Sender sollte in den Supabase-Einstellungen konfiguriert werden.
+**Dateien:** `components/app/FlowBuilderClient.tsx`
 
 ---
 
-#### 23. `conversations.instagram_sender_id NOT NULL` blockiert Channel-Erweiterung
+#### ~~21. Output-Config nicht editierbar im Builder~~ ✅ ERLEDIGT 2026-03-26
 
-Für zukünftige WhatsApp/Facebook-Integration muss `instagram_sender_id` nullable sein oder durch `channel_sender_id` ersetzt werden. Aktuell ist der NOT NULL Constraint ein strukturelles Hindernis.
+**Umgesetzt (`components/app/FlowBuilderClient.tsx`):**
+
+**Bereits vorhanden (vor dieser Session):**
+- "Flow-Einstellungen"-Button im Header öffnet Settings-Panel via `showFlowSettings` State.
+- Panel zeigt: Flow-Typ-Toggle (Buchungs-Flow / Freier Flow) + Pflichtfelder-Checkboxen (name, date, time, guestCount, phone, email).
+- Cockpit-Leiste zeigt gesammelte Felder (grün = Pflichtfeld, grau = optional).
+
+**Diese Session — Fixes für korrekte `defaults`-Verwaltung:**
+
+**`handleToggleFlowType`:**
+- Wenn auf "reservation" für non-Gastro-Verticals (fitness, beauty) gewechselt wird: `guestCount` nicht in requiredFields → `defaults: { guestCount: 1 }` wird jetzt explizit gesetzt.
+- Vorher: defaults fehlte → Webhook-Fallback hat guestCount=1 zur Laufzeit hinzugefügt. Jetzt ist die gespeicherte Config semantisch vollständig.
+
+**`handleToggleRequiredField`:**
+- `guestCount` aus requiredFields entfernt → `defaults.guestCount = 1` wird gesetzt.
+- `guestCount` wieder hinzugefügt → `defaults.guestCount` wird gelöscht.
+
+**UI-Hint:**
+- `guestCount`-Button zeigt `· Standard: 1` wenn nicht als Pflichtfeld markiert → Betreiber sieht sofort den verwendeten Standardwert.
+
+**Use Cases jetzt vollständig unterstützt:**
+- Fitness-Studio: `guestCount` abwählen → `defaults.guestCount = 1` gesetzt → Buchung mit 1 Person.
+- Beauty-Salon: `date` abwählen → Flow benötigt kein Datum → Buchung ohne Datum.
+- Gastro: `guestCount` bleibt Pflichtfeld → Gast muss Personenzahl angeben.
+
+**Datei:** `components/app/FlowBuilderClient.tsx`
 
 ---
 
-#### 24. Token-Auto-Refresh Status unklar
+#### ~~22. Supabase SMTP nicht konfiguriert~~ ✅ ERLEDIGT 2026-03-26
 
-`app/api/cron/refresh-tokens/route.ts` (QStash Cron) existiert. Unklar ob er in Produktion aktiv läuft und ob er korrekt mit dem Token-Encryption-System zusammenarbeitet. Benötigt Monitoring-Check.
+**Umgesetzt — Supabase Auth Hook statt SMTP-Konfiguration:**
+
+**Ansatz:** Statt Supabase's SMTP-Einstellungen zu konfigurieren (die Supabase-Templates verwenden würden), wurde ein **Supabase Auth Hook** implementiert. Supabase ruft die eigene Next.js API auf, die alle Auth-Emails über Resend sendet — mit vollständigem Wesponde-Branding und maximaler Kontrolle über Templates.
+
+**Neue Datei `app/api/auth/email-hook/route.ts`:**
+- `POST /api/auth/email-hook` — empfängt Supabase-Webhook bei jedem Auth-Email-Event.
+- Bearer-Auth via `AUTH_EMAIL_HOOK_SECRET` (neues Env-Var, auch in `.env.local.example` ergänzt).
+- Verarbeitet alle 6 Email-Typen: `signup`, `recovery`, `invite`, `magic_link`, `email_change_new/current`, `reauthentication`.
+- Mappt `email_action_type` → `verifyOtp` Type für `/auth/callback?token_hash=...&type=...`.
+- Ruft `sendEmail()` aus `lib/email/resend.ts` auf (bereits vorhanden).
+- Gibt immer HTTP 200 zurück — auch bei Resend-Fehler (Grund: Non-200 würde Supabase veranlassen, seinen Default-Sender als Fallback zu nutzen → Doppel-Email).
+
+**Branded HTML-Templates (Deutsch, inline CSS):**
+- Alle 5 Template-Funktionen (signup, recovery, invite, magic_link, email_change) mit Wesponde Light Theme.
+- Design: `#121624` Header, `#f6f9ff` Hintergrund, `#2450b2` Links, `#171923`/`#3d4255` Text.
+- Fallback-Link unter jedem Button (für Email-Clients die Buttons blockieren).
+- `baseLayout()` und `ctaButton()` als wiederverwendbare Hilfsfunktionen.
+
+**Manueller Setup-Schritt (Supabase Dashboard):**
+1. `Authentication → Hooks → send_email` Hook aktivieren.
+2. URL: `https://wesponde.com/api/auth/email-hook`
+3. Secret: Neues zufälliges Secret generieren → in Supabase Dashboard eintragen + als `AUTH_EMAIL_HOOK_SECRET` in Vercel-Env-Vars setzen.
+
+**Datei:** `app/api/auth/email-hook/route.ts` (neu), `.env.local.example`
+
+---
+
+#### ~~23. `conversations.instagram_sender_id NOT NULL` blockiert Channel-Erweiterung~~ ✅ ERLEDIGT 2026-03-26
+
+**Umgesetzt (Code + Migration):**
+
+**DB-Migration (`supabase/migration_conversations_channel_sender.sql`):**
+- Backfill: `UPDATE conversations SET channel_sender_id = instagram_sender_id WHERE channel_sender_id IS NULL`.
+- `ALTER TABLE conversations ALTER COLUMN instagram_sender_id DROP NOT NULL`.
+- `DROP INDEX conversations_integration_sender_idx` (alter Unique-Index auf `instagram_sender_id`).
+- `CREATE UNIQUE INDEX conversations_integration_channel_sender_idx ON (integration_id, channel, channel_sender_id) WHERE channel_sender_id IS NOT NULL`.
+
+⚠️ **Migration muss manuell im Supabase SQL-Editor ausgeführt werden** — Datei: `supabase/migration_conversations_channel_sender.sql`
+
+**Webhook (`app/api/webhooks/instagram/route.ts`):**
+- Conversation-Lookup: `.eq("instagram_sender_id", ...)` → `.eq("channel_sender_id", ...)` (2 Stellen).
+- Upsert `onConflict`: `"integration_id,instagram_sender_id"` → `"integration_id,channel,channel_sender_id"`.
+- `instagram_sender_id` wird für Instagram weiterhin gesetzt (backward compat), `channel_sender_id` ist der primäre Key.
+
+**Schema + Interface:**
+- `supabase/schema.sql`: `instagram_sender_id` als nullable mit Kommentar, neuer Index.
+- `components/app/ConversationsClient.tsx`: `instagram_sender_id: string | null`, `channel_sender_id: string | null`.
+
+**Resultat:** Instagram-DMs laufen wie bisher. WhatsApp/Facebook-Channels können `channel_sender_id` setzen ohne `instagram_sender_id` — kein NOT NULL Crash mehr.
+
+---
+
+#### ~~24. Token-Auto-Refresh Status unklar~~ ✅ ERLEDIGT 2026-03-26
+
+**Analyse:**
+- Der TODO referenzierte `app/api/cron/refresh-tokens/route.ts` — diese Datei existiert nicht. Die korrekte Datei ist `app/api/cron/meta/refresh/route.ts`.
+- Der Cron ist korrekt in `vercel.json` eingetragen: `{ "path": "/api/cron/meta/refresh", "schedule": "0 3 * * *" }` — läuft täglich um 3:00 Uhr UTC.
+- Token-Encryption-Integration war bereits korrekt: nutzt `decryptToken()`, `encryptToken()`, `isEncryptedToken()` aus `lib/security/tokenEncryption.ts`. Migriert Klartext-Tokens automatisch zu `enc:v1:`-Format wenn `TOKEN_ENCRYPTION_KEY` gesetzt ist.
+
+**Problem:** Bei einem erfolgreichen Lauf (alle Tokens refreshed, keine Fehler) wurde **nichts in die `logs`-Tabelle** geschrieben — nur Warnings/Errors. Dadurch war nicht unterscheidbar ob der Cron nie lief oder erfolgreich lief.
+
+**Fix (`app/api/cron/meta/refresh/route.ts`):**
+- `reqLogger.info()` nach dem Env-Check: "Meta token refresh cron started" — jeder Lauf hinterlässt einen Eintrag.
+- `reqLogger.info()` am Ende: "Meta token refresh cron completed" mit `{ total, refreshed, failed, skipped, alertsSent }` — vollständige Lauf-Statistik im Log.
+
+**Monitoring-Query (Supabase SQL Editor):**
+```sql
+SELECT created_at, message, metadata
+FROM logs
+WHERE message ILIKE 'Meta token refresh cron%'
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+**Datei:** `app/api/cron/meta/refresh/route.ts`
 
 ---
 
@@ -335,51 +555,118 @@ Für zukünftige WhatsApp/Facebook-Integration muss `instagram_sender_id` nullab
 
 ---
 
-#### F1. 🔴 Cross-Flow Trigger-Konflikt Warnung im Builder
+#### ~~F1. 🔴 Cross-Flow Trigger-Konflikt Warnung im Builder~~ ✅ ERLEDIGT 2026-03-26
 
-Wenn ein Betreiber einen Trigger-Keyword eingibt der bereits in einem anderen aktiven Flow verwendet wird → keine Warnung. Der Flow Builder zeigt nur intra-Flow-Lint-Warnungen. Benötigt: API-Call beim Speichern/Aktivieren um Konflikte zu melden.
+**War bereits größtenteils umgesetzt (TODO #9, 2026-03-25):**
+- `findCrossFlowConflicts(accountId, flowId, triggers)` in `lib/webhook/flowMatcher.ts` — vergleicht Keywords normalisiert gegen alle anderen aktiven Flows.
+- PUT-Handler (`app/api/flows/[id]/route.ts`): Konflikt-Check nach Aktivierung, `conflict_warnings` in Response.
+- `FlowBuilderClient.tsx`: `conflictWarnings` State + dismissibles Orange-Warning-Panel unterhalb des Cockpits. Autoclearing beim nächsten Save ohne Konflikte.
 
----
+**Diese Session — Verbleibende Lücke geschlossen:**
+Beim initialen Seitenaufruf eines bereits aktiven Flows mit bestehenden Konflikten wurden die Warnungen erst nach dem ersten Speichern angezeigt (`conflictWarnings` startet als `[]`).
 
-#### F2. 🔴 Flow-Priorität / Reihenfolge sichtbar und steuerbar machen
+**Fix (`app/api/flows/[id]/route.ts` GET-Handler):**
+- Nach dem Flow-Laden: wenn `data.status === "Aktiv"` → `findCrossFlowConflicts()` ausführen.
+- Bei Konflikten: `conflict_warnings` im GET-Response mitgeben (`{ ...data, conflict_warnings }`).
+- Kein Extra-Response wenn keine Konflikte (minimaler Overhead).
 
-Die Flow-Liste zeigt keine Information darüber, welcher Flow bei Keyword-Konflikten gewinnt. Ein "Priorität"-Indikator oder eine Drag-to-reorder Funktion würde Betreibern Kontrolle geben.
+**Fix (`components/app/FlowBuilderClient.tsx` `fetchFlow`):**
+- Nach dem Laden: wenn `data.conflict_warnings` vorhanden → `setConflictWarnings()`.
+- Warnungen sind damit sofort beim Öffnen des Builders sichtbar, ohne warten auf Save.
 
----
-
-#### F3. 🟡 `collects`-Feld Pflicht für Freitext-Nodes im Builder
-
-Aktuell kann ein Freitext-Node ohne `collects`-Feld gespeichert werden. Im Webhook wird dann kein gezieltes Variable-Matching durchgeführt. Der Builder sollte eine Warnung anzeigen: *"Dieser Schritt sammelt keine Variable — die Antwort des Gastes wird ignoriert"* wenn `inputMode = "free_text"` und `collects` leer ist.
-
----
-
-#### F4. 🟡 Output-Config Editor im Inspector
-
-Tab im InspectorSlideOver der es erlaubt `output_config.requiredFields` zu konfigurieren: welche Felder sind Pflicht für die Reservierungserstellung dieses Flows. Aktuell auto-gesetzt, nicht editierbar.
-
----
-
-#### F5. 🟡 Flow Export/Import UI
-
-Button in der Flow-Toolbar: "Exportieren" → Download als JSON. "Importieren" → Upload JSON → neuer Flow. API-Route existiert bereits.
+**Dateien:** `app/api/flows/[id]/route.ts`, `components/app/FlowBuilderClient.tsx`
 
 ---
 
-#### F6. 🟡 Aktivierungscheck gegen Server-Lint
+#### F2. ✅ ERLEDIGT 2026-03-26 — Flow-Priorität / Reihenfolge sichtbar und steuerbar machen
 
-Wenn der Betreiber den Flow von "Entwurf" auf "Aktiv" setzt, sollte der Client die Server-Response auf Lint-Warnungen prüfen und diese prominent anzeigen (nicht nur im Cockpit).
+**Implementierung:**
+- `flows.metadata.priority` (integer) als Prioritätswert — kein DB-Migration nötig (JSONB)
+- `lib/webhook/flowMatcher.ts`: Tiebreaker in `findMatchingFlow` Sort erweitert: erst `metadata.priority` (niedrig = hohe Priorität), dann `updated_at`
+- `components/app/FlowListClient.tsx`:
+  - `activeFlowsSortedByPriority` useMemo: alle aktiven Flows nach Priority sortiert
+  - `priorityRankOf(flowId)`: gibt 1-basierten Rang zurück
+  - `movePriority(flowId, direction)`: swappt Priority mit Nachbar-Flow via zwei parallele PUT `/api/flows/[id]` Calls; optimistisches Update + Rollback bei Fehler
+  - `filteredFlows` Sort: Favoriten → Priority → updated_at (statt nur Favoriten)
+  - Grid-View: `#N` Badge neben Status-Badge + ↑↓ Buttons neben Favorit-Star (nur bei ≥2 aktiven Flows)
+  - Table-View: neue "Priorität"-Spalte mit `#N` Badge + ↑↓ Buttons (nur bei ≥2 aktiven Flows)
 
 ---
 
-#### F7. 🟢 Multi-Select im Canvas (Pro-Modus)
+#### F3. ✅ ERLEDIGT 2026-03-26 — `collects`-Feld Pflicht für Freitext-Nodes im Builder
 
-Mehrere Nodes gleichzeitig markieren → Batch-Delete, Batch-Move. React Flow unterstützt das nativ, fehlt nur die Integration.
+**Implementierung:**
+- `lib/flowLint.ts`: Im `else`-Block (free_text-Zweig) der Node-Checks, nach der Weiterleitungs-Prüfung: wenn genau eine free_text-Edge vorhanden ist (gültiger Freitext-Node) aber `collects` leer oder `"__custom_empty__"` → Warning `"[Name] sammelt keine Variable"` mit Suggestion "Öffne den Schritt und wähle unter 'Speichern als' aus, welche Variable gesetzt werden soll".
+- Trifft auf alle Freitext-Nodes zu — unabhängig vom Vertical. Bereits bestehende Warnungs-Anzeige im Builder (Cockpit-Panel, Warning-Pill) zeigt den Hinweis automatisch.
 
 ---
 
-#### F8. 🟢 Team-Invite UI
+#### ~~F4. 🟡 Output-Config Editor im Inspector~~ ✅ ERLEDIGT 2026-03-26
 
-Einstellungsseite: Teammitglied per Email einladen, Rolle zuweisen, bestehende Mitglieder verwalten.
+**Umgesetzt:**
+
+Die Buchungskonfiguration wurde in den **Variablen-Tab des InspectorSlideOver** integriert — dort wo der Betreiber bereits sieht welche Felder gesammelt werden. Das ist der natürlichste Kontext: "was wird gesammelt" + "was ist Pflichtfeld" gehört zusammen.
+
+**`components/app/InspectorSlideOver.tsx`:**
+- 4 neue Props: `outputType`, `requiredFields`, `onToggleFlowType`, `onToggleRequiredField`.
+- `VariablesTab` um Abschnitt "Buchungskonfiguration" am Ende erweitert.
+- Flow-Typ-Toggle (Buchungs-Flow / Freier Flow) + Pflichtfelder-Checkboxen — identisches Design wie Header-Panel inkl. `· Standard: 1` Hint für guestCount.
+
+**`components/app/FlowBuilderClient.tsx`:**
+- 4 neue Props an `<InspectorSlideOver>` übergeben: nutzt bestehende `outputType`, `requiredFields`, `handleToggleFlowType`, `handleToggleRequiredField` — kein doppelter State.
+
+**Ergebnis:** Output-Config an 2 Stellen editierbar (beide teilen denselben State):
+1. Header-Panel "Flow-Einstellungen" (schneller Zugriff, immer sichtbar)
+2. Inspector → Tab "Variablen" (kontextuell, während man den Flow aufbaut)
+
+**Dateien:** `components/app/InspectorSlideOver.tsx`, `components/app/FlowBuilderClient.tsx`
+
+---
+
+#### ~~F5. 🟡 Flow Export/Import UI~~ ✅ ERLEDIGT 2026-03-26 (siehe #20)
+
+---
+
+#### ~~F6. 🟡 Aktivierungscheck gegen Server-Lint~~ ✅ ERLEDIGT 2026-03-26
+
+**Problem:** Der Server gibt bei Aktivierungs-Blockierung `422 LINT_FAILED` mit einem `warnings`-Array zurück. Der Client hat diesen Status-Code bisher nicht separat behandelt — er fiel in den generischen `else`-Branch und zeigte nur "Speichern fehlgeschlagen" an. Die konkreten Warnungen wurden ignoriert. Status wurde nicht auf "Entwurf" zurückgesetzt.
+
+**Umgesetzt (`components/app/FlowBuilderClient.tsx`):**
+
+**Neuer State:** `serverLintErrors: FlowLintWarning[]` (initial `[]`).
+
+**Neuer `422`-Branch in `handleSave`:**
+- `error.code === "LINT_FAILED"` → `setStatus("Entwurf")` (Aktivierung zurückgesetzt).
+- `error.warnings` → `setServerLintErrors(warnings)` (konkrete Fehlerliste).
+- `setCockpitIssuesExpanded(true)` → Cockpit-Warnungen klappen sich auf.
+- `setSaveState("error")` mit 4s Timeout.
+
+**Neues Modal "Server Lint Error Modal":**
+- Erscheint wenn `serverLintErrors.length > 0`.
+- Roter Akzent (Rose) statt Amber — visuell von Client-Warnungen unterscheidbar: das hier ist eine harte Server-Ablehnung.
+- Titel: "Flow kann nicht aktiviert werden" + Erklärung.
+- Jede Warning als eigene Kachel mit `w.message` + `w.suggestion`.
+- Ein Button: "Verstanden — Flow bearbeiten" → leert `serverLintErrors`.
+- Kein "Trotzdem aktivieren" — Server ist autoritativ.
+
+**Datei:** `components/app/FlowBuilderClient.tsx`
+
+---
+
+#### F7. ✅ ERLEDIGT 2026-03-26 — Multi-Select im Canvas (Pro-Modus)
+
+**Implementierung:**
+- Canvas-Modus war deaktiviert (toggle entfernt). Wieder aktiviert via "Liste / Canvas" Toggle-Button in der Toolbar (zwischen Import und Flow Preview).
+- `builderMode === "pro"`: rendert `FlowBuilderCanvas` (React Flow); `builderMode === "simple"`: rendert `FlowListBuilder` (bisheriges Verhalten)
+- React Flow hatte Multi-Select bereits konfiguriert (`selectionOnDrag`, `multiSelectionKeyCode="Meta"`, `selectionKeyCode="Shift"`) — fehlte nur die UI-Integration.
+- Floating Action Bar: erscheint wenn `selection.nodes.length > 1` — zeigt "N Schritte ausgewählt" + "Kopieren" Button + "Löschen" Button (roter Rand) + Hinweis "oder ⌫ Delete"
+- `onSelectionChange={handleSelectionChange}` jetzt tatsächlich an Canvas verdrahtet
+- Batch-Move funktioniert nativ über React Flow (Shift+Drag oder Box-Select → Drag)
+- Canvas-Props: `onNodeClick` → `setSelectedNodeId`, `onNodeDoubleClick` → Inspector öffnen, `onEdgeClick` → `setSelectedEdgeId`, `onInit` → `setReactFlowInstance`
+
+---
+
+#### ~~F8. 🟢 Team-Invite UI~~ ✅ ERLEDIGT 2026-03-26 (siehe #19)
 
 ---
 

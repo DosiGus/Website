@@ -71,6 +71,12 @@ type InspectorSlideOverProps = {
   lintWarnings: FlowLintWarning[];
   onFocusWarning: (warning: FlowLintWarning) => void;
 
+  // Output config (flow-level, shown in Variables tab)
+  outputType: 'reservation' | 'custom';
+  requiredFields: string[];
+  onToggleFlowType: (type: 'reservation' | 'custom') => void;
+  onToggleRequiredField: (field: string) => void;
+
   // Save state
   saveState: 'idle' | 'saving' | 'saved' | 'error';
 };
@@ -92,10 +98,18 @@ function VariablesTab({
   selectedNode,
   nodes,
   labels,
+  outputType,
+  requiredFields,
+  onToggleFlowType,
+  onToggleRequiredField,
 }: {
   selectedNode: ReactFlowNode | null;
   nodes: ReactFlowNode[];
   labels: ReturnType<typeof import('../../lib/verticals').getBookingLabels>;
+  outputType: 'reservation' | 'custom';
+  requiredFields: string[];
+  onToggleFlowType: (type: 'reservation' | 'custom') => void;
+  onToggleRequiredField: (field: string) => void;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -220,6 +234,79 @@ function VariablesTab({
           </p>
         )}
       </div>
+
+      {/* Output config — flow type + required fields */}
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Buchungskonfiguration</p>
+
+        {/* Flow type toggle */}
+        <div className="space-y-2">
+          <p className="text-xs text-zinc-500">Flow-Typ</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onToggleFlowType('reservation')}
+              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                outputType === 'reservation'
+                  ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300'
+                  : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              Buchungs-Flow
+            </button>
+            <button
+              onClick={() => onToggleFlowType('custom')}
+              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                outputType === 'custom'
+                  ? 'border-violet-500 bg-violet-500/20 text-violet-300'
+                  : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              Freier Flow
+            </button>
+          </div>
+          <p className="text-xs text-zinc-600">
+            {outputType === 'reservation'
+              ? 'Erstellt automatisch Buchungen wenn alle Pflichtfelder vorliegen.'
+              : 'Keine automatische Buchung — freie Konversation.'}
+          </p>
+        </div>
+
+        {/* Required fields — only for reservation type */}
+        {outputType === 'reservation' && (
+          <div className="space-y-2">
+            <p className="text-xs text-zinc-500">Pflichtfelder für Buchungserstellung</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'name', label: 'Name' },
+                { key: 'date', label: 'Datum' },
+                { key: 'time', label: 'Uhrzeit' },
+                { key: 'guestCount', label: labels.participantsCountLabel },
+                { key: 'phone', label: 'Telefon' },
+                { key: 'email', label: 'E-Mail' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => onToggleRequiredField(key)}
+                  className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all ${
+                    requiredFields.includes(key)
+                      ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-300'
+                      : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${requiredFields.includes(key) ? 'bg-indigo-400' : 'bg-zinc-600'}`} />
+                  {label}
+                  {key === 'guestCount' && !requiredFields.includes(key) && (
+                    <span className="text-zinc-600">· Standard: 1</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-zinc-600">
+              Blau = Pflichtfeld. Buchung wird erst erstellt wenn alle Pflichtfelder vorliegen.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -264,6 +351,10 @@ export default function InspectorSlideOver({
   onNodeSelect,
   lintWarnings,
   onFocusWarning,
+  outputType,
+  requiredFields,
+  onToggleFlowType,
+  onToggleRequiredField,
   saveState,
   hidePayloadField = false,
 }: InspectorSlideOverProps) {
@@ -620,7 +711,15 @@ export default function InspectorSlideOver({
 
           {/* Variables Tab */}
           {inspectorTab === 'variables' && (
-            <VariablesTab selectedNode={selectedNode} nodes={nodes} labels={labels} />
+            <VariablesTab
+              selectedNode={selectedNode}
+              nodes={nodes}
+              labels={labels}
+              outputType={outputType}
+              requiredFields={requiredFields}
+              onToggleFlowType={onToggleFlowType}
+              onToggleRequiredField={onToggleRequiredField}
+            />
           )}
 
           {/* Preview Tab */}

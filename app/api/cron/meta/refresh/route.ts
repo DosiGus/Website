@@ -31,6 +31,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing Meta config" }, { status: 500 });
   }
 
+  await reqLogger.info("oauth", "Meta token refresh cron started");
+
   const supabase = createSupabaseServerClient();
   const { data: integrations, error: integrationsError } = await supabase
     .from("integrations")
@@ -383,6 +385,16 @@ export async function GET(request: Request) {
       });
     }
   }
+
+  await reqLogger.info("oauth", "Meta token refresh cron completed", {
+    metadata: {
+      total: candidates.length,
+      refreshed,
+      failed,
+      skipped,
+      alertsSent: issues.length,
+    },
+  });
 
   return NextResponse.json({ refreshed, failed, skipped, total: candidates.length, issues: issues.length });
 }

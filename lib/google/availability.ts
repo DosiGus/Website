@@ -32,7 +32,7 @@ export type SlotAvailabilityResult = {
 export async function getAvailableSlotsForDate(
   accountId: string,
   date: string, // YYYY-MM-DD
-): Promise<string[]> {
+): Promise<string[] | null> {
   try {
     const supabase = createSupabaseServerClient();
     const { data: account } = await supabase
@@ -84,12 +84,16 @@ export async function getAvailableSlotsForDate(
 
     return slots;
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    // No Google Calendar connected — not an error, just not configured.
+    // Return null so the caller can skip slot injection entirely instead of
+    // showing a misleading "keine freien Zeiten" warning.
+    if (message === "Google Kalender ist nicht verbunden.") {
+      return null;
+    }
     await logger.warn("integration", "getAvailableSlotsForDate failed", {
       accountId,
-      metadata: {
-        date,
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
+      metadata: { date, error: message },
     });
     return [];
   }

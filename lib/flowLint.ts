@@ -257,6 +257,19 @@ export function lintFlow(
             action: "Verbindungen prüfen",
           }),
         );
+      } else {
+        // Exactly one free-text edge: check that the response is actually saved.
+        const collectsRaw = String((node.data as any)?.collects ?? "").trim();
+        const collectsMissing = !collectsRaw || collectsRaw === "__custom_empty__";
+        if (collectsMissing) {
+          warnings.push(
+            buildWarning(`"${nodeLabel}" sammelt keine Variable`, {
+              nodeId: node.id,
+              suggestion: "Dieser Schritt erwartet eine Freitext-Antwort, speichert sie aber nirgends. Öffne den Schritt und wähle unter 'Speichern als' aus, welche Variable gesetzt werden soll (z.B. Name, Datum).",
+              action: "Variable wählen",
+            }),
+          );
+        }
       }
     }
   });

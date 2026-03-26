@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, Search, Star, Trash2, Pencil, Check, X, AlertTriangle, CheckCircle } from "lucide-react";
+import { ChevronUp, ChevronDown, Copy, Search, Star, Trash2, Pencil, Check, X, AlertTriangle, CheckCircle } from "lucide-react";
 import type { Edge, Node } from "reactflow";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { lintFlow } from "../../lib/flowLint";
@@ -55,6 +55,7 @@ export default function FlowListClient({
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [priorityUpdating, setPriorityUpdating] = useState<string | null>(null);
   const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const lastStatusParamRef = useRef<string | null>(null);
@@ -238,8 +239,11 @@ export default function FlowListClient({
       .sort((a, b) => {
         const aFav = favorites.includes(a.id);
         const bFav = favorites.includes(b.id);
-        if (aFav === bFav) return 0;
-        return aFav ? -1 : 1;
+        if (aFav !== bFav) return aFav ? -1 : 1;
+        const aPriority = (a.metadata as any)?.priority ?? 999;
+        const bPriority = (b.metadata as any)?.priority ?? 999;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        return b.updated_at.localeCompare(a.updated_at);
       });
   }, [flowsWithWarnings, searchQuery, effectiveStatusFilter, favorites]);
 
@@ -247,6 +251,94 @@ export default function FlowListClient({
     setFavorites((prev) =>
       prev.includes(flowId) ? prev.filter((id) => id !== flowId) : [...prev, flowId],
     );
+  };
+
+  // Active flows sorted by priority — used for rank badges and up/down controls.
+  const activeFlowsSortedByPriority = useMemo(
+    () =>
+      [...flows]
+        .filter((f) => f.status === "Aktiv")
+        .sort((a, b) => {
+          const ap = (a.metadata as any)?.priority ?? 999;
+          const bp = (b.metadata as any)?.priority ?? 999;
+          return ap - bp;
+        }),
+    [flows],
+  );
+
+  const priorityRankOf = (flowId: string): number =>
+    activeFlowsSortedByPriority.findIndex((f) => f.id === flowId) + 1;
+
+  const movePriority = async (flowId: string, direction: -1 | 1) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    const rank = priorityRankOf(flowId);
+    const swapRank = rank + direction;
+    if (swapRank < 1 || swapRank > activeFlowsSortedByPriority.length) return;
+
+    const flowA = activeFlowsSortedByPriority[rank - 1];
+    const flowB = activeFlowsSortedByPriority[swapRank - 1];
+    const newPriorityA = swapRank;
+    const newPriorityB = rank;
+
+    // Optimistic update
+    setFlows((prev) =>
+      prev.map((f) => {
+        if (f.id === flowA.id)
+          return { ...f, metadata: { ...(f.metadata ?? { version: "1" }), priority: newPriorityA } };
+        if (f.id === flowB.id)
+          return { ...f, metadata: { ...(f.metadata ?? { version: "1" }), priority: newPriorityB } };
+        return f;
+      }),
+    );
+
+    setPriorityUpdating(flowId);
+    try {
+      await Promise.all([
+        fetch(`/api/flows/${flowA.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            name: flowA.name,
+            status: flowA.status,
+            nodes: flowA.nodes,
+            edges: flowA.edges,
+            triggers: flowA.triggers ?? [],
+            metadata: { ...(flowA.metadata ?? { version: "1" }), priority: newPriorityA },
+          }),
+        }),
+        fetch(`/api/flows/${flowB.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            name: flowB.name,
+            status: flowB.status,
+            nodes: flowB.nodes,
+            edges: flowB.edges,
+            triggers: flowB.triggers ?? [],
+            metadata: { ...(flowB.metadata ?? { version: "1" }), priority: newPriorityB },
+          }),
+        }),
+      ]);
+    } catch {
+      setError("Priorität konnte nicht gespeichert werden.");
+      // Reload to reset optimistic update
+      const reloadResp = await fetch("/api/flows", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (reloadResp.ok) setFlows(await reloadResp.json());
+    } finally {
+      setPriorityUpdating(null);
+    }
   };
 
   const duplicateFlow = async (flowId: string) => {
@@ -496,29 +588,58 @@ export default function FlowListClient({
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                    flow.status === "Aktiv"
-                      ? "bg-emerald-500/10 text-emerald-400"
-                      : "bg-zinc-500/10 text-zinc-400"
-                  }`}>
-                    {flow.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                      flow.status === "Aktiv"
+                        ? "bg-emerald-500/10 text-emerald-400"
+                        : "bg-zinc-500/10 text-zinc-400"
+                    }`}>
+                      {flow.status}
+                    </span>
+                    {flow.status === "Aktiv" && activeFlowsSortedByPriority.length > 1 && (
+                      <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-400">
+                        #{priorityRankOf(flow.id)}
+                      </span>
+                    )}
+                  </div>
                   <h3 className="mt-2 text-lg font-semibold text-white">{flow.name}</h3>
                   <p className="mt-1 text-sm text-zinc-500">
                     Zuletzt aktualisiert {new Date(flow.updated_at).toLocaleDateString("de-DE")}
                   </p>
                 </div>
-                <button
-                  onClick={() => toggleFavorite(flow.id)}
-                  className={`rounded-lg border p-2 transition-all ${
-                    favorites.includes(flow.id)
-                      ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                      : "border-white/10 bg-white/5 text-zinc-500 hover:border-white/20 hover:text-white"
-                  }`}
-                  title="Favorit"
-                >
-                  <Star className="h-4 w-4" fill={favorites.includes(flow.id) ? "currentColor" : "none"} />
-                </button>
+                <div className="flex flex-col items-end gap-1">
+                  <button
+                    onClick={() => toggleFavorite(flow.id)}
+                    className={`rounded-lg border p-2 transition-all ${
+                      favorites.includes(flow.id)
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                        : "border-white/10 bg-white/5 text-zinc-500 hover:border-white/20 hover:text-white"
+                    }`}
+                    title="Favorit"
+                  >
+                    <Star className="h-4 w-4" fill={favorites.includes(flow.id) ? "currentColor" : "none"} />
+                  </button>
+                  {flow.status === "Aktiv" && activeFlowsSortedByPriority.length > 1 && (
+                    <div className="flex flex-col">
+                      <button
+                        onClick={() => movePriority(flow.id, -1)}
+                        disabled={priorityRankOf(flow.id) === 1 || priorityUpdating === flow.id}
+                        className="rounded p-1 text-zinc-600 transition-colors hover:bg-white/10 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-25"
+                        title="Priorität erhöhen"
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => movePriority(flow.id, 1)}
+                        disabled={priorityRankOf(flow.id) === activeFlowsSortedByPriority.length || priorityUpdating === flow.id}
+                        className="rounded p-1 text-zinc-600 transition-colors hover:bg-white/10 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-25"
+                        title="Priorität senken"
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                 {renderWarningPill(flow.warningCount)}
@@ -573,6 +694,7 @@ export default function FlowListClient({
           <tr>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Name</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Status</th>
+            <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Priorität</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Qualität</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Aktualisiert</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Aktionen</th>
@@ -633,6 +755,33 @@ export default function FlowListClient({
                 >
                   {flow.status}
                 </span>
+              </td>
+              <td className="px-4 py-4">
+                {flow.status === "Aktiv" && activeFlowsSortedByPriority.length > 1 ? (
+                  <div className="flex items-center gap-1">
+                    <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-xs font-semibold text-indigo-400">
+                      #{priorityRankOf(flow.id)}
+                    </span>
+                    <button
+                      onClick={() => movePriority(flow.id, -1)}
+                      disabled={priorityRankOf(flow.id) === 1 || priorityUpdating === flow.id}
+                      className="rounded p-1 text-zinc-600 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-25"
+                      title="Höher"
+                    >
+                      <ChevronUp className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={() => movePriority(flow.id, 1)}
+                      disabled={priorityRankOf(flow.id) === activeFlowsSortedByPriority.length || priorityUpdating === flow.id}
+                      className="rounded p-1 text-zinc-600 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-25"
+                      title="Niedriger"
+                    >
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-zinc-600">—</span>
+                )}
               </td>
               <td className="px-6 py-4">{renderWarningPill(flow.warningCount)}</td>
               <td className="px-6 py-4 text-zinc-400">

@@ -33,6 +33,12 @@ export async function recordMessageFailure(input: FailureInsert) {
     nodeId,
   } = input;
 
+  const isRetryable = retryable ?? false;
+  // Delay first retry by 2 minutes to avoid immediate double-send (race with the original attempt)
+  const firstRetryAt = isRetryable
+    ? new Date(Date.now() + 2 * 60 * 1000).toISOString()
+    : null;
+
   const { error } = await supabase.from("message_failures").insert({
     integration_id: integrationId,
     conversation_id: conversationId,
@@ -44,10 +50,13 @@ export async function recordMessageFailure(input: FailureInsert) {
     quick_replies: quickReplies ?? null,
     error_code: errorCode ?? null,
     error_message: errorMessage,
-    retryable: retryable ?? false,
+    retryable: isRetryable,
     attempts: attempts ?? null,
     flow_id: flowId ?? null,
     node_id: nodeId ?? null,
+    retry_count: 0,
+    next_retry_at: firstRetryAt,
+    resolved_at: null,
   });
 
   if (error) {

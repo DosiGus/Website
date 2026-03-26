@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "../../../lib/supabaseServerClient";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -42,8 +43,32 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return response;
+    const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      // Handle invite acceptance: add the new user to the invited account
+      const invitedAccountId = sessionData?.user?.user_metadata?.invited_account_id;
+      const invitedRole = sessionData?.user?.user_metadata?.invited_role;
+      if (invitedAccountId && invitedRole && sessionData?.user?.id) {
+        try {
+          const supabaseAdmin = createSupabaseServerClient();
+          const { data: existing } = await supabaseAdmin
+            .from("account_members")
+            .select("id")
+            .eq("account_id", invitedAccountId)
+            .eq("user_id", sessionData.user.id)
+            .maybeSingle();
+          if (!existing) {
+            await supabaseAdmin
+              .from("account_members")
+              .insert({ account_id: invitedAccountId, user_id: sessionData.user.id, role: invitedRole });
+          }
+        } catch {
+          // Non-critical: user is still authenticated, invite membership can be added manually
+          console.error("[auth/callback] Failed to add invited user to account_members");
+        }
+      }
+      return response;
+    }
     console.error("[auth/callback] exchangeCodeForSession failed:", error.message, error.status);
   }
 
