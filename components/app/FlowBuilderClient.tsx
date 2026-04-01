@@ -621,13 +621,6 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     setLintWarnings(lintFlow(nodes, edges, triggers, metadata).warnings);
   }, [nodes, edges, triggers, metadata]);
 
-  // Open inspector when node or edge is selected — only in canvas (pro) mode
-  // In simple/list mode the inspector opens only via the explicit Inspect button
-  useEffect(() => {
-    if (builderMode === "pro" && (selectedNodeId || selectedEdgeId)) {
-      setInspectorOpen(true);
-    }
-  }, [builderMode, selectedNodeId, selectedEdgeId]);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
