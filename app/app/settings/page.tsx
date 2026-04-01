@@ -1,11 +1,72 @@
 'use client';
 
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock, Building2, ChevronDown, Bot, UserPlus, Trash2 } from "lucide-react";
+import { Settings, User, Bell, Key, Shield, Save, CheckCircle, AlertTriangle, LogOut, Users, Clock, Building2, ChevronDown, Bot, UserPlus, Trash2, type LucideIcon } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../lib/supabaseBrowserClient";
 import { getDefaultCalendarSettings, type CalendarSettings } from "../../../lib/google/settings";
 import { VERTICAL_OPTIONS, type VerticalKey, getBookingLabels } from "../../../lib/verticals";
+import Badge from "../../../components/ui/Badge";
+import Button from "../../../components/ui/Button";
+import PageHeader from "../../../components/app/PageHeader";
+
+type SectionCardProps = {
+  icon: LucideIcon;
+  iconClassName: string;
+  title: string;
+  description: string;
+  badge?: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+};
+
+function SectionCard({
+  icon: Icon,
+  iconClassName,
+  title,
+  description,
+  badge,
+  open,
+  onToggle,
+  children,
+}: SectionCardProps) {
+  return (
+    <section className="overflow-hidden rounded-[18px] border border-[#E2E8F0] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <button
+        type="button"
+        className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-[#F8FAFC]"
+        onClick={onToggle}
+      >
+        <span
+          className={[
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+            iconClassName,
+          ].join(" ")}
+        >
+          <Icon className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-[#0F172A]">
+            {title}
+          </span>
+          <span className="mt-1 block text-xs text-[#64748B]">
+            {description}
+          </span>
+        </span>
+        {badge ? <span className="shrink-0">{badge}</span> : null}
+        <ChevronDown
+          className={[
+            "h-4 w-4 shrink-0 text-[#94A3B8] transition-transform duration-200",
+            open ? "rotate-180" : "",
+          ].join(" ")}
+        />
+      </button>
+      {open ? <div className="border-t border-[#E2E8F0] px-5 py-5">{children}</div> : null}
+    </section>
+  );
+}
 
 export default function SettingsPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -87,7 +148,7 @@ export default function SettingsPage() {
     monthlyReport: false,
   });
 
-  const [openCard, setOpenCard] = useState<string | null>(null);
+  const [openCard, setOpenCard] = useState<string | null>("profil");
   const toggleCard = (key: string) => setOpenCard((prev) => (prev === key ? null : key));
 
   useEffect(() => {
@@ -489,13 +550,15 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-zinc-500/20 bg-zinc-500/10 px-3 py-1 text-xs font-medium text-zinc-400">
-            <Settings className="h-3 w-3" />
-            Einstellungen
-          </div>
-          <h1 className="mt-3 text-3xl font-semibold text-white">Wird geladen...</h1>
+      <div className="space-y-6">
+        <PageHeader badge="Einstellungen" title="Einstellungen werden geladen…" />
+        <div className="grid gap-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={index}
+              className="h-[88px] animate-pulse rounded-[18px] border border-[#E2E8F0] bg-white"
+            />
+          ))}
         </div>
       </div>
     );
@@ -517,636 +580,734 @@ export default function SettingsPage() {
   });
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <div className="inline-flex items-center gap-2 rounded-full border border-zinc-500/20 bg-zinc-500/10 px-3 py-1 text-xs font-medium text-zinc-400">
-          <Settings className="h-3 w-3" />
-          Einstellungen
+    <div className="space-y-8 app-page-enter">
+      <PageHeader
+        badge="Einstellungen"
+        title="Kontoeinstellungen"
+        description="Verwalte Profil, Teamzugriffe, Kalenderlogik und Sicherheitsoptionen in einem klaren App-Workspace."
+      />
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="app-card rounded-2xl px-5 py-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+              Profil
+            </div>
+            <div className="mt-2 text-sm font-semibold text-[#0F172A]">
+              {userName || "Noch kein Name"}
+            </div>
+            <div className="mt-1 text-xs text-[#64748B]">{userEmail}</div>
+          </div>
+          <div className="app-card rounded-2xl px-5 py-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+              Team
+            </div>
+            <div className="mt-2 text-sm font-semibold text-[#0F172A]">
+              {teamLoading ? "Laedt..." : `${teamMembers.length} Mitglieder`}
+            </div>
+            <div className="mt-1 text-xs text-[#64748B]">
+              Rolle: {currentUserRole || "Unbekannt"}
+            </div>
+          </div>
+          <div className="app-card rounded-2xl px-5 py-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+              Branche
+            </div>
+            <div className="mt-2 text-sm font-semibold text-[#0F172A]">
+              {vertical
+                ? VERTICAL_OPTIONS.find((option) => option.key === vertical)?.label ||
+                  vertical
+                : "Nicht gesetzt"}
+            </div>
+            <div className="mt-1 text-xs text-[#64748B]">
+              Fallback: {fallbackEnabled ? "aktiv" : "deaktiviert"}
+            </div>
+          </div>
         </div>
-        <h1 className="mt-3 text-3xl font-semibold text-white">
-          Kontoeinstellungen
-        </h1>
-        <p className="mt-1 text-zinc-400">
-          Verwalte dein Profil, Benachrichtigungen und Sicherheitseinstellungen.
-        </p>
-      </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="space-y-3">
+        <SectionCard
+          icon={User}
+          iconClassName="bg-[#DBEAFE] text-[#2563EB]"
+          title="Profil"
+          description="Persoenliche Informationen und Anzeigename"
+          open={openCard === "profil"}
+          onToggle={() => toggleCard("profil")}
+          badge={saved ? <Badge variant="success">Gespeichert</Badge> : undefined}
+        >
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                  Name
+                </span>
+                <input
+                  type="text"
+                  value={userName}
+                  onChange={(event) => setUserName(event.target.value)}
+                  className="app-input px-4 py-3"
+                  placeholder="Dein Name"
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                  E-Mail
+                </span>
+                <input
+                  type="email"
+                  value={userEmail}
+                  disabled
+                  className="app-input px-4 py-3"
+                />
+              </label>
+            </div>
 
-        {/* Profil */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
-          <button
-            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
-            onClick={() => toggleCard("profil")}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500">
-              <User className="h-5 w-5 text-white" />
+            <p className="text-xs text-[#64748B]">
+              Die E-Mail-Adresse wird aus deinem Konto uebernommen und kann hier
+              nicht geaendert werden.
+            </p>
+
+            {error ? (
+              <div className="flex items-center gap-2 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+                <AlertTriangle className="h-4 w-4" />
+                {error}
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={handleSaveProfile} loading={saving}>
+                <Save className="h-4 w-4" />
+                Aenderungen speichern
+              </Button>
+              {saved ? (
+                <span className="inline-flex items-center gap-2 rounded-md bg-[#ECFDF5] px-3 py-2 text-sm font-medium text-[#047857]">
+                  <CheckCircle className="h-4 w-4" />
+                  Gespeichert
+                </span>
+              ) : null}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-white text-sm">Profil</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Deine persönlichen Informationen</div>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          icon={Bell}
+          iconClassName="bg-[#FEF3C7] text-[#B45309]"
+          title="Benachrichtigungen"
+          description="Lege fest, wann die App dich aktiv informiert"
+          open={openCard === "notifications"}
+          onToggle={() => toggleCard("notifications")}
+        >
+          <div className="space-y-3">
+            {[
+              {
+                key: "newLeads",
+                label: "Neue Leads per E-Mail",
+                desc: `Erhalte eine E-Mail bei neuen ${labels.bookingPlural}.`,
+              },
+              {
+                key: "botErrors",
+                label: "Bot-Fehler und Fallbacks",
+                desc: "Benachrichtigung, wenn der Bot nicht passend antworten konnte.",
+              },
+              {
+                key: "integrationExpiry",
+                label: "Integration laeuft ab",
+                desc: "Warnung, bevor dein Instagram-Token auslaeuft.",
+              },
+              {
+                key: "monthlyReport",
+                label: "Monatlicher Performance-Report",
+                desc: "Zusammenfassung deiner Automations-Statistiken.",
+              },
+            ].map(({ key, label, desc }) => (
+              <label
+                key={key}
+                className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-4 transition-colors hover:border-[#BFDBFE] hover:bg-white"
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-[#0F172A]">
+                    {label}
+                  </span>
+                  <span className="mt-1 block text-sm text-[#64748B]">
+                    {desc}
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={notifications[key as keyof typeof notifications]}
+                  onChange={(event) =>
+                    setNotifications({
+                      ...notifications,
+                      [key]: event.target.checked,
+                    })
+                  }
+                  className="mt-1 h-4 w-4 rounded border-[#CBD5E1] text-[#2563EB] focus:ring-[#2563EB] focus:ring-offset-0"
+                />
+              </label>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          icon={Building2}
+          iconClassName="bg-[#D1FAE5] text-[#047857]"
+          title="Branche"
+          description="Steuert Default-Flows und Branchenlogik in der App"
+          open={openCard === "branche"}
+          onToggle={() => toggleCard("branche")}
+          badge={
+            vertical ? (
+              <Badge variant="success">
+                {VERTICAL_OPTIONS.find((option) => option.key === vertical)?.label ||
+                  vertical}
+              </Badge>
+            ) : undefined
+          }
+        >
+          {calendarLoading ? (
+            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#64748B]">
+              Branchen-Einstellungen werden geladen...
             </div>
-            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "profil" ? "rotate-180" : ""}`} />
-          </button>
-          {openCard === "profil" && (
-            <div className="px-5 pb-5 border-t border-white/5">
-              <div className="pt-4 space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Name</label>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {VERTICAL_OPTIONS.map((option) => {
+                  const isActive = vertical === option.key;
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      disabled={verticalSaving || !canEditVertical}
+                      onClick={() => handleVerticalChange(option.key)}
+                      className={[
+                        "rounded-[18px] border p-4 text-left transition",
+                        isActive
+                          ? "border-[#86EFAC] bg-[#F0FDF4]"
+                          : "border-[#E2E8F0] bg-white hover:border-[#BFDBFE] hover:bg-[#F8FAFC]",
+                      ].join(" ")}
+                    >
+                      <div className="text-sm font-semibold text-[#0F172A]">
+                        {option.label}
+                      </div>
+                      <div className="mt-2 text-sm text-[#64748B]">
+                        {option.description}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {option.examples.map((example) => (
+                          <span
+                            key={example}
+                            className="rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-[#64748B]"
+                          >
+                            {example}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {!canEditVertical ? (
+                <div className="rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#B45309]">
+                  Nur Owner kann die Branche aendern.
+                </div>
+              ) : null}
+
+              {verticalNotice ? (
+                <div className="rounded-lg border border-[#BBF7D0] bg-[#ECFDF5] px-4 py-3 text-sm text-[#047857]">
+                  {verticalNotice}
+                </div>
+              ) : null}
+
+              {verticalError ? (
+                <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+                  {verticalError}
+                </div>
+              ) : null}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          icon={Clock}
+          iconClassName="bg-[#E0F2FE] text-[#0369A1]"
+          title="Kalender und Verfuegbarkeit"
+          description="Zeitzone, Buchungsfenster und Oeffnungszeiten"
+          open={openCard === "kalender"}
+          onToggle={() => toggleCard("kalender")}
+        >
+          {calendarLoading ? (
+            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#64748B]">
+              Kalender-Einstellungen werden geladen...
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="grid gap-3">
+                <div className="grid gap-3 rounded-[18px] border border-[#E2E8F0] bg-[#F8FAFC] p-4 sm:grid-cols-[minmax(0,1fr)_200px] sm:items-center">
+                  <div>
+                    <div className="text-sm font-semibold text-[#0F172A]">
+                      Zeitzone
+                    </div>
+                    <div className="mt-1 text-sm text-[#64748B]">
+                      Fuer Buchungszeiten und Kalender-Events.
+                    </div>
+                  </div>
                   <input
                     type="text"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    placeholder="Dein Name"
+                    value={calendarForm.timeZone}
+                    onChange={(event) =>
+                      handleCalendarFieldChange("timeZone", event.target.value)
+                    }
+                    className="app-input px-4 py-3"
+                    placeholder="Europe/Berlin"
                   />
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">E-Mail</label>
+
+                <div className="grid gap-3 rounded-[18px] border border-[#E2E8F0] bg-[#F8FAFC] p-4 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-center">
+                  <div>
+                    <div className="text-sm font-semibold text-[#0F172A]">
+                      Buchungsfenster
+                    </div>
+                    <div className="mt-1 text-sm text-[#64748B]">
+                      Wie weit im Voraus koennen Kunden buchen?
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={90}
+                      value={calendarForm.bookingWindowDays}
+                      onChange={(event) =>
+                        handleCalendarFieldChange(
+                          "bookingWindowDays",
+                          event.target.value,
+                        )
+                      }
+                      className="app-input px-4 py-3"
+                    />
+                    <span className="text-sm text-[#64748B]">Tage</span>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 rounded-[18px] border border-[#E2E8F0] bg-[#F8FAFC] p-4 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-center">
+                  <div>
+                    <div className="text-sm font-semibold text-[#0F172A]">
+                      Termindauer
+                    </div>
+                    <div className="mt-1 text-sm text-[#64748B]">
+                      Wie lange dauert ein Termin bei dir?
+                    </div>
+                  </div>
+                  <select
+                    value={calendarForm.slotDurationMinutes}
+                    onChange={(event) =>
+                      handleCalendarFieldChange(
+                        "slotDurationMinutes",
+                        event.target.value,
+                      )
+                    }
+                    className="app-select"
+                  >
+                    {[15, 30, 45, 60, 90, 120].map((min) => (
+                      <option key={min} value={min}>
+                        {min} Min.
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                  Oeffnungszeiten
+                </div>
+                <div className="overflow-hidden rounded-[18px] border border-[#E2E8F0]">
+                  {CALENDAR_DAYS.map((day) => {
+                    const range = calendarForm.hours?.[day.key]?.[0] ?? "";
+                    const [start, end] = range.split("-");
+                    const isOpen = Boolean(range);
+                    return (
+                      <div
+                        key={day.key}
+                        className="grid gap-3 border-b border-[#E2E8F0] bg-white px-4 py-3 last:border-b-0 md:grid-cols-[120px_80px_minmax(0,1fr)] md:items-center"
+                      >
+                        <span className="text-sm font-semibold text-[#0F172A]">
+                          {day.label}
+                        </span>
+                        <label className="inline-flex items-center gap-2 text-sm text-[#475569]">
+                          <input
+                            type="checkbox"
+                            checked={isOpen}
+                            onChange={() => handleCalendarDayToggle(day.key)}
+                            className="h-4 w-4 rounded border-[#CBD5E1] text-[#10B981] focus:ring-[#10B981] focus:ring-offset-0"
+                          />
+                          Offen
+                        </label>
+
+                        {isOpen ? (
+                          <div className="grid gap-2 sm:grid-cols-[1fr_20px_1fr]">
+                            <input
+                              type="time"
+                              value={start || "07:00"}
+                              onChange={(event) =>
+                                handleCalendarDayRangeChange(
+                                  day.key,
+                                  event.target.value,
+                                  end || "21:00",
+                                )
+                              }
+                              className="app-input px-3 py-2 [color-scheme:light]"
+                            />
+                            <span className="self-center text-center text-sm text-[#94A3B8]">
+                              -
+                            </span>
+                            <input
+                              type="time"
+                              value={end || "21:00"}
+                              onChange={(event) =>
+                                handleCalendarDayRangeChange(
+                                  day.key,
+                                  start || "07:00",
+                                  event.target.value,
+                                )
+                              }
+                              className="app-input px-3 py-2 [color-scheme:light]"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-sm text-[#94A3B8]">
+                            Geschlossen
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {calendarError ? (
+                <div className="flex items-center gap-2 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+                  <AlertTriangle className="h-4 w-4" />
+                  {calendarError}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button onClick={handleSaveCalendarSettings} loading={calendarSaving}>
+                  <Save className="h-4 w-4" />
+                  Kalender speichern
+                </Button>
+                {calendarNotice ? (
+                  <span className="inline-flex items-center gap-2 rounded-md bg-[#ECFDF5] px-3 py-2 text-sm font-medium text-[#047857]">
+                    <CheckCircle className="h-4 w-4" />
+                    {calendarNotice}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          icon={Bot}
+          iconClassName="bg-[#EDE9FE] text-[#7C3AED]"
+          title="Bot-Verhalten"
+          description="Regeln fuer automatische Antworten auf unbekannte Nachrichten"
+          open={openCard === "bot"}
+          onToggle={() => toggleCard("bot")}
+          badge={
+            fallbackEnabled ? (
+              <Badge variant="success">Fallback an</Badge>
+            ) : (
+              <Badge variant="neutral">Fallback aus</Badge>
+            )
+          }
+        >
+          <div className="space-y-4">
+            <label className="flex cursor-pointer items-start justify-between gap-4 rounded-[18px] border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-4">
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-[#0F172A]">
+                  Automatische Fallback-Nachricht
+                </span>
+                <span className="mt-1 block text-sm leading-6 text-[#64748B]">
+                  Wenn niemand deiner Logik passt, antwortet der Bot mit einem
+                  freundlichen Hinweis und zeigt verfuegbare Optionen als Buttons
+                  an. Deaktiviere das, wenn du lieber gar keine Standardantwort
+                  senden willst.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={fallbackEnabled}
+                disabled={fallbackSaving}
+                onChange={(event) => handleFallbackToggle(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-[#CBD5E1] text-[#7C3AED] focus:ring-[#7C3AED] focus:ring-offset-0"
+              />
+            </label>
+
+            {fallbackNotice ? (
+              <div className="rounded-lg border border-[#BBF7D0] bg-[#ECFDF5] px-4 py-3 text-sm text-[#047857]">
+                {fallbackNotice}
+              </div>
+            ) : null}
+
+            {fallbackError ? (
+              <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+                {fallbackError}
+              </div>
+            ) : null}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          icon={Users}
+          iconClassName="bg-[#E0F2FE] text-[#0369A1]"
+          title="Team und Rollen"
+          description="Zugriffe, Rollen und Einladungen fuer dein Team"
+          open={openCard === "team"}
+          onToggle={() => toggleCard("team")}
+          badge={
+            !teamLoading ? (
+              <Badge variant="info">
+                {teamMembers.length} {teamMembers.length === 1 ? "Mitglied" : "Mitglieder"}
+              </Badge>
+            ) : undefined
+          }
+        >
+          <div className="space-y-4">
+            {teamLoading ? (
+              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#64748B]">
+                Team wird geladen...
+              </div>
+            ) : teamError ? (
+              <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+                {teamError}
+              </div>
+            ) : sortedMembers.length === 0 ? (
+              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#64748B]">
+                Keine Team-Mitglieder gefunden.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sortedMembers.map((member) => {
+                  const isCurrentUser = member.userId === currentUserId;
+                  const canEditMember =
+                    canManageTeam &&
+                    (currentUserRole === "owner" || member.role !== "owner");
+                  const label = member.fullName || member.email || member.userId;
+                  const secondary =
+                    member.fullName && member.email ? member.email : null;
+
+                  return (
+                    <div
+                      key={member.userId}
+                      className="flex flex-col gap-3 rounded-[18px] border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-[#0F172A]">
+                            {label}
+                          </span>
+                          {isCurrentUser ? (
+                            <Badge variant="neutral">Du</Badge>
+                          ) : null}
+                        </div>
+                        {secondary ? (
+                          <div className="mt-1 text-sm text-[#64748B]">
+                            {secondary}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {canManageTeam ? (
+                          <select
+                            value={member.role}
+                            onChange={(event) =>
+                              updateMemberRole(
+                                member.userId,
+                                event.target.value as TeamRole,
+                              )
+                            }
+                            disabled={!canEditMember || teamSavingId === member.userId}
+                            className="app-select min-w-[160px]"
+                          >
+                            {ROLE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Badge variant="neutral">{ROLE_LABELS[member.role]}</Badge>
+                        )}
+
+                        {canManageTeam &&
+                        !isCurrentUser &&
+                        (currentUserRole === "owner" || member.role !== "owner") ? (
+                          <Button
+                            variant="danger-outline"
+                            size="sm"
+                            disabled={teamRemovingId === member.userId}
+                            onClick={() => removeMember(member.userId)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Entfernen
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {teamNotice ? (
+              <div className="rounded-lg border border-[#BBF7D0] bg-[#ECFDF5] px-4 py-3 text-sm text-[#047857]">
+                {teamNotice}
+              </div>
+            ) : null}
+
+            {!teamLoading && !teamError && !canManageTeam ? (
+              <p className="text-sm text-[#64748B]">
+                Rollen koennen nur von Owner oder Admin geaendert werden.
+              </p>
+            ) : null}
+
+            {!teamLoading && !teamError && canManageTeam && ownerCount <= 1 ? (
+              <p className="text-sm text-[#64748B]">
+                Mindestens ein Owner muss bestehen bleiben.
+              </p>
+            ) : null}
+
+            {!teamLoading && canManageTeam ? (
+              <div className="rounded-[18px] border border-[#E2E8F0] bg-white p-4">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Teammitglied einladen
+                </p>
+                <div className="mt-4 flex flex-col gap-3 lg:flex-row">
                   <input
                     type="email"
-                    value={userEmail}
-                    disabled
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-zinc-400 focus:outline-none disabled:opacity-60"
+                    placeholder="E-Mail-Adresse"
+                    value={inviteEmail}
+                    onChange={(event) => {
+                      setInviteEmail(event.target.value);
+                      setInviteError(null);
+                      setInviteNotice(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") inviteMember();
+                    }}
+                    disabled={inviting}
+                    className="app-input flex-1 px-4 py-3"
                   />
-                  <p className="mt-1 text-xs text-zinc-500">E-Mail kann nicht geändert werden.</p>
-                </div>
-                {error && (
-                  <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
-                    <AlertTriangle className="h-4 w-4" />
-                    {error}
-                  </div>
-                )}
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleSaveProfile}
-                    disabled={saving}
-                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 disabled:opacity-50"
+                  <select
+                    value={inviteRole}
+                    onChange={(event) =>
+                      setInviteRole(
+                        event.target.value as "admin" | "member" | "viewer",
+                      )
+                    }
+                    disabled={inviting}
+                    className="app-select min-w-[170px]"
                   >
-                    <Save className="h-4 w-4" />
-                    {saving ? "Speichern..." : "Änderungen speichern"}
-                  </button>
-                  {saved && (
-                    <span className="flex items-center gap-1 text-sm font-medium text-emerald-400">
-                      <CheckCircle className="h-4 w-4" />
-                      Gespeichert
-                    </span>
-                  )}
+                    <option value="admin">Admin</option>
+                    <option value="member">Mitarbeiter</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                  <Button
+                    onClick={inviteMember}
+                    disabled={inviting || !inviteEmail.trim()}
+                    loading={inviting}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Einladen
+                  </Button>
                 </div>
+
+                {inviteError ? (
+                  <p className="mt-3 text-sm text-[#B91C1C]">{inviteError}</p>
+                ) : null}
+                {inviteNotice ? (
+                  <p className="mt-3 text-sm text-[#047857]">{inviteNotice}</p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          icon={Key}
+          iconClassName="bg-[#ECFCCB] text-[#4D7C0F]"
+          title="API-Zugriff"
+          description="Schluessel fuer Webhooks oder externe Integrationen"
+          open={openCard === "api"}
+          onToggle={() => toggleCard("api")}
+        >
+          <div className="space-y-4">
+            <div className="rounded-[18px] border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                API-Schluessel
+              </p>
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                <code className="flex-1 rounded-md border border-[#E2E8F0] bg-white px-4 py-3 font-mono text-sm text-[#0F172A]">
+                  wesponde_live_****************
+                </code>
+                <Button variant="secondary">Kopieren</Button>
               </div>
             </div>
-          )}
+            <p className="text-sm text-[#64748B]">
+              Verwende diesen Schluessel fuer sichere Server-Integrationen. Teile
+              ihn niemals oeffentlich.
+            </p>
+            <Button variant="secondary">Neuen Schluessel generieren</Button>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          icon={Shield}
+          iconClassName="bg-[#FEE2E2] text-[#B91C1C]"
+          title="Sicherheit"
+          description="Konto-Sicherheit, Passwort-Hinweis und Abmeldung"
+          open={openCard === "sicherheit"}
+          onToggle={() => toggleCard("sicherheit")}
+        >
+          <div className="space-y-4">
+            <div className="rounded-[18px] border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+              <p className="text-sm font-semibold text-[#0F172A]">
+                Letzte Anmeldung
+              </p>
+              <p className="mt-1 text-sm text-[#64748B]">
+                Heute, von diesem Geraet.
+              </p>
+            </div>
+            <div className="rounded-[18px] border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+              <p className="text-sm font-semibold text-[#0F172A]">
+                Passwort aendern
+              </p>
+              <p className="mt-1 text-sm text-[#64748B]">
+                Du kannst dein Passwort ueber den Login-Bereich zuruecksetzen.
+              </p>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Danger Zone */}
+        <div className="rounded-xl border border-[#EF4444]/30 bg-[#FEE2E2]/20 p-6">
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <h3 className="text-sm font-semibold text-[#EF4444]">Gefahrenzone</h3>
+              <p className="mt-1 text-sm text-[#64748B]">
+                Wenn du dich abmeldest, wirst du zu der Login-Seite weitergeleitet.
+              </p>
+            </div>
+            <Button variant="danger-outline" onClick={handleLogout} className="shrink-0">
+              <LogOut className="h-4 w-4" />
+              Abmelden
+            </Button>
+          </div>
         </div>
-
-        {/* Benachrichtigungen */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
-          <button
-            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
-            onClick={() => toggleCard("notifications")}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500">
-              <Bell className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-white text-sm">Benachrichtigungen</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Wähle, wann wir dich informieren sollen</div>
-            </div>
-            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "notifications" ? "rotate-180" : ""}`} />
-          </button>
-          {openCard === "notifications" && (
-            <div className="px-5 pb-5 border-t border-white/5">
-              <div className="pt-4 space-y-3">
-                {[
-                  { key: "newLeads", label: "Neue Leads per E-Mail", desc: `Erhalte eine E-Mail bei neuen ${labels.bookingPlural}` },
-                  { key: "botErrors", label: "Bot-Fehler / Fallbacks", desc: "Benachrichtigung wenn der Bot nicht antworten konnte" },
-                  { key: "integrationExpiry", label: "Integration läuft ab", desc: "Warnung bevor dein Instagram-Token abläuft" },
-                  { key: "monthlyReport", label: "Monatlicher Performance-Report", desc: "Zusammenfassung deiner Automation-Statistiken" },
-                ].map(({ key, label, desc }) => (
-                  <label key={key} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10 cursor-pointer">
-                    <div>
-                      <span className="text-sm font-medium text-white">{label}</span>
-                      <p className="text-xs text-zinc-500">{desc}</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notifications[key as keyof typeof notifications]}
-                      onChange={(e) => setNotifications({ ...notifications, [key]: e.target.checked })}
-                      className="h-5 w-5 rounded border-zinc-600 bg-zinc-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Branche */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
-          <button
-            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
-            onClick={() => toggleCard("branche")}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-white text-sm">Branche</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Wähle, welche Default-Flows wir dir zeigen sollen</div>
-            </div>
-            {vertical && (
-              <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400 shrink-0">
-                {VERTICAL_OPTIONS.find((o) => o.key === vertical)?.label ?? vertical}
-              </span>
-            )}
-            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "branche" ? "rotate-180" : ""}`} />
-          </button>
-          {openCard === "branche" && (
-            <div className="px-5 pb-5 border-t border-white/5">
-              <div className="pt-4 space-y-4">
-                {calendarLoading ? (
-                  <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
-                    Branchen-Einstellungen werden geladen...
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      {VERTICAL_OPTIONS.map((option) => {
-                        const isActive = vertical === option.key;
-                        return (
-                          <button
-                            key={option.key}
-                            type="button"
-                            disabled={verticalSaving || !canEditVertical}
-                            onClick={() => handleVerticalChange(option.key)}
-                            className={`flex h-full flex-col rounded-2xl border px-4 py-3 text-left transition ${
-                              isActive
-                                ? "border-emerald-500/60 bg-emerald-500/10"
-                                : "border-white/10 bg-white/5 hover:border-emerald-400/40 hover:bg-emerald-500/10"
-                            }`}
-                          >
-                            <div className="text-sm font-semibold text-white">{option.label}</div>
-                            <div className="mt-2 text-xs text-zinc-400">{option.description}</div>
-                            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-zinc-500">
-                              {option.examples.map((example) => (
-                                <span key={example} className="rounded-full border border-white/10 px-2 py-1">
-                                  {example}
-                                </span>
-                              ))}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {!canEditVertical && (
-                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-                        Nur Owner kann die Branche ändern.
-                      </div>
-                    )}
-                    {verticalNotice && (
-                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                        {verticalNotice}
-                      </div>
-                    )}
-                    {verticalError && (
-                      <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-                        {verticalError}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Kalender & Verfügbarkeit */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
-          <button
-            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
-            onClick={() => toggleCard("kalender")}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
-              <Clock className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-white text-sm">Kalender & Verfügbarkeit</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Arbeitszeiten, Slots und Buchungsfenster</div>
-            </div>
-            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "kalender" ? "rotate-180" : ""}`} />
-          </button>
-          {openCard === "kalender" && (
-            <div className="px-5 pb-5 border-t border-white/5">
-              <div className="pt-4">
-                {calendarLoading ? (
-                  <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
-                    Kalender-Einstellungen werden geladen...
-                  </div>
-                ) : (
-                  <div className="space-y-5">
-                    {/* Grundeinstellungen */}
-                    <div className="overflow-hidden rounded-xl border border-white/10 divide-y divide-white/5">
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <div>
-                          <div className="text-sm font-medium text-white">Zeitzone</div>
-                          <div className="text-xs text-zinc-500 mt-0.5">Für Buchungszeiten und Kalender-Events</div>
-                        </div>
-                        <input
-                          type="text"
-                          value={calendarForm.timeZone}
-                          onChange={(e) => handleCalendarFieldChange("timeZone", e.target.value)}
-                          className="w-36 rounded-lg border border-white/10 bg-zinc-950/40 px-3 py-1.5 text-right text-sm text-white focus:border-emerald-500 focus:outline-none"
-                          placeholder="Europe/Berlin"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <div>
-                          <div className="text-sm font-medium text-white">Buchungsfenster</div>
-                          <div className="text-xs text-zinc-500 mt-0.5">Wie weit im Voraus können Kunden buchen?</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min={1}
-                            max={90}
-                            value={calendarForm.bookingWindowDays}
-                            onChange={(e) => handleCalendarFieldChange("bookingWindowDays", e.target.value)}
-                            className="w-16 rounded-lg border border-white/10 bg-zinc-950/40 px-3 py-1.5 text-right text-sm text-white focus:border-emerald-500 focus:outline-none"
-                          />
-                          <span className="text-xs text-zinc-500 w-8">Tage</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <div>
-                          <div className="text-sm font-medium text-white">Termindauer</div>
-                          <div className="text-xs text-zinc-500 mt-0.5">Wie lange dauert ein Termin bei dir?</div>
-                        </div>
-                        <select
-                          value={calendarForm.slotDurationMinutes}
-                          onChange={(e) => handleCalendarFieldChange("slotDurationMinutes", e.target.value)}
-                          className="app-select"
-                        >
-                          {[15, 30, 45, 60, 90, 120].map((min) => (
-                            <option key={min} value={min}>{min} Min.</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Öffnungszeiten */}
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-2">Öffnungszeiten</div>
-                      <div className="overflow-hidden rounded-xl border border-white/10 divide-y divide-white/5">
-                        {CALENDAR_DAYS.map((day) => {
-                          const range = calendarForm.hours?.[day.key]?.[0] ?? "";
-                          const [start, end] = range.split("-");
-                          const isOpen = Boolean(range);
-                          return (
-                            <div key={day.key} className={`flex items-center gap-3 px-4 py-2.5 ${!isOpen ? "opacity-50" : ""}`}>
-                              <span className="w-24 text-sm font-medium text-white shrink-0">{day.label}</span>
-                              <label className="flex items-center cursor-pointer shrink-0">
-                                <input
-                                  type="checkbox"
-                                  checked={isOpen}
-                                  onChange={() => handleCalendarDayToggle(day.key)}
-                                  className="h-4 w-4 rounded border-zinc-600 bg-zinc-700 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0"
-                                />
-                              </label>
-                              {isOpen ? (
-                                <div className="flex items-center gap-2 flex-1">
-                                  <input
-                                    type="time"
-                                    value={start || "07:00"}
-                                    onChange={(e) => handleCalendarDayRangeChange(day.key, e.target.value, end || "21:00")}
-                                    className="rounded-lg border border-white/10 bg-zinc-950/40 px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-500"
-                                  />
-                                  <span className="text-zinc-600 text-xs">–</span>
-                                  <input
-                                    type="time"
-                                    value={end || "21:00"}
-                                    onChange={(e) => handleCalendarDayRangeChange(day.key, start || "07:00", e.target.value)}
-                                    className="rounded-lg border border-white/10 bg-zinc-950/40 px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-500"
-                                  />
-                                </div>
-                              ) : (
-                                <span className="text-xs text-zinc-600">Geschlossen</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {calendarError && (
-                      <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
-                        <AlertTriangle className="h-4 w-4" />
-                        {calendarError}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={handleSaveCalendarSettings}
-                        disabled={calendarSaving}
-                        className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 disabled:opacity-50"
-                      >
-                        <Save className="h-4 w-4" />
-                        {calendarSaving ? "Speichern..." : "Speichern"}
-                      </button>
-                      {calendarNotice && (
-                        <span className="flex items-center gap-1 text-sm font-medium text-emerald-400">
-                          <CheckCircle className="h-4 w-4" />
-                          {calendarNotice}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bot-Verhalten */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
-          <button
-            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
-            onClick={() => toggleCard("bot")}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600">
-              <Bot className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-white text-sm">Bot-Verhalten</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Steuere, wie der Bot auf unbekannte Nachrichten reagiert</div>
-            </div>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold shrink-0 ${fallbackEnabled ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-500/10 text-zinc-400"}`}>
-              {fallbackEnabled ? "Fallback an" : "Fallback aus"}
-            </span>
-            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "bot" ? "rotate-180" : ""}`} />
-          </button>
-          {openCard === "bot" && (
-            <div className="px-5 pb-5 border-t border-white/5">
-              <div className="pt-4 space-y-4">
-                <label className="flex items-start justify-between gap-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 cursor-pointer transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-white">Automatische Fallback-Nachricht</span>
-                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                      Wenn jemand deiner Instagram-Seite schreibt und keiner deiner Abläufe passt, antwortet der Bot automatisch mit einem freundlichen Hinweis und zeigt deine verfügbaren Optionen als Buttons an.<br />
-                      <span className="text-zinc-600 mt-1 block">Deaktivieren wenn du lieber keine automatische Antwort auf unbekannte Nachrichten senden möchtest.</span>
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={fallbackEnabled}
-                    disabled={fallbackSaving}
-                    onChange={(e) => handleFallbackToggle(e.target.checked)}
-                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-zinc-600 bg-zinc-700 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 disabled:opacity-50 cursor-pointer"
-                  />
-                </label>
-
-                {fallbackNotice && (
-                  <p className="flex items-center gap-1.5 text-xs text-emerald-400">
-                    <CheckCircle className="h-3.5 w-3.5" /> {fallbackNotice}
-                  </p>
-                )}
-                {fallbackError && (
-                  <p className="flex items-center gap-1.5 text-xs text-red-400">
-                    <AlertTriangle className="h-3.5 w-3.5" /> {fallbackError}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Team & Rollen */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
-          <button
-            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
-            onClick={() => toggleCard("team")}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-500">
-              <Users className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-white text-sm">Team & Rollen</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Verwalte, wer Zugriff hat</div>
-            </div>
-            {!teamLoading && teamMembers.length > 0 && (
-              <span className="rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-400 shrink-0">
-                {teamMembers.length} {teamMembers.length === 1 ? "Mitglied" : "Mitglieder"}
-              </span>
-            )}
-            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "team" ? "rotate-180" : ""}`} />
-          </button>
-          {openCard === "team" && (
-            <div className="px-5 pb-5 border-t border-white/5">
-              <div className="pt-4 space-y-3">
-                {teamLoading ? (
-                  <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
-                    Team wird geladen...
-                  </div>
-                ) : teamError ? (
-                  <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
-                    {teamError}
-                  </div>
-                ) : sortedMembers.length === 0 ? (
-                  <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
-                    Keine Team-Mitglieder gefunden.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {sortedMembers.map((member) => {
-                      const isCurrentUser = member.userId === currentUserId;
-                      const canEditMember = canManageTeam && (currentUserRole === "owner" || member.role !== "owner");
-                      const label = member.fullName || member.email || member.userId;
-                      const secondary = member.fullName && member.email ? member.email : null;
-                      return (
-                        <div
-                          key={member.userId}
-                          className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-white">{label}</span>
-                              {isCurrentUser && (
-                                <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-zinc-300">Du</span>
-                              )}
-                            </div>
-                            {secondary && <div className="text-xs text-zinc-500">{secondary}</div>}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {canManageTeam ? (
-                              <select
-                                value={member.role}
-                                onChange={(e) => updateMemberRole(member.userId, e.target.value as TeamRole)}
-                                disabled={!canEditMember || teamSavingId === member.userId}
-                                className="app-select disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {ROLE_OPTIONS.map((option) => (
-                                  <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span className="rounded-lg bg-white/10 px-3 py-1 text-xs font-medium text-zinc-300">
-                                {ROLE_LABELS[member.role]}
-                              </span>
-                            )}
-                            {canManageTeam && !isCurrentUser && (currentUserRole === "owner" || member.role !== "owner") && (
-                              <button
-                                onClick={() => removeMember(member.userId)}
-                                disabled={teamRemovingId === member.userId}
-                                title="Mitglied entfernen"
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-500 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-400 disabled:opacity-40"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {!teamLoading && !teamError && teamNotice && (
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
-                    {teamNotice}
-                  </div>
-                )}
-                {!teamLoading && !teamError && !canManageTeam && (
-                  <p className="text-xs text-zinc-500">Rollen können nur von Owner/Admin geändert werden.</p>
-                )}
-                {!teamLoading && !teamError && canManageTeam && ownerCount <= 1 && (
-                  <p className="text-xs text-zinc-500">Mindestens ein Owner muss bestehen bleiben.</p>
-                )}
-
-                {/* Invite form — only for owner/admin */}
-                {!teamLoading && canManageTeam && (
-                  <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-                    <p className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
-                      <UserPlus className="h-3.5 w-3.5" />
-                      Teammitglied einladen
-                    </p>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <input
-                        type="email"
-                        placeholder="E-Mail-Adresse"
-                        value={inviteEmail}
-                        onChange={(e) => { setInviteEmail(e.target.value); setInviteError(null); setInviteNotice(null); }}
-                        onKeyDown={(e) => { if (e.key === "Enter") inviteMember(); }}
-                        disabled={inviting}
-                        className="flex-1 rounded-lg border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/30 disabled:opacity-60"
-                      />
-                      <select
-                        value={inviteRole}
-                        onChange={(e) => setInviteRole(e.target.value as "admin" | "member" | "viewer")}
-                        disabled={inviting}
-                        className="app-select disabled:opacity-60"
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="member">Mitarbeiter</option>
-                        <option value="viewer">Viewer</option>
-                      </select>
-                      <button
-                        onClick={inviteMember}
-                        disabled={inviting || !inviteEmail.trim()}
-                        className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        {inviting ? "Wird gesendet…" : "Einladen"}
-                      </button>
-                    </div>
-                    {inviteError && (
-                      <p className="text-xs text-rose-400">{inviteError}</p>
-                    )}
-                    {inviteNotice && (
-                      <p className="text-xs text-emerald-400">{inviteNotice}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* API-Zugriff */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
-          <button
-            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
-            onClick={() => toggleCard("api")}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
-              <Key className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-white text-sm">API-Zugriff</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Für Webhooks oder externe Integrationen</div>
-            </div>
-            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "api" ? "rotate-180" : ""}`} />
-          </button>
-          {openCard === "api" && (
-            <div className="px-5 pb-5 border-t border-white/5">
-              <div className="pt-4 space-y-4">
-                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                  <p className="text-xs font-medium text-zinc-400">API-Schlüssel</p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <code className="flex-1 rounded-lg bg-zinc-800 px-3 py-2 font-mono text-xs text-zinc-300">
-                      wesponde_live_••••••••••••••••
-                    </code>
-                    <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/10 hover:text-white">
-                      Kopieren
-                    </button>
-                  </div>
-                </div>
-                <p className="text-xs text-zinc-500">
-                  Verwende diesen Schlüssel, um Wesponde mit anderen Tools zu verbinden. Teile ihn niemals öffentlich.
-                </p>
-                <button className="rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:shadow-lg hover:shadow-indigo-500/25">
-                  Neuen Schlüssel generieren
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Sicherheit */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden">
-          <button
-            className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
-            onClick={() => toggleCard("sicherheit")}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-pink-500">
-              <Shield className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-white text-sm">Sicherheit</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Konto-Sicherheit und Abmeldung</div>
-            </div>
-            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform duration-200 ${openCard === "sicherheit" ? "rotate-180" : ""}`} />
-          </button>
-          {openCard === "sicherheit" && (
-            <div className="px-5 pb-5 border-t border-white/5">
-              <div className="pt-4 space-y-4">
-                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                  <p className="text-sm font-medium text-white">Letzte Anmeldung</p>
-                  <p className="mt-1 text-xs text-zinc-400">Heute, von diesem Gerät</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                  <p className="text-sm font-medium text-white">Passwort ändern</p>
-                  <p className="mt-1 text-xs text-zinc-400">Du kannst dein Passwort über den Login-Bereich zurücksetzen.</p>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-400 transition-all hover:bg-rose-500/20"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Abmelden
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
       </div>
     </div>
   );

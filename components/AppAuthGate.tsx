@@ -29,13 +29,21 @@ export default function AppAuthGate({ children }: { children: ReactNode }) {
     async function loadSession() {
       try {
         const { data, error } = await supabase!.auth.getUser();
-        if (error || !data.user) {
+        if (error) {
+          console.error("[AppAuthGate] getUser error:", error.message);
+          setStatus("unauthenticated");
+          router.replace("/login?redirect=" + encodeURIComponent(pathname));
+          return;
+        }
+        if (!data.user) {
+          console.warn("[AppAuthGate] getUser returned no user — not authenticated");
           setStatus("unauthenticated");
           router.replace("/login?redirect=" + encodeURIComponent(pathname));
           return;
         }
         setStatus("ready");
       } catch (error: any) {
+        console.error("[AppAuthGate] loadSession threw:", error?.message);
         setErrorMessage(
           error?.message || "Sitzung konnte nicht geprüft werden. Bitte melde dich erneut an."
         );
@@ -43,7 +51,10 @@ export default function AppAuthGate({ children }: { children: ReactNode }) {
       }
     }
 
-    const { data: listener } = supabase!.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase!.auth.onAuthStateChange((event, session) => {
+      // INITIAL_SESSION fires before storage is fully loaded — let loadSession() handle it.
+      // Only react to explicit auth events after initialization.
+      if (event === "INITIAL_SESSION") return;
       if (!session) {
         setStatus("unauthenticated");
         router.replace("/login");

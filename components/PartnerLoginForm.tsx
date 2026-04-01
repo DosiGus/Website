@@ -90,8 +90,11 @@ export default function PartnerLoginForm() {
     try {
       const supabase = createSupabaseBrowserClient();
       if (view === "login") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: loginData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        if (!loginData.session) {
+          throw new Error("Email not confirmed");
+        }
         setStatus("success");
         setMessage("Login erfolgreich! Du wirst gleich weitergeleitet.");
         router.replace(redirectTarget);
