@@ -31,7 +31,7 @@ const config: Config = {
         },
         // Primary design system
         primary: {
-          DEFAULT: "#6366f1",
+          DEFAULT: "#1E4FD8",
           soft: "#eef2ff",
           dark: "#4f46e5"
         },
@@ -58,9 +58,8 @@ const config: Config = {
         '4xl': '2rem',
       },
       fontFamily: {
-        display: ["'IBM Plex Sans JP'", "var(--font-sans)", "sans-serif"],
-        sans: ["'IBM Plex Sans JP'", "var(--font-sans)", "system-ui", "sans-serif"],
-        body: ["'IBM Plex Sans JP'", "var(--font-sans)", "system-ui", "sans-serif"]
+        display: ["var(--font-bricolage)", "var(--font-sans)", "system-ui", "sans-serif"],
+        sans: ["var(--font-dm-sans)", "var(--font-sans)", "system-ui", "sans-serif"],
       },
       animation: {
         'fade-in-up': 'fadeInUp 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
@@ -70,8 +69,6 @@ const config: Config = {
         'phone-float': 'phoneFloat 8s ease-in-out infinite',
         'message-in': 'messageSlideIn 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'quick-reply-in': 'quickReplyIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
-        'glow-pulse': 'glowPulse 3s ease-in-out infinite',
-        'gradient-shift': 'gradientShift 8s ease infinite',
       },
       keyframes: {
         fadeInUp: {
@@ -103,21 +100,11 @@ const config: Config = {
           '60%': { transform: 'translateY(-2px) scale(1.02)' },
           '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
-        glowPulse: {
-          '0%, 100%': { opacity: '0.5' },
-          '50%': { opacity: '0.8' },
-        },
-        gradientShift: {
-          '0%, 100%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-        },
       },
       boxShadow: {
         'node': '0 1px 3px rgba(0,0,0,0.08)',
         'node-hover': '0 8px 25px rgba(0,0,0,0.12)',
         'node-selected': '0 12px 35px rgba(99,102,241,0.25)',
-        'glow-indigo': '0 0 40px -8px rgba(99,102,241,0.5)',
-        'glow-violet': '0 0 40px -8px rgba(139,92,246,0.5)',
         'glow-emerald': '0 0 20px rgba(16,185,129,0.3)',
         'glow-amber': '0 0 20px rgba(245,158,11,0.3)',
         'glow-pink': '0 0 20px rgba(236,72,153,0.3)',

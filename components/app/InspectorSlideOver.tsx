@@ -143,27 +143,26 @@ function VariablesTab({
 
   return (
     <div className="space-y-4">
-      {/* This node collects */}
       {selectedNode && (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-3">
+        <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
             Dieser Schritt sammelt
           </p>
           {hasCollects ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-semibold text-indigo-300">
+              <span className="rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-sm font-semibold text-[#2563EB]">
                 {VARIABLE_LABELS[nodeCollects] ?? nodeCollects}
               </span>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-[#64748B]">
                 → gespeichert als{" "}
-                <code className="rounded bg-white/5 px-1 text-zinc-300">{`{{${nodeCollects}}}`}</code>
+                <code className="rounded bg-white px-1 text-[#2563EB]">{`{{${nodeCollects}}}`}</code>
               </span>
             </div>
           ) : (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-[#64748B]">
               Dieser Schritt sammelt keine Variable.{" "}
               {(selectedNode?.data as any)?.inputMode === "free_text" && (
-                <span className="text-zinc-400">
+                <span className="text-[#475569]">
                   Wähle im Feld &quot;Dieses Feld sammelt&quot; was gespeichert werden soll.
                 </span>
               )}
@@ -172,10 +171,9 @@ function VariablesTab({
         </div>
       )}
 
-      {/* Placeholders used in this node's text */}
       {selectedNode && (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-3">
+        <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
             Platzhalter im Text dieses Schritts
           </p>
           {placeholdersInText.length > 0 ? (
@@ -185,8 +183,8 @@ function VariablesTab({
                   key={p}
                   className={`rounded-full border px-2 py-0.5 text-xs font-mono font-semibold ${
                     allCollectedKeys.includes(p)
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                      : "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                      ? "border-[#A7F3D0] bg-[#ECFDF5] text-[#047857]"
+                      : "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
                   }`}
                   title={allCollectedKeys.includes(p) ? "Wird gesammelt ✓" : "Wird NICHT gesammelt — fehlt ein Freitext-Schritt?"}
                 >
@@ -195,17 +193,16 @@ function VariablesTab({
               ))}
             </div>
           ) : (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-[#64748B]">
               Kein Platzhalter verwendet.{" "}
-              <span className="text-zinc-400">Tipp: Schreibe {"{{"}<span className="text-zinc-300">name</span>{"}}"} um den Namen einzufügen.</span>
+              <span className="text-[#475569]">Tipp: Schreibe {"{{"}<span className="text-[#0F172A]">name</span>{"}}"} um den Namen einzufügen.</span>
             </p>
           )}
         </div>
       )}
 
-      {/* All available placeholders in this flow */}
-      <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-3">
+      <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
           Verfügbare Platzhalter in diesem Flow
         </p>
         {allCollectedKeys.length > 0 ? (
@@ -213,15 +210,15 @@ function VariablesTab({
             {allCollectedKeys.map((key) => (
               <div
                 key={key}
-                className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2"
+                className="flex items-center justify-between rounded-lg border border-[#E2E8F0] bg-white px-3 py-2"
               >
                 <div className="flex items-center gap-2">
-                  <code className="text-sm font-mono text-indigo-300">{`{{${key}}}`}</code>
-                  <span className="text-xs text-zinc-500">{VARIABLE_LABELS[key] ?? key}</span>
+                  <code className="text-sm font-mono text-[#2563EB]">{`{{${key}}}`}</code>
+                  <span className="text-xs text-[#64748B]">{VARIABLE_LABELS[key] ?? key}</span>
                 </div>
                 <button
                   onClick={() => handleCopy(key)}
-                  className="text-xs font-semibold text-zinc-500 hover:text-zinc-200 transition-colors"
+                  className="text-xs font-semibold text-[#64748B] transition-colors hover:text-[#2563EB]"
                 >
                   {copied === key ? "Kopiert ✓" : "Kopieren"}
                 </button>
@@ -229,26 +226,25 @@ function VariablesTab({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-[#64748B]">
             Noch keine Felder konfiguriert. Füge Freitext-Schritte hinzu und wähle jeweils &quot;Dieses Feld sammelt&quot;.
           </p>
         )}
       </div>
 
-      {/* Output config — flow type + required fields */}
-      <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Buchungskonfiguration</p>
+      <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 space-y-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Buchungskonfiguration</p>
 
         {/* Flow type toggle */}
         <div className="space-y-2">
-          <p className="text-xs text-zinc-500">Flow-Typ</p>
+          <p className="text-xs text-[#64748B]">Flow-Typ</p>
           <div className="flex gap-2">
             <button
               onClick={() => onToggleFlowType('reservation')}
               className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
                 outputType === 'reservation'
-                  ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300'
-                  : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300'
+                  ? 'border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]'
+                  : 'border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A]'
               }`}
             >
               Buchungs-Flow
@@ -257,14 +253,14 @@ function VariablesTab({
               onClick={() => onToggleFlowType('custom')}
               className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
                 outputType === 'custom'
-                  ? 'border-violet-500 bg-violet-500/20 text-violet-300'
-                  : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300'
+                  ? 'border-[#DDD6FE] bg-[#F5F3FF] text-[#7C3AED]'
+                  : 'border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A]'
               }`}
             >
               Freier Flow
             </button>
           </div>
-          <p className="text-xs text-zinc-600">
+          <p className="text-xs text-[#64748B]">
             {outputType === 'reservation'
               ? 'Erstellt automatisch Buchungen wenn alle Pflichtfelder vorliegen.'
               : 'Keine automatische Buchung — freie Konversation.'}
@@ -274,7 +270,7 @@ function VariablesTab({
         {/* Required fields — only for reservation type */}
         {outputType === 'reservation' && (
           <div className="space-y-2">
-            <p className="text-xs text-zinc-500">Pflichtfelder für Buchungserstellung</p>
+            <p className="text-xs text-[#64748B]">Pflichtfelder für Buchungserstellung</p>
             <div className="flex flex-wrap gap-2">
               {[
                 { key: 'name', label: 'Name' },
@@ -289,19 +285,19 @@ function VariablesTab({
                   onClick={() => onToggleRequiredField(key)}
                   className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all ${
                     requiredFields.includes(key)
-                      ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-300'
-                      : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300'
+                      ? 'border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]'
+                      : 'border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A]'
                   }`}
                 >
-                  <span className={`h-1.5 w-1.5 rounded-full ${requiredFields.includes(key) ? 'bg-indigo-400' : 'bg-zinc-600'}`} />
+                  <span className={`h-1.5 w-1.5 rounded-full ${requiredFields.includes(key) ? 'bg-[#2563EB]' : 'bg-[#94A3B8]'}`} />
                   {label}
                   {key === 'guestCount' && !requiredFields.includes(key) && (
-                    <span className="text-zinc-600">· Standard: 1</span>
+                    <span className="text-[#94A3B8]">· Standard: 1</span>
                   )}
                 </button>
               ))}
             </div>
-            <p className="text-xs text-zinc-600">
+            <p className="text-xs text-[#64748B]">
               Blau = Pflichtfeld. Buchung wird erst erstellt wenn alle Pflichtfelder vorliegen.
             </p>
           </div>
@@ -324,7 +320,7 @@ export default function InspectorSlideOver({
   onTabChange,
   hasUnsavedChanges,
   onSave,
-  disableBackdropBlur = false,
+  disableBackdropBlur = true,
   selectedNode,
   selectedNodeReplies,
   selectedInputMode,
@@ -385,41 +381,37 @@ export default function InspectorSlideOver({
 
   return (
     <>
-      {/* Backdrop - subtle overlay */}
       <div
-        className={`fixed inset-0 z-30 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-30 transition-opacity duration-250 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        } ${disableBackdropBlur ? 'bg-black/20' : 'bg-black/40 backdrop-blur-[2px]'}`}
+        } ${disableBackdropBlur ? 'bg-slate-900/10' : 'bg-slate-900/20 backdrop-blur-[2px]'}`}
         onClick={onClose}
       />
 
-      {/* Slide-over Panel */}
       <div
         ref={panelRef}
         className={`
           fixed right-0 top-0 z-40 h-full w-[400px] max-w-[90vw]
-          bg-zinc-900 shadow-2xl border-l border-white/10
-          transform transition-transform duration-300 ease-out
+          bg-white shadow-[0_24px_64px_rgba(15,23,42,0.18)] border-l border-[#E2E8F0]
+          transform transition-transform duration-[250ms] ease-out
           flex flex-col
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <h2 className="font-display text-xl font-semibold text-white">
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] px-6 py-4">
+          <h2 className="text-xl font-semibold text-[#0F172A]">
             Inspector
           </h2>
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+            className="rounded-full p-2 text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="border-b border-white/10 px-4 py-3">
-          <div className="flex gap-1 rounded-xl bg-white/5 p-1">
+        <div className="border-b border-[#E2E8F0] px-4 py-3">
+          <div className="flex gap-1 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-1">
             {(['content', 'preview', 'logic', 'variables'] as InspectorTab[]).map((tab) => (
               <button
                 key={tab}
@@ -427,8 +419,8 @@ export default function InspectorSlideOver({
                 className={`
                   flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all
                   ${inspectorTab === tab
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-300'
+                    ? 'bg-white text-[#0F172A] shadow-sm'
+                    : 'text-[#64748B] hover:text-[#0F172A]'
                   }
                 `}
               >
@@ -438,46 +430,41 @@ export default function InspectorSlideOver({
           </div>
         </div>
 
-        {/* Content Area */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {/* Content Tab */}
           {inspectorTab === 'content' && (
             <div className="space-y-5">
               {selectedNode ? (
                 <>
-                  {/* Text Message */}
                   <div>
-                    <label className="text-sm font-semibold text-zinc-400">Textnachricht</label>
+                    <label className="text-sm font-semibold text-[#334155]">Textnachricht</label>
                     <textarea
                       value={selectedNode.data?.text ?? ''}
                       onChange={(e) => onNodeFieldChange('text', e.target.value)}
-                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                      className="app-input mt-2 min-h-[112px] resize-none px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                       rows={4}
                       placeholder="Gib hier deine Nachricht ein..."
                     />
                   </div>
 
-                  {/* Image URL */}
                   <div>
-                    <label className="text-sm font-semibold text-zinc-400">Bild (URL)</label>
+                    <label className="text-sm font-semibold text-[#334155]">Bild (URL)</label>
                     <input
                       value={selectedNode.data?.imageUrl ?? ''}
                       onChange={(e) => onNodeFieldChange('imageUrl', e.target.value)}
                       placeholder="https://..."
-                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="app-input mt-2 px-4 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                     />
                   </div>
 
-                  {/* Input Mode */}
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                    <p className="text-sm font-semibold text-zinc-300 mb-3">Antwortart</p>
-                    <div className="flex rounded-lg bg-white/5 p-1 border border-white/10">
+                  <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                    <p className="mb-3 text-sm font-semibold text-[#0F172A]">Antwortart</p>
+                    <div className="flex rounded-lg border border-[#E2E8F0] bg-white p-1">
                       <button
                         onClick={() => onInputModeChange('buttons')}
                         className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-all ${
                           selectedInputMode === 'buttons'
-                            ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white'
-                            : 'text-zinc-500 hover:text-zinc-300'
+                            ? 'bg-[#2563EB] text-white'
+                            : 'text-[#64748B] hover:text-[#0F172A]'
                         }`}
                       >
                         Buttons
@@ -486,34 +473,33 @@ export default function InspectorSlideOver({
                         onClick={() => onInputModeChange('free_text')}
                         className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-all ${
                           selectedInputMode === 'free_text'
-                            ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white'
-                            : 'text-zinc-500 hover:text-zinc-300'
+                            ? 'bg-[#2563EB] text-white'
+                            : 'text-[#64748B] hover:text-[#0F172A]'
                         }`}
                       >
                         Freitext
                       </button>
                     </div>
                     {selectedInputMode === 'free_text' && (
-                      <p className="mt-2 text-xs text-zinc-500">
+                      <p className="mt-2 text-xs text-[#64748B]">
                         Der {labels.contactLabel} schreibt hier frei. Du bestimmst, wohin es danach weitergeht.
                       </p>
                     )}
                   </div>
 
-                  {/* Free Text Options */}
                   {selectedInputMode === 'free_text' ? (
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4">
+                    <div className="rounded-xl border border-[#FCD34D] bg-[#FFFBEB] p-4 space-y-4">
                       <div>
-                        <label className="text-xs font-semibold text-zinc-500">Platzhalter im Chat</label>
+                        <label className="text-xs font-semibold text-[#B45309]">Platzhalter im Chat</label>
                         <input
                           value={selectedNode.data?.placeholder ?? ''}
                           onChange={(e) => onFreeTextMetaChange('placeholder', e.target.value)}
                           placeholder="z. B. Datum eingeben..."
-                          className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
+                          className="app-input mt-1 bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-zinc-500">Dieses Feld sammelt</label>
+                        <label className="text-xs font-semibold text-[#B45309]">Dieses Feld sammelt</label>
                         <select
                           value={selectedNode.data?.collects ?? ''}
                           onChange={(e) => onFreeTextMetaChange('collects', e.target.value)}
@@ -530,7 +516,7 @@ export default function InspectorSlideOver({
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-zinc-500">Führt zu</label>
+                        <label className="text-xs font-semibold text-[#B45309]">Führt zu</label>
                         <select
                           value={selectedFreeTextTarget ?? ''}
                           onChange={(e) => onFreeTextTargetChange(selectedNode.id, e.target.value || null)}
@@ -548,19 +534,18 @@ export default function InspectorSlideOver({
                       </div>
                     </div>
                   ) : (
-                    /* Quick Replies / Buttons */
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                    <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm font-semibold text-zinc-300">Antwort-Buttons</p>
+                        <p className="text-sm font-semibold text-[#0F172A]">Antwort-Buttons</p>
                         <button
                           onClick={onAddQuickReply}
-                          className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                          className="text-xs font-semibold text-[#2563EB] transition-colors hover:text-[#1D4ED8]"
                         >
                           + Button
                         </button>
                       </div>
                       {selectedNodeReplies.length === 0 ? (
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-[#64748B]">
                           Noch keine Buttons. Füge Buttons hinzu, um Antworten zu verlinken.
                         </p>
                       ) : (
@@ -568,13 +553,13 @@ export default function InspectorSlideOver({
                           {selectedNodeReplies.map((reply) => (
                             <div
                               key={reply.id}
-                              className="rounded-xl border border-white/10 bg-zinc-800/50 p-3 space-y-2"
+                              className="space-y-2 rounded-xl border border-[#E2E8F0] bg-white p-3"
                             >
-                              <div className="flex items-center justify-between text-xs text-zinc-500">
+                              <div className="flex items-center justify-between text-xs text-[#64748B]">
                                 <span>Button</span>
                                 <button
                                   onClick={() => onRemoveQuickReply(reply.id)}
-                                  className="text-rose-400 hover:text-rose-300"
+                                  className="text-[#DC2626] hover:text-[#B91C1C]"
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </button>
@@ -583,18 +568,18 @@ export default function InspectorSlideOver({
                                 value={reply.label}
                                 onChange={(e) => onUpdateQuickReply(reply.id, { label: e.target.value })}
                                 placeholder="Button-Text"
-                                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
+                                className="app-input px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                               />
                               {!hidePayloadField && (
                                 <input
                                   value={reply.payload}
                                   onChange={(e) => onUpdateQuickReply(reply.id, { payload: e.target.value })}
                                   placeholder="Payload / interne Aktion"
-                                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
+                                  className="app-input px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                                 />
                               )}
                               <div>
-                                <label className="text-xs font-semibold text-zinc-500">Führt zu</label>
+                                <label className="text-xs font-semibold text-[#64748B]">Führt zu</label>
                                 <select
                                   value={reply.targetNodeId ?? ''}
                                   onChange={(e) => onQuickReplyTargetChange(reply.id, e.target.value, reply.label)}
@@ -616,31 +601,29 @@ export default function InspectorSlideOver({
                     </div>
                   )}
 
-                  {/* Delete Node Button */}
                   <button
                     onClick={onDeleteSelection}
-                    className="w-full rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-400 hover:bg-rose-500/20 transition-colors"
+                    className="w-full rounded-md border border-[#FECACA] bg-[#FEF2F2] px-4 py-2.5 text-sm font-medium text-[#DC2626] transition-colors hover:bg-[#FEE2E2]"
                   >
                     Node entfernen
                   </button>
                 </>
               ) : (
-                <div className="rounded-xl border border-dashed border-white/20 p-8 text-center">
-                  <p className="text-sm text-zinc-500">
+                <div className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-8 text-center">
+                  <p className="text-sm text-[#64748B]">
                     Wähle einen Node im Canvas aus, um die Inhalte zu bearbeiten.
                   </p>
                 </div>
               )}
 
-              {/* Snippets */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p className="text-sm font-semibold text-zinc-300 mb-3">Snippets</p>
+              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                <p className="mb-3 text-sm font-semibold text-[#0F172A]">Snippets</p>
                 <div className="flex flex-wrap gap-2">
                   {snippets.map((snippet) => (
                     <button
                       key={snippet.label}
                       onClick={() => onSnippetInsert(snippet.text)}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-zinc-400 hover:border-indigo-500/50 hover:text-indigo-400 transition-colors"
+                      className="rounded-full border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#475569] transition-colors hover:border-[#BFDBFE] hover:text-[#2563EB]"
                     >
                       {snippet.label}
                     </button>
@@ -648,14 +631,13 @@ export default function InspectorSlideOver({
                 </div>
               </div>
 
-              {/* Smart Prompt */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p className="flex items-center gap-2 text-sm font-semibold text-zinc-300 mb-3">
-                  <Sparkles className="h-4 w-4 text-indigo-400" />
+              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#0F172A]">
+                  <Sparkles className="h-4 w-4 text-[#2563EB]" />
                   Smart Prompt
                 </p>
                 <textarea
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none resize-none"
+                  className="app-input min-h-[92px] resize-none px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                   rows={3}
                   placeholder={`z. B. 'Erzeuge eine freundliche Begrüßung für ein ${wizardCopy.businessTypeLabel.toLowerCase()}...'`}
                   value={smartPrompt}
@@ -663,7 +645,7 @@ export default function InspectorSlideOver({
                 />
                 <button
                   onClick={onSmartPromptSubmit}
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-400 hover:border-indigo-500/50 hover:text-indigo-400 transition-colors"
+                  className="mt-2 w-full rounded-md border border-[#E2E8F0] bg-white px-3 py-2 text-xs font-semibold text-[#475569] transition-colors hover:border-[#BFDBFE] hover:text-[#2563EB]"
                 >
                   Vorschlag einsetzen
                 </button>
@@ -677,15 +659,15 @@ export default function InspectorSlideOver({
               {selectedEdge ? (
                 <>
                   <div>
-                    <label className="text-sm font-semibold text-zinc-400">Edge Label</label>
+                    <label className="text-sm font-semibold text-[#334155]">Edge Label</label>
                     <input
                       value={(selectedEdge.data as any)?.condition ?? ''}
                       onChange={(e) => onEdgeFieldChange('condition', e.target.value)}
-                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="app-input mt-2 px-4 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-zinc-400">Bedeutung / Ton</label>
+                    <label className="text-sm font-semibold text-[#334155]">Bedeutung / Ton</label>
                     <select
                       value={((selectedEdge.data as any)?.tone as EdgeTone) ?? 'neutral'}
                       onChange={(e) => onEdgeFieldChange('tone', e.target.value)}
@@ -700,8 +682,8 @@ export default function InspectorSlideOver({
                   </div>
                 </>
               ) : (
-                <div className="rounded-xl border border-dashed border-white/20 p-8 text-center">
-                  <p className="text-sm text-zinc-500">
+                <div className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-8 text-center">
+                  <p className="text-sm text-[#64748B]">
                     Wähle eine Verbindung, um Bedingungen und Labels zu pflegen.
                   </p>
                 </div>
@@ -724,7 +706,7 @@ export default function InspectorSlideOver({
 
           {/* Preview Tab */}
           {inspectorTab === 'preview' && (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
               <FlowSimulator
                 nodes={nodes}
                 edges={edges}
@@ -734,11 +716,10 @@ export default function InspectorSlideOver({
             </div>
           )}
 
-          {/* Quality Check Section */}
-          <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
-            <p className="text-sm font-semibold text-zinc-300 mb-3">Qualitäts-Check</p>
+          <div className="mt-6 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+            <p className="mb-3 text-sm font-semibold text-[#0F172A]">Qualitäts-Check</p>
             {lintWarnings.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-400">
+              <div className="flex items-center gap-2 rounded-lg border border-[#A7F3D0] bg-[#ECFDF5] px-3 py-2 text-sm font-semibold text-[#047857]">
                 <CheckCircle2 className="h-4 w-4" /> Keine Warnungen
               </div>
             ) : (
@@ -748,8 +729,8 @@ export default function InspectorSlideOver({
                     key={warning.id}
                     className={`rounded-lg border p-3 text-sm ${
                       warning.severity === 'info'
-                        ? 'border-blue-500/20 bg-blue-500/10 text-blue-400'
-                        : 'border-amber-500/20 bg-amber-500/10 text-amber-400'
+                        ? 'border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]'
+                        : 'border-[#FCD34D] bg-[#FFFBEB] text-[#B45309]'
                     }`}
                   >
                     <p className="font-semibold">{warning.message}</p>
@@ -771,22 +752,21 @@ export default function InspectorSlideOver({
             )}
           </div>
 
-          {/* Save State Feedback */}
           {saveState === 'saved' && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-400">
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-[#A7F3D0] bg-[#ECFDF5] px-3 py-2 text-sm font-semibold text-[#047857]">
               <CheckCircle2 className="h-4 w-4" /> Änderungen gespeichert
             </div>
           )}
           {saveState === 'error' && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-2 text-sm font-semibold text-rose-400">
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm font-semibold text-[#DC2626]">
               <TriangleAlert className="h-4 w-4" /> Speichern fehlgeschlagen
             </div>
           )}
         </div>
 
-        <div className="border-t border-white/10 bg-zinc-900/90 px-6 py-4">
+        <div className="border-t border-[#E2E8F0] bg-white px-6 py-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold text-zinc-400">
+            <span className="text-xs font-semibold text-[#64748B]">
               {saveState === 'error'
                 ? 'Speichern fehlgeschlagen'
                 : hasUnsavedChanges
@@ -796,7 +776,7 @@ export default function InspectorSlideOver({
             <button
               onClick={onSave}
               disabled={!hasUnsavedChanges || saveState === 'saving'}
-              className="rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full bg-[#2450b2] px-5 py-2.5 text-[15px] font-semibold text-white shadow-[0_2px_16px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1a46c4] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saveState === 'saving' ? 'Speichert...' : 'Speichern'}
             </button>

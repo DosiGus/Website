@@ -1,54 +1,64 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
-  Clock,
-  Users,
   CheckCircle2,
-  XCircle,
-  Eye,
-  Trash2,
-  Plus,
-  Filter,
   ChevronLeft,
   ChevronRight,
+  Clock3,
+  Eye,
+  FilterX,
+  LayoutList,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+  XCircle,
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
-import type { Reservation, ReservationStatus, ReservationListResponse } from "../../lib/reservationTypes";
-import ReservationDetailModal from "./ReservationDetailModal";
+import type {
+  Reservation,
+  ReservationListResponse,
+  ReservationStatus,
+} from "../../lib/reservationTypes";
 import ReservationCreateModal from "./ReservationCreateModal";
+import ReservationDetailModal from "./ReservationDetailModal";
+import ReservationCalendar, { toDateStr } from "./ReservationCalendar";
+import Button from "../ui/Button";
+import Badge from "../ui/Badge";
+import DataTable, { type DataTableColumn } from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
 import { getBookingLabels, type VerticalKey } from "../../lib/verticals";
 
-type StatusBadgeConfig = {
-  label: string;
-  bgClass: string;
-  textClass: string;
+type Props = {
+  vertical?: VerticalKey | null;
 };
 
-const STATUS_CONFIG: Record<ReservationStatus, StatusBadgeConfig> = {
-  pending: { label: "Ausstehend", bgClass: "bg-amber-500/10", textClass: "text-amber-400" },
-  confirmed: { label: "Bestätigt", bgClass: "bg-emerald-500/10", textClass: "text-emerald-400" },
-  cancelled: { label: "Storniert", bgClass: "bg-zinc-500/10", textClass: "text-zinc-400" },
-  completed: { label: "Abgeschlossen", bgClass: "bg-blue-500/10", textClass: "text-blue-400" },
-  no_show: { label: "Nicht erschienen", bgClass: "bg-rose-500/10", textClass: "text-rose-400" },
+type StatusMeta = {
+  label: string;
+  badgeVariant: "warning" | "success" | "neutral" | "info" | "danger";
+};
+
+const STATUS_META: Record<ReservationStatus, StatusMeta> = {
+  pending: { label: "Ausstehend", badgeVariant: "warning" },
+  confirmed: { label: "Bestaetigt", badgeVariant: "success" },
+  cancelled: { label: "Storniert", badgeVariant: "neutral" },
+  completed: { label: "Abgeschlossen", badgeVariant: "info" },
+  no_show: { label: "Nicht erschienen", badgeVariant: "danger" },
 };
 
 const STATUS_OPTIONS: { value: ReservationStatus | "all"; label: string }[] = [
-  { value: "all", label: "Status filtern" },
+  { value: "all", label: "Alle Status" },
   { value: "pending", label: "Ausstehend" },
-  { value: "confirmed", label: "Bestätigt" },
+  { value: "confirmed", label: "Bestaetigt" },
   { value: "cancelled", label: "Storniert" },
   { value: "completed", label: "Abgeschlossen" },
   { value: "no_show", label: "Nicht erschienen" },
 ];
 
 const ITEMS_PER_PAGE = 20;
-
-type Props = {
-  vertical?: VerticalKey | null;
-};
 
 export default function ReservationsClient({ vertical }: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -63,29 +73,19 @@ export default function ReservationsClient({ vertical }: Props) {
   const [notice, setNotice] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
-  // Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ReservationStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<ReservationStatus | "all">(
+    "all",
+  );
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Modals
-  const [detailModalReservation, setDetailModalReservation] = useState<Reservation | null>(null);
+  const [detailModalReservation, setDetailModalReservation] =
+    useState<Reservation | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
-
-  // Delete confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-
-  // Pending action state
   const [pendingAction, setPendingAction] = useState<string | null>(null);
-  const lastStatusParamRef = useRef<string | null>(null);
-  const requestIdRef = useRef(0);
-  const lastFilterKeyRef = useRef<string | null>(null);
-
-  // Stats
   const [stats, setStats] = useState({
     today: 0,
     pending: 0,
@@ -93,16 +93,29 @@ export default function ReservationsClient({ vertical }: Props) {
     guestsToday: 0,
   });
 
-  // Load user
+  const [pageView, setPageView] = useState<"calendar" | "list">("list");
+  const [calReservations, setCalReservations] = useState<Reservation[]>([]);
+  const [calLoading, setCalLoading] = useState(false);
+  const calRequestIdRef = useRef(0);
+
+  const lastStatusParamRef = useRef<string | null>(null);
+  const requestIdRef = useRef(0);
+  const lastFilterKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
     async function loadUser() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         router.replace("/login");
         return;
       }
+
       setUserId(user.id);
     }
+
     loadUser();
   }, [supabase, router]);
 
@@ -130,7 +143,16 @@ export default function ReservationsClient({ vertical }: Props) {
     }
   }, [searchParams]);
 
-  // Load reservations
+  useEffect(() => {
+    const handleOpenCreate = () => setCreateModalOpen(true);
+    window.addEventListener("wesponde:reservations:create", handleOpenCreate);
+    return () =>
+      window.removeEventListener(
+        "wesponde:reservations:create",
+        handleOpenCreate,
+      );
+  }, []);
+
   const loadReservations = async () => {
     if (!userId) return;
 
@@ -138,7 +160,9 @@ export default function ReservationsClient({ vertical }: Props) {
     setError(null);
     const requestId = ++requestIdRef.current;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session?.access_token) {
       router.replace("/login");
       return;
@@ -175,49 +199,60 @@ export default function ReservationsClient({ vertical }: Props) {
       setTotal(data.total);
     } catch (err) {
       if (requestId !== requestIdRef.current) return;
-      setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten");
+      setError(
+        err instanceof Error ? err.message : "Ein Fehler ist aufgetreten",
+      );
     } finally {
       if (requestId !== requestIdRef.current) return;
       setLoading(false);
     }
   };
 
-  // Load stats
   const loadStats = async () => {
     if (!userId) return;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session?.access_token) return;
 
     const today = new Date().toISOString().split("T")[0];
 
     try {
-      // Get today's reservations
-      const todayResponse = await fetch(`/api/reservations?date=${today}&limit=200`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const todayData: ReservationListResponse = todayResponse.ok ? await todayResponse.json() : { reservations: [], total: 0, limit: 200, offset: 0 };
+      const [todayResponse, pendingResponse, confirmedResponse] =
+        await Promise.all([
+          fetch(`/api/reservations?date=${today}&limit=200`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+          fetch(`/api/reservations?status=pending&limit=200`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+          fetch(`/api/reservations?status=confirmed&limit=200`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+        ]);
 
-      // Get pending reservations
-      const pendingResponse = await fetch(`/api/reservations?status=pending&limit=200`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const pendingData: ReservationListResponse = pendingResponse.ok ? await pendingResponse.json() : { reservations: [], total: 0, limit: 200, offset: 0 };
-
-      // Get confirmed reservations
-      const confirmedResponse = await fetch(`/api/reservations?status=confirmed&limit=200`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const confirmedData: ReservationListResponse = confirmedResponse.ok ? await confirmedResponse.json() : { reservations: [], total: 0, limit: 200, offset: 0 };
+      const todayData: ReservationListResponse = todayResponse.ok
+        ? await todayResponse.json()
+        : { reservations: [], total: 0, limit: 200, offset: 0 };
+      const pendingData: ReservationListResponse = pendingResponse.ok
+        ? await pendingResponse.json()
+        : { reservations: [], total: 0, limit: 200, offset: 0 };
+      const confirmedData: ReservationListResponse = confirmedResponse.ok
+        ? await confirmedResponse.json()
+        : { reservations: [], total: 0, limit: 200, offset: 0 };
 
       setStats({
         today: todayData.total,
         pending: pendingData.total,
         confirmed: confirmedData.total,
-        guestsToday: (todayData.reservations ?? []).reduce((sum, r) => sum + r.guest_count, 0),
+        guestsToday: (todayData.reservations ?? []).reduce(
+          (sum, reservation) => sum + reservation.guest_count,
+          0,
+        ),
       });
     } catch {
-      // Stats loading failed silently
+      // Stats load quietly; table state already covers primary UX.
     }
   };
 
@@ -236,13 +271,13 @@ export default function ReservationsClient({ vertical }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, currentPage, filterKey]);
 
-  // Client-side search filter
   const filteredReservations = useMemo(() => {
-    if (!searchQuery) return reservations;
+    if (!searchQuery.trim()) return reservations;
     const query = searchQuery.toLowerCase();
-    return reservations.filter((r) =>
-      r.guest_name.toLowerCase().includes(query) ||
-      (r.contacts?.display_name || "").toLowerCase().includes(query)
+
+    return reservations.filter((reservation) =>
+      reservation.guest_name.toLowerCase().includes(query) ||
+      (reservation.contacts?.display_name || "").toLowerCase().includes(query),
     );
   }, [reservations, searchQuery]);
 
@@ -257,7 +292,6 @@ export default function ReservationsClient({ vertical }: Props) {
     return null;
   };
 
-  // Format date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("de-DE", {
@@ -267,13 +301,14 @@ export default function ReservationsClient({ vertical }: Props) {
     });
   };
 
-  // Update reservation status
   const updateStatus = async (id: string, status: ReservationStatus) => {
     setPendingAction(id);
     setError(null);
     setNotice(null);
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session?.access_token) {
       router.replace("/login");
       return;
@@ -298,35 +333,42 @@ export default function ReservationsClient({ vertical }: Props) {
       if (status === "completed" && payload?.review) {
         const reviewStatus = payload.review.status as string | undefined;
         if (payload.review.success) {
-          setNotice("✅ Bewertungs-Flow wurde gesendet.");
+          setNotice("Bewertungs-Flow wurde gesendet.");
         } else if (reviewStatus === "missing_review_url") {
-          setNotice("⚠️ Kein Google-Bewertungslink hinterlegt. Bitte in Integrationen speichern.");
+          setNotice(
+            "Kein Google-Bewertungslink hinterlegt. Bitte in Integrationen speichern.",
+          );
         } else if (reviewStatus === "missing_sender") {
-          setNotice(`⚠️ Instagram-Kontakt fehlt (${labels.bookingSingular}).`);
+          setNotice(`Instagram-Kontakt fehlt (${labels.bookingSingular}).`);
         } else if (reviewStatus === "missing_integration") {
-          setNotice("⚠️ Integration nicht verbunden. Bitte Meta/Instagram verbinden.");
+          setNotice(
+            "Integration nicht verbunden. Bitte Meta oder Instagram verbinden.",
+          );
         } else if (reviewStatus === "already_sent") {
-          setNotice("ℹ️ Bewertungs-Flow wurde bereits gesendet.");
+          setNotice("Bewertungs-Flow wurde bereits gesendet.");
         } else {
-          setNotice("⚠️ Bewertungs-Flow konnte nicht gesendet werden.");
+          setNotice("Bewertungs-Flow konnte nicht gesendet werden.");
         }
       }
 
       await loadReservations();
       await loadStats();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten");
+      setError(
+        err instanceof Error ? err.message : "Ein Fehler ist aufgetreten",
+      );
     } finally {
       setPendingAction(null);
     }
   };
 
-  // Delete reservation
   const deleteReservation = async (id: string) => {
     setPendingAction(id);
     setError(null);
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session?.access_token) {
       router.replace("/login");
       return;
@@ -341,381 +383,520 @@ export default function ReservationsClient({ vertical }: Props) {
       });
 
       if (!response.ok) {
-        throw new Error("Fehler beim Löschen");
+        throw new Error("Fehler beim Loeschen");
       }
 
       setDeleteConfirmId(null);
       await loadReservations();
       await loadStats();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten");
+      setError(
+        err instanceof Error ? err.message : "Ein Fehler ist aufgetreten",
+      );
     } finally {
       setPendingAction(null);
     }
   };
 
-  // Handle create success
+  const loadCalendarReservations = useCallback(async (start: Date, end: Date) => {
+    if (!userId) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    const reqId = ++calRequestIdRef.current;
+    setCalLoading(true);
+
+    const params = new URLSearchParams({
+      dateFrom: toDateStr(start),
+      dateTo: toDateStr(end),
+      limit: "500",
+    });
+
+    try {
+      const res = await fetch(`/api/reservations?${params}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok || reqId !== calRequestIdRef.current) return;
+      const data: ReservationListResponse = await res.json();
+      if (reqId !== calRequestIdRef.current) return;
+      setCalReservations(data.reservations);
+    } catch {
+      // silent
+    } finally {
+      if (reqId === calRequestIdRef.current) setCalLoading(false);
+    }
+  }, [userId, supabase]);
+
   const handleCreateSuccess = () => {
     setCreateModalOpen(false);
     loadReservations();
     loadStats();
   };
 
-  // Pagination
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
-  // Render status badge
   const renderStatusBadge = (status: ReservationStatus) => {
-    const config = STATUS_CONFIG[status];
-    return (
-      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${config.bgClass} ${config.textClass}`}>
-        {config.label}
-      </span>
-    );
+    const config = STATUS_META[status];
+    return <Badge variant={config.badgeVariant}>{config.label}</Badge>;
   };
 
-  // Render action buttons
   const renderActions = (reservation: Reservation) => {
     const isLoading = pendingAction === reservation.id;
 
     return (
-      <div className="flex flex-wrap gap-2">
-        {/* Confirm button - show for pending */}
-        {reservation.status === "pending" && (
-          <button
+      <div className="flex flex-wrap items-center gap-2">
+        {reservation.status === "pending" ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={isLoading}
             onClick={() => updateStatus(reservation.id, "confirmed")}
-            disabled={isLoading}
-            className="flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
+            className="border-[#BBF7D0] bg-[#ECFDF5] text-[#047857] hover:bg-[#D1FAE5]"
           >
-            <CheckCircle2 className="h-3 w-3" />
-            Bestätigen
-          </button>
-        )}
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Bestaetigen
+          </Button>
+        ) : null}
 
-        {/* Cancel button - show for pending or confirmed */}
-        {(reservation.status === "pending" || reservation.status === "confirmed") && (
-          <button
+        {reservation.status === "pending" ||
+        reservation.status === "confirmed" ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={isLoading}
             onClick={() => updateStatus(reservation.id, "cancelled")}
-            disabled={isLoading}
-            className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/10 disabled:opacity-50"
+            className="border-[#E2E8F0] bg-white text-[#475569] hover:bg-[#F8FAFC]"
           >
-            <XCircle className="h-3 w-3" />
+            <XCircle className="h-3.5 w-3.5" />
             Stornieren
-          </button>
-        )}
+          </Button>
+        ) : null}
 
-        {/* Complete button - show for confirmed */}
-        {reservation.status === "confirmed" && (
-          <button
+        {reservation.status === "confirmed" ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={isLoading}
             onClick={() => updateStatus(reservation.id, "completed")}
-            disabled={isLoading}
-            className="flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/20 disabled:opacity-50"
+            className="border-[#BAE6FD] bg-[#F0F9FF] text-[#0369A1] hover:bg-[#E0F2FE]"
           >
-            <CheckCircle2 className="h-3 w-3" />
-            Abschließen
-          </button>
-        )}
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Abschliessen
+          </Button>
+        ) : null}
 
-        {/* No-show button - show for confirmed */}
-        {reservation.status === "confirmed" && (
-          <button
+        {reservation.status === "confirmed" ? (
+          <Button
+            size="sm"
+            variant="danger-outline"
+            loading={isLoading}
             onClick={() => updateStatus(reservation.id, "no_show")}
-            disabled={isLoading}
-            className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-400 transition-colors hover:bg-rose-500/20 disabled:opacity-50"
+            className="border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C] hover:bg-[#FEE2E2]"
           >
-            <XCircle className="h-3 w-3" />
-            Nicht erschienen
-          </button>
-        )}
+            <XCircle className="h-3.5 w-3.5" />
+            No-Show
+          </Button>
+        ) : null}
 
-        {/* Details button - always show */}
-        <button
+        <Button
+          size="sm"
+          variant="ghost"
           onClick={() => setDetailModalReservation(reservation)}
-          className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/10"
+          className="text-[#475569] hover:bg-[#F0F4F9] hover:text-[#0F172A]"
         >
-          <Eye className="h-3 w-3" />
+          <Eye className="h-3.5 w-3.5" />
           Details
-        </button>
+        </Button>
 
-        {/* Delete button - always show */}
         {deleteConfirmId === reservation.id ? (
-          <div className="flex items-center gap-1">
-            <button
+          <>
+            <Button
+              size="sm"
+              variant="danger"
+              loading={isLoading}
               onClick={() => deleteReservation(reservation.id)}
-              disabled={isLoading}
-              className="rounded-lg bg-rose-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
             >
-              {isLoading ? "Lösche..." : "Ja, löschen"}
-            </button>
-            <button
+              <Trash2 className="h-3.5 w-3.5" />
+              Jetzt loeschen
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={() => setDeleteConfirmId(null)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/10"
             >
               Abbrechen
-            </button>
-          </div>
+            </Button>
+          </>
         ) : (
-          <button
+          <Button
+            size="sm"
+            variant="danger-outline"
             onClick={() => setDeleteConfirmId(reservation.id)}
-            className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-400 transition-colors hover:bg-rose-500/20"
           >
-            <Trash2 className="h-3 w-3" />
-            Löschen
-          </button>
+            <Trash2 className="h-3.5 w-3.5" />
+            Loeschen
+          </Button>
         )}
       </div>
     );
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-blue-500/20 blur-2xl transition-all group-hover:bg-blue-500/30" />
-          <div className="relative flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600">
-              <CalendarDays className="h-5 w-5 text-white" />
+  const columns: DataTableColumn<Reservation>[] = [
+    {
+      id: "contact",
+      header: labels.contactLabel,
+      sortValue: (reservation) => getReservationPrimaryName(reservation),
+      render: (reservation) => (
+        <div className="min-w-[180px]">
+          <div className="font-medium text-[#0F172A]">
+            {getReservationPrimaryName(reservation)}
+          </div>
+          {getReservationSecondaryName(reservation) ? (
+            <div className="mt-1 text-xs text-[#64748B]">
+              {getReservationSecondaryName(reservation)}
             </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{stats.today}</p>
-              <p className="text-sm text-zinc-400">Heute</p>
-            </div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      id: "date",
+      header: "Datum",
+      sortValue: (reservation) =>
+        `${reservation.reservation_date} ${reservation.reservation_time}`,
+      render: (reservation) => (
+        <div>
+          <div className="font-medium text-[#0F172A]">
+            {formatDate(reservation.reservation_date)}
+          </div>
+          <div className="mt-1 text-xs text-[#64748B]">
+            {reservation.reservation_time} Uhr
           </div>
         </div>
-
-        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-amber-500/20 blur-2xl transition-all group-hover:bg-amber-500/30" />
-          <div className="relative flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600">
-              <Clock className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{stats.pending}</p>
-              <p className="text-sm text-zinc-400">Ausstehend</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-emerald-500/20 blur-2xl transition-all group-hover:bg-emerald-500/30" />
-          <div className="relative flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
-              <CheckCircle2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{stats.confirmed}</p>
-              <p className="text-sm text-zinc-400">Bestätigt</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-violet-500/20 blur-2xl transition-all group-hover:bg-violet-500/30" />
-          <div className="relative flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-600">
-              <Users className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{stats.guestsToday}</p>
-              <p className="text-sm text-zinc-400">{labels.participantsTodayLabel}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Create Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => setCreateModalOpen(true)}
-          className="flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40"
+      ),
+    },
+    {
+      id: "participants",
+      header: labels.participantsLabel,
+      align: "center",
+      sortValue: (reservation) => reservation.guest_count,
+      render: (reservation) => (
+        <span
+          className="font-medium text-[#0F172A]"
+          style={{ fontVariantNumeric: "tabular-nums" }}
         >
+          {reservation.guest_count}
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      sortValue: (reservation) => STATUS_META[reservation.status].label,
+      render: (reservation) => renderStatusBadge(reservation.status),
+    },
+    {
+      id: "actions",
+      header: "Aktionen",
+      render: (reservation) => renderActions(reservation),
+      cellClassName: "min-w-[280px]",
+    },
+  ];
+
+  const statCards = [
+    {
+      key: "today",
+      label: "Heute",
+      value: stats.today,
+      description: `${labels.bookingPlural} fuer den heutigen Tag`,
+      icon: CalendarDays,
+      tone: "bg-[#DBEAFE] text-[#2563EB]",
+    },
+    {
+      key: "pending",
+      label: "Ausstehend",
+      value: stats.pending,
+      description: "Warten auf Bestaetigung",
+      icon: Clock3,
+      tone: "bg-[#FEF3C7] text-[#B45309]",
+    },
+    {
+      key: "confirmed",
+      label: "Bestaetigt",
+      value: stats.confirmed,
+      description: "Bereits verbindlich eingeplant",
+      icon: CheckCircle2,
+      tone: "bg-[#D1FAE5] text-[#047857]",
+    },
+    {
+      key: "guestsToday",
+      label: labels.participantsTodayLabel,
+      value: stats.guestsToday,
+      description: "Gesamtvolumen fuer heute",
+      icon: Users,
+      tone: "bg-[#E0F2FE] text-[#0369A1]",
+    },
+  ] as const;
+
+  const hasActiveFilters =
+    statusFilter !== "all" || Boolean(dateFrom) || Boolean(dateTo);
+
+  return (
+    <div className="space-y-6 app-page-enter">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {statCards.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.key} className="app-card rounded-2xl p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[13px] font-medium text-[#94A3B8]">
+                    {item.label}
+                  </p>
+                  <p
+                    className="mt-3 text-[28px] font-bold text-[#0F172A]"
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                  >
+                    {item.value.toLocaleString("de-DE")}
+                  </p>
+                </div>
+                <span
+                  className={[
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                    item.tone,
+                  ].join(" ")}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-[#475569]">
+                {item.description}
+              </p>
+            </div>
+          );
+        })}
+      </section>
+
+      {/* View toggle */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center rounded-xl border border-[#E2E8F0] bg-white p-1 shadow-sm">
+          <button
+            onClick={() => setPageView("list")}
+            className={[
+              "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+              pageView === "list"
+                ? "bg-[#2450b2] text-white shadow-sm"
+                : "text-[#64748B] hover:text-[#0F172A]",
+            ].join(" ")}
+          >
+            <LayoutList className="h-4 w-4" />
+            Liste
+          </button>
+          <button
+            onClick={() => setPageView("calendar")}
+            className={[
+              "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+              pageView === "calendar"
+                ? "bg-[#2450b2] text-white shadow-sm"
+                : "text-[#64748B] hover:text-[#0F172A]",
+            ].join(" ")}
+          >
+            <CalendarDays className="h-4 w-4" />
+            Kalender
+          </button>
+        </div>
+
+        <Button onClick={() => setCreateModalOpen(true)}>
           <Plus className="h-4 w-4" />
           {labels.bookingCreateAction}
-        </button>
+        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-          {/* Search */}
-          <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2">
-            <Filter className="h-4 w-4 text-zinc-400" />
-            <input
-              className="w-full bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
-              placeholder={labels.contactSearchPlaceholder}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      {/* Calendar view */}
+      {pageView === "calendar" && (
+        <ReservationCalendar
+          reservations={calReservations}
+          loading={calLoading}
+          onSelectReservation={setDetailModalReservation}
+          onRangeChange={loadCalendarReservations}
+        />
+      )}
+
+      {/* List view */}
+      {pageView === "list" && (
+      <section className="app-panel space-y-5 p-6">
+        <div className="flex flex-col gap-4 border-b border-[#E2E8F0] pb-5 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <Badge variant="accent">Operations</Badge>
+            <h2 className="mt-3 text-lg font-semibold text-[#0F172A]">
+              {labels.bookingPlural} im Blick behalten
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-[#475569]">
+              Suche nach {labels.contactPlural.toLowerCase()}, filtere nach
+              Status oder Zeitraum und bearbeite offene Vorgaenge direkt in der
+              Tabelle.
+            </p>
           </div>
+        </div>
 
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as ReservationStatus | "all")}
-            className="app-select"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,0.7fr))_auto]">
+          <label className="space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+              Suche
+            </span>
+            <span className="flex min-h-[42px] items-center gap-3 rounded-md border border-[#E2E8F0] bg-white px-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+              <Search className="h-4 w-4 text-[#94A3B8]" />
+              <input
+                className="app-input min-h-0 border-0 bg-transparent p-0 shadow-none focus:border-0 focus:shadow-none"
+                placeholder={labels.contactSearchPlaceholder}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+            </span>
+          </label>
 
-          {/* Date From */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-zinc-400">Von:</span>
+          <label className="space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+              Status
+            </span>
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as ReservationStatus | "all")
+              }
+              className="app-select"
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+              Von
+            </span>
             <input
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
+              onChange={(event) => setDateFrom(event.target.value)}
+              className="app-input px-3 py-2 [color-scheme:light]"
             />
-          </div>
+          </label>
 
-          {/* Date To */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-zinc-400">Bis:</span>
+          <label className="space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+              Bis
+            </span>
             <input
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
+              onChange={(event) => setDateTo(event.target.value)}
+              className="app-input px-3 py-2 [color-scheme:light]"
             />
-          </div>
+          </label>
 
-          {/* Clear Filters */}
-          {(statusFilter !== "all" || dateFrom || dateTo) && (
-            <button
+          <div className="flex items-end">
+            <Button
+              variant="secondary"
+              disabled={!hasActiveFilters}
               onClick={() => {
                 setStatusFilter("all");
                 setDateFrom("");
                 setDateTo("");
               }}
-              className="text-sm font-semibold text-indigo-400 hover:text-indigo-300"
             >
-              Filter zurücksetzen
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-400">
-          {error}
-        </div>
-      )}
-
-      {notice && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-400">
-          {notice}
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-xl">
-        {loading ? (
-          <div className="p-6 text-sm text-zinc-400">
-            {labels.bookingPlural} werden geladen...
+              <FilterX className="h-4 w-4" />
+              Reset
+            </Button>
           </div>
-        ) : filteredReservations.length === 0 ? (
-          <div className="p-6 text-sm text-zinc-400">
-            Keine {labels.bookingPlural} gefunden.
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-white/10 text-sm">
-                <thead className="bg-white/5">
-                  <tr>
-                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">{labels.contactLabel}</th>
-                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Datum</th>
-                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Uhrzeit</th>
-                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">{labels.participantsLabel}</th>
-                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Status</th>
-                    <th className="px-6 py-3 text-left font-semibold text-zinc-400">Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filteredReservations.map((reservation) => (
-                    <tr key={reservation.id} className="transition-colors hover:bg-white/5">
-                      <td className="whitespace-nowrap px-6 py-4 font-medium text-white">
-                        <div>{getReservationPrimaryName(reservation)}</div>
-                        {getReservationSecondaryName(reservation) && (
-                          <div className="text-xs text-zinc-500">
-                            {getReservationSecondaryName(reservation)}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-zinc-300">
-                        {formatDate(reservation.reservation_date)}
-                      </td>
-                      <td className="px-6 py-4 text-zinc-300">
-                        {reservation.reservation_time}
-                      </td>
-                      <td className="px-6 py-4 text-zinc-300">
-                        {reservation.guest_count}
-                      </td>
-                      <td className="px-6 py-4">
-                        {renderStatusBadge(reservation.status)}
-                      </td>
-                      <td className="px-6 py-4">
-                        {renderActions(reservation)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-white/10 bg-white/5 px-6 py-3">
-                <p className="text-sm text-zinc-400">
-                  Seite {currentPage} von {totalPages} ({total} Einträge)
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5 disabled:opacity-50"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Zurück
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5 disabled:opacity-50"
-                  >
-                    Weiter
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+        {error ? (
+          <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+            {error}
+          </div>
+        ) : null}
+
+        {notice ? (
+          <div className="rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#B45309]">
+            {notice}
+          </div>
+        ) : null}
+
+        <div className="space-y-4">
+          <DataTable
+            data={filteredReservations}
+            columns={columns}
+            getRowKey={(reservation) => reservation.id}
+            initialSort={{ columnId: "date", direction: "asc" }}
+            loading={loading}
+            skeletonRows={6}
+            emptyState={
+              <EmptyState
+                icon={CalendarDays}
+                title={`Keine ${labels.bookingPlural} gefunden`}
+                description={`Sobald neue ${labels.bookingPlural.toLowerCase()} eingehen oder du manuell ${labels.bookingAccusativeArticle} anlegst, erscheinen sie hier.`}
+                action={
+                  <Button onClick={() => setCreateModalOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                    {labels.bookingCreateAction}
+                  </Button>
+                }
+              />
+            }
+          />
+
+          {totalPages > 1 ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-[#475569]">
+                Seite <span className="font-semibold text-[#0F172A]">{currentPage}</span>{" "}
+                von <span className="font-semibold text-[#0F172A]">{totalPages}</span>
+                {" "}bei {total.toLocaleString("de-DE")} Eintraegen
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Zurueck
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
+                >
+                  Weiter
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-            )}
-          </>
-        )}
-      </div>
+            </div>
+          ) : null}
+        </div>
+      </section>
+      )}
 
-      {/* Detail Modal */}
-      {detailModalReservation && (
+      {detailModalReservation ? (
         <ReservationDetailModal
           reservation={detailModalReservation}
           labels={labels}
           onClose={() => setDetailModalReservation(null)}
         />
-      )}
+      ) : null}
 
-      {/* Create Modal */}
-      {createModalOpen && (
+      {createModalOpen ? (
         <ReservationCreateModal
           onClose={() => setCreateModalOpen(false)}
           onSuccess={handleCreateSuccess}
           labels={labels}
         />
-      )}
+      ) : null}
     </div>
   );
 }

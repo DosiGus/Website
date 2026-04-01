@@ -7,7 +7,6 @@ import {
   Layers,
   Link2,
   Pencil,
-  Workflow,
   Zap,
   type LucideIcon,
 } from "lucide-react";

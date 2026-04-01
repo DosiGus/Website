@@ -2,7 +2,7 @@ import "./globals.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, DM_Sans, Bricolage_Grotesque } from "next/font/google";
 
 const inter = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -10,6 +10,9 @@ const inter = Plus_Jakarta_Sans({
   variable: "--font-sans",
   display: "swap",
 });
+
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
+const bricolage = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-bricolage", display: "swap", weight: ["400", "500", "600", "700", "800"] });
 
 export const metadata: Metadata = {
   verification: {
@@ -36,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="privacy-policy" href="https://wesponde.com/privacy" />
       </head>
       <body
-        className={`${inter.variable} flex min-h-screen flex-col bg-zinc-950 text-white antialiased`}
+        className={`${inter.variable} ${dmSans.variable} ${bricolage.variable} flex min-h-screen flex-col bg-zinc-950 text-white antialiased`}
       >
         <Navbar />
         <main className="flex-1">{children}</main>

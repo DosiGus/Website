@@ -7,10 +7,10 @@ import {
   CalendarDays,
   Check,
   Clock,
+  ListChecks,
   MessageCircle,
   Phone,
   Users,
-  Sparkles,
   Zap,
 } from "lucide-react";
 import { Node, Edge } from "reactflow";
@@ -97,6 +97,18 @@ const TIME_PRESETS = [
   { label: "Abend (17-21 Uhr)", slots: ["17:00", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30"] },
   { label: "Ganztags", slots: ["11:00", "12:00", "13:00", "17:00", "18:00", "19:00", "20:00"] },
 ];
+
+const STEP_HEADER_CLASS = "flex items-center gap-4 text-[#2563EB]";
+const STEP_TITLE_CLASS = "text-[32px] font-semibold tracking-tight text-[#0F172A] sm:text-[36px]";
+const STEP_COPY_CLASS = "text-[19px] leading-8 text-[#475569]";
+const STEP_HINT_CLASS = "text-[15px] leading-7 text-[#94A3B8]";
+const FIELD_LABEL_CLASS = "mb-3 block text-[17px] font-semibold text-[#334155]";
+const INPUT_CLASS = "app-input rounded-2xl px-5 py-4 font-medium text-[#0F172A] placeholder:text-[#94A3B8]";
+const SELECTION_CARD_BASE_CLASS = "flex items-center gap-4 rounded-3xl border-2 p-5 text-left transition";
+const SELECTION_CARD_SELECTED_CLASS = "border-[#93C5FD] bg-[#EFF6FF]";
+const SELECTION_CARD_IDLE_CLASS = "border-[#E2E8F0] bg-white hover:border-[#BFDBFE] hover:bg-[#F8FAFC]";
+const INPUT_TEXT_STYLE = { fontSize: "18px", lineHeight: "1.45" } as const;
+const TEXTAREA_TEXT_STYLE = { fontSize: "18px", lineHeight: "1.6" } as const;
 
 export default function FlowSetupWizard({ onComplete, onCancel, vertical }: FlowSetupWizardProps) {
   const copy = getWizardCopy(vertical);
@@ -559,16 +571,16 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
   }, [config, copy, onComplete, vertical]);
 
   const renderStepIndicator = () => (
-    <div className="flex items-center justify-center gap-2 mb-8">
+    <div className="mb-12 flex items-center justify-center gap-3.5">
       {[1, 2, 3, 4, 5, 6].map((s) => (
         <div
           key={s}
-          className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all ${
+          className={`flex h-11 w-11 items-center justify-center rounded-full text-base font-semibold transition-all ${
             s === step
-              ? "bg-emerald-500 text-white scale-110"
+              ? "scale-110 bg-[#2563EB] text-white shadow-[0_12px_30px_rgba(37,99,235,0.24)]"
               : s < step
-              ? "bg-emerald-500/20 text-emerald-400"
-              : "bg-white/10 text-zinc-500"
+                ? "border border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]"
+                : "border border-[#E2E8F0] bg-[#F8FAFC] text-[#94A3B8]"
           }`}
         >
           {s < step ? <Check className="h-4 w-4" /> : s}
@@ -578,21 +590,21 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
   );
 
   const renderStep1 = () => (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 text-emerald-400">
-        <MessageCircle className="h-6 w-6" />
-        <h2 className="text-xl font-semibold text-white">Begrüßung</h2>
+    <div className="space-y-8">
+      <div className={STEP_HEADER_CLASS}>
+        <MessageCircle className="h-7 w-7" />
+        <h2 className={STEP_TITLE_CLASS}>Begrüßung</h2>
       </div>
-      <p className="text-zinc-400">
+      <p className={STEP_COPY_CLASS}>
         Wie heißt dein {copy.businessTypeLabel} und wie möchtest du deine {copy.customerPlural} begrüßen?
       </p>
-      <p className="text-xs text-zinc-500">
+      <p className={STEP_HINT_CLASS}>
         Tipp: Der {copy.businessTypeLabel}-Name wird automatisch in die Begrüßung eingefügt.
       </p>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div>
-          <label className="block text-sm font-semibold text-zinc-300 mb-2">
+          <label className={FIELD_LABEL_CLASS}>
             {copy.businessLabel} *
           </label>
           <input
@@ -600,12 +612,13 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
             value={config.restaurantName}
             onChange={(e) => updateConfig("restaurantName", e.target.value)}
             placeholder={copy.businessPlaceholder}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            className={`w-full ${INPUT_CLASS}`}
+            style={INPUT_TEXT_STYLE}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-zinc-300 mb-2">
+          <label className={FIELD_LABEL_CLASS}>
             Begrüßungsnachricht
           </label>
           <textarea
@@ -614,10 +627,11 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
               setGreetingTouched(true);
               updateConfig("greetingMessage", e.target.value);
             }}
-            rows={3}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            rows={5}
+            className="app-input w-full resize-none rounded-2xl px-5 py-4 font-medium text-[#0F172A] placeholder:text-[#94A3B8]"
+            style={TEXTAREA_TEXT_STYLE}
           />
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className={`mt-1 ${STEP_HINT_CLASS}`}>
             Diese Nachricht sehen {copy.customerPlural} als erstes, wenn sie die Unterhaltung starten.
           </p>
         </div>
@@ -626,21 +640,21 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
   );
 
   const renderStep2 = () => (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 text-emerald-400">
-        <Zap className="h-6 w-6" />
-        <h2 className="text-xl font-semibold text-white">Einstieg</h2>
+    <div className="space-y-8">
+      <div className={STEP_HEADER_CLASS}>
+        <Zap className="h-7 w-7" />
+        <h2 className={STEP_TITLE_CLASS}>Einstieg</h2>
       </div>
-      <p className="text-zinc-400">
+      <p className={STEP_COPY_CLASS}>
         Welche Wörter tippen {copy.customerPlural}, um die Unterhaltung zu starten?
       </p>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div>
-          <label className="block text-sm font-semibold text-zinc-300 mb-2">
+          <label className={FIELD_LABEL_CLASS}>
             Einstiegswörter *
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <input
               type="text"
               value={config.triggerInput}
@@ -656,7 +670,8 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
                 }
               }}
               placeholder={`z. B. ${copy.triggerKeywords.slice(0, 2).join(", ")}`}
-              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              className={`flex-1 ${INPUT_CLASS}`}
+              style={INPUT_TEXT_STYLE}
             />
             <button
               type="button"
@@ -667,7 +682,7 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
                   updateConfig("triggerInput", "");
                 }
               }}
-              className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/15"
+              className="rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] px-5 py-3 text-base font-semibold text-[#1D4ED8] transition-colors hover:bg-[#DBEAFE]"
             >
               Hinzufügen
             </button>
@@ -675,8 +690,8 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
           {config.triggerKeywords.length > 0 ? (
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-emerald-300">Auswahl</span>
-                <span className="text-zinc-500">
+                <span className="font-semibold text-[#2563EB]">Auswahl</span>
+                <span className="text-[#94A3B8]">
                   {config.triggerKeywords.length} ausgewählt
                 </span>
               </div>
@@ -684,7 +699,7 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
                 {config.triggerKeywords.map((keyword) => (
                   <span
                     key={keyword}
-                    className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"
+                    className="inline-flex items-center gap-2 rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-1.5 text-[15px] font-semibold text-[#2563EB]"
                   >
                     {keyword}
                     <button
@@ -692,10 +707,10 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
                       onClick={() =>
                         updateConfig(
                           "triggerKeywords",
-                          config.triggerKeywords.filter((item) => item !== keyword)
+                          config.triggerKeywords.filter((item) => item !== keyword),
                         )
                       }
-                      className="text-emerald-300/70 hover:text-emerald-200"
+                      className="text-[#2563EB]/60 hover:text-[#1D4ED8]"
                     >
                       ×
                     </button>
@@ -704,11 +719,11 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
               </div>
             </div>
           ) : (
-            <p className="mt-2 text-xs text-rose-400">
+            <p className="mt-2 text-xs text-[#DC2626]">
               Bitte mindestens ein Wort hinzufügen.
             </p>
           )}
-          <p className="mt-2 text-xs text-zinc-500">
+          <p className={`mt-2 ${STEP_HINT_CLASS}`}>
             {copy.customerPlural} nutzen diese Wörter, um die Unterhaltung zu beginnen.
           </p>
         </div>
@@ -717,16 +732,16 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
   );
 
   const renderStep3 = () => (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 text-emerald-400">
-        <CalendarDays className="h-6 w-6" />
-        <h2 className="text-xl font-semibold text-white">Datum-Optionen</h2>
+    <div className="space-y-8">
+      <div className={STEP_HEADER_CLASS}>
+        <CalendarDays className="h-7 w-7" />
+        <h2 className={STEP_TITLE_CLASS}>Datum-Optionen</h2>
       </div>
-      <p className="text-zinc-400">
+      <p className={STEP_COPY_CLASS}>
         Welche Tage sollen {copy.customerPlural} zur Auswahl haben?
       </p>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         {DATE_OPTIONS.map((opt) => {
           const isSelected = config.dateOptions.includes(opt.id);
           return (
@@ -735,25 +750,23 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
               type="button"
               onClick={() => {
                 if (isSelected) {
-                  updateConfig("dateOptions", config.dateOptions.filter(d => d !== opt.id));
+                  updateConfig("dateOptions", config.dateOptions.filter((d) => d !== opt.id));
                 } else {
                   updateConfig("dateOptions", [...config.dateOptions, opt.id]);
                 }
               }}
-              className={`flex items-center gap-3 rounded-xl border-2 p-4 transition ${
-                isSelected
-                  ? "border-emerald-500 bg-emerald-500/10"
-                  : "border-white/10 hover:border-white/20"
+              className={`${SELECTION_CARD_BASE_CLASS} ${
+                isSelected ? SELECTION_CARD_SELECTED_CLASS : SELECTION_CARD_IDLE_CLASS
               }`}
             >
               <div
-                className={`flex h-5 w-5 items-center justify-center rounded-md border-2 ${
-                  isSelected ? "border-emerald-500 bg-emerald-500 text-white" : "border-zinc-600"
+                className={`flex h-6 w-6 items-center justify-center rounded-lg border-2 ${
+                  isSelected ? "border-[#2563EB] bg-[#2563EB] text-white" : "border-[#CBD5E1] bg-white"
                 }`}
               >
                 {isSelected && <Check className="h-3 w-3" />}
               </div>
-              <span className={`font-medium ${isSelected ? "text-emerald-400" : "text-zinc-300"}`}>
+              <span className={`text-base font-medium ${isSelected ? "text-[#2563EB]" : "text-[#334155]"}`}>
                 {opt.label}
               </span>
             </button>
@@ -761,37 +774,37 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
         })}
       </div>
 
-      <p className="text-xs text-zinc-500">
+      <p className={STEP_HINT_CLASS}>
         Tipp: Mit „Wunschdatum“ können {copy.customerPlural} ein konkretes Datum eintippen.
       </p>
     </div>
   );
 
   const renderStep4 = () => (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 text-emerald-400">
-        <Clock className="h-6 w-6" />
-        <h2 className="text-xl font-semibold text-white">Uhrzeiten</h2>
+    <div className="space-y-8">
+      <div className={STEP_HEADER_CLASS}>
+        <Clock className="h-7 w-7" />
+        <h2 className={STEP_TITLE_CLASS}>Uhrzeiten</h2>
       </div>
-      <p className="text-zinc-400">
+      <p className={STEP_COPY_CLASS}>
         Welche Uhrzeiten bietest du für {copy.bookingNounPlural} an? {copy.customerPlural} können auch eine andere Uhrzeit anfragen.
       </p>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div>
-          <label className="block text-sm font-semibold text-zinc-300 mb-3">
+          <label className={FIELD_LABEL_CLASS}>
             Schnellauswahl
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {TIME_PRESETS.map((preset) => (
               <button
                 key={preset.label}
                 type="button"
                 onClick={() => updateConfig("timeSlots", preset.slots)}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                className={`rounded-full border px-5 py-2.5 text-[15px] font-medium transition ${
                   JSON.stringify(config.timeSlots) === JSON.stringify(preset.slots)
-                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
-                    : "border-white/10 text-zinc-400 hover:border-white/20"
+                    ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]"
+                    : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#BFDBFE] hover:text-[#0F172A]"
                 }`}
               >
                 {preset.label}
@@ -801,42 +814,43 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-zinc-300 mb-2">
+          <label className={FIELD_LABEL_CLASS}>
             Aktuelle Auswahl
           </label>
-          <div className="flex flex-wrap gap-2 rounded-xl border border-white/10 bg-white/5 p-3 min-h-[60px]">
+          <div className="flex min-h-[72px] flex-wrap gap-3 rounded-3xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
             {config.timeSlots.map((slot) => (
               <span
                 key={slot}
-                className="inline-flex items-center gap-1 rounded-full bg-zinc-800 border border-white/10 px-3 py-1 text-sm font-medium text-zinc-300"
+                className="inline-flex items-center gap-1 rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-1.5 text-[15px] font-medium text-[#2563EB]"
               >
                 {slot} Uhr
                 <button
                   type="button"
-                  onClick={() => updateConfig("timeSlots", config.timeSlots.filter(s => s !== slot))}
-                  className="ml-1 text-zinc-500 hover:text-rose-400"
+                  onClick={() => updateConfig("timeSlots", config.timeSlots.filter((s) => s !== slot))}
+                  className="ml-1 text-[#2563EB]/60 hover:text-[#DC2626]"
                 >
                   ×
                 </button>
               </span>
             ))}
             {config.timeSlots.length === 0 && (
-              <span className="text-sm text-zinc-500">Keine Uhrzeiten ausgewählt</span>
+              <span className="text-sm text-[#94A3B8]">Keine Uhrzeiten ausgewählt</span>
             )}
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-zinc-300 mb-2">
+          <label className={FIELD_LABEL_CLASS}>
             Eigene Zeiten hinzufügen
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <input
               type="text"
               value={config.customTimeSlots}
               onChange={(e) => updateConfig("customTimeSlots", e.target.value)}
               placeholder="z.B. 14:30"
-              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className={`flex-1 ${INPUT_CLASS}`}
+              style={INPUT_TEXT_STYLE}
             />
             <button
               type="button"
@@ -847,7 +861,7 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
                   updateConfig("customTimeSlots", "");
                 }
               }}
-              className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/15"
+              className="rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] px-5 py-3 text-base font-semibold text-[#1D4ED8] transition-colors hover:bg-[#DBEAFE]"
             >
               Hinzufügen
             </button>
@@ -858,18 +872,18 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
   );
 
   const renderStep5 = () => (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 text-emerald-400">
-        <Users className="h-6 w-6" />
-        <h2 className="text-xl font-semibold text-white">{copy.participantsLabel}</h2>
+    <div className="space-y-8">
+      <div className={STEP_HEADER_CLASS}>
+        <Users className="h-7 w-7" />
+        <h2 className={STEP_TITLE_CLASS}>{copy.participantsLabel}</h2>
       </div>
-      <p className="text-zinc-400">
+      <p className={STEP_COPY_CLASS}>
         Wie viele {copy.customerPlural} können maximal gleichzeitig {copy.bookingVerb}?
       </p>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div>
-          <label className="block text-sm font-semibold text-zinc-300 mb-2">
+          <label className={FIELD_LABEL_CLASS}>
             Maximale {copy.participantsLabel}
           </label>
           <input
@@ -880,7 +894,6 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
             onChange={(e) => {
               const max = parseInt(e.target.value);
               updateConfig("maxGuests", max);
-              // Auto-generate options based on max
               const options = [];
               for (let i = 1; i <= Math.min(max, 6); i++) {
                 options.push(i);
@@ -888,21 +901,21 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
               if (max > 6) options.push(max);
               updateConfig("guestOptions", options);
             }}
-            className="w-full accent-emerald-500"
+            className="w-full accent-[#2563EB]"
           />
-          <div className="flex justify-between text-sm text-zinc-500 mt-1">
+          <div className="mt-1 flex justify-between text-[15px] text-[#94A3B8]">
             <span>2</span>
-            <span className="font-semibold text-emerald-400">{config.maxGuests} {copy.participantUnitPlural}</span>
+            <span className="font-semibold text-[#2563EB]">{config.maxGuests} {copy.participantUnitPlural}</span>
             <span>20</span>
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-zinc-300 mb-2">
+          <label className={FIELD_LABEL_CLASS}>
             Angezeigte Optionen (als Buttons)
           </label>
           <div className="flex flex-wrap gap-2">
-            {[1, 2, 3, 4, 5, 6, 7, 8].filter(n => n <= config.maxGuests).map((num) => {
+            {[1, 2, 3, 4, 5, 6, 7, 8].filter((n) => n <= config.maxGuests).map((num) => {
               const isSelected = config.guestOptions.includes(num);
               return (
                 <button
@@ -910,15 +923,15 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
                   type="button"
                   onClick={() => {
                     if (isSelected) {
-                      updateConfig("guestOptions", config.guestOptions.filter(g => g !== num));
+                      updateConfig("guestOptions", config.guestOptions.filter((g) => g !== num));
                     } else {
                       updateConfig("guestOptions", [...config.guestOptions, num].sort((a, b) => a - b));
                     }
                   }}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-semibold transition ${
+                  className={`flex h-12 w-12 items-center justify-center rounded-full border-2 text-base font-semibold transition ${
                     isSelected
-                      ? "border-emerald-500 bg-emerald-500 text-white"
-                      : "border-white/10 text-zinc-400 hover:border-white/20"
+                      ? "border-[#2563EB] bg-[#2563EB] text-white"
+                      : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#BFDBFE]"
                   }`}
                 >
                   {num}
@@ -926,7 +939,7 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
               );
             })}
           </div>
-          <p className="mt-2 text-xs text-zinc-500">
+          <p className={`mt-2 ${STEP_HINT_CLASS}`}>
             Tipp: 4-6 Buttons sind optimal für die mobile Ansicht.
           </p>
         </div>
@@ -935,19 +948,19 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
   );
 
   const renderStep6 = () => (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 text-emerald-400">
-        <Phone className="h-6 w-6" />
-        <h2 className="text-xl font-semibold text-white">Kontaktdaten & Abschluss</h2>
+    <div className="space-y-8">
+      <div className={STEP_HEADER_CLASS}>
+        <Phone className="h-7 w-7" />
+        <h2 className={STEP_TITLE_CLASS}>Kontaktdaten & Abschluss</h2>
       </div>
-      <p className="text-zinc-400">
+      <p className={STEP_COPY_CLASS}>
         Welche Informationen sollen am Ende erfragt werden?
       </p>
-      <p className="text-xs text-zinc-500">
+      <p className={STEP_HINT_CLASS}>
         Der Name wird immer abgefragt.
       </p>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {[
           { key: "collectPhone", label: "Telefonnummer", recommended: true },
           { key: "collectEmail", label: "E-Mail-Adresse", recommended: false },
@@ -959,24 +972,22 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
               key={item.key}
               type="button"
               onClick={() => updateConfig(item.key as keyof WizardConfig, !isSelected as any)}
-              className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition ${
-                isSelected
-                  ? "border-emerald-500 bg-emerald-500/10"
-                  : "border-white/10 hover:border-white/20"
+              className={`flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left transition ${
+                isSelected ? SELECTION_CARD_SELECTED_CLASS : SELECTION_CARD_IDLE_CLASS
               }`}
             >
               <div
-                className={`flex h-5 w-5 items-center justify-center rounded-md border-2 ${
-                  isSelected ? "border-emerald-500 bg-emerald-500 text-white" : "border-zinc-600"
+                className={`flex h-6 w-6 items-center justify-center rounded-lg border-2 ${
+                  isSelected ? "border-[#2563EB] bg-[#2563EB] text-white" : "border-[#CBD5E1] bg-white"
                 }`}
               >
                 {isSelected && <Check className="h-3 w-3" />}
               </div>
-              <span className={`font-medium ${isSelected ? "text-emerald-400" : "text-zinc-300"}`}>
+              <span className={`text-[17px] font-medium ${isSelected ? "text-[#2563EB]" : "text-[#334155]"}`}>
                 {item.label}
               </span>
               {item.recommended && (
-                <span className="ml-auto text-xs font-semibold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full">
+                <span className="ml-auto rounded-full bg-[#EFF6FF] px-3 py-1 text-[13px] font-semibold text-[#2563EB]">
                   Empfohlen
                 </span>
               )}
@@ -986,7 +997,7 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-zinc-300 mb-2">
+        <label className={FIELD_LABEL_CLASS}>
           Bestätigungsnachricht
         </label>
         <textarea
@@ -995,10 +1006,11 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
             setConfirmationTouched(true);
             updateConfig("confirmationMessage", e.target.value);
           }}
-          rows={3}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+          rows={5}
+          className="app-input w-full resize-none rounded-2xl px-5 py-4 font-medium text-[#0F172A] placeholder:text-[#94A3B8]"
+          style={TEXTAREA_TEXT_STYLE}
         />
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className={`mt-1 ${STEP_HINT_CLASS}`}>
           Diese Nachricht sehen {copy.customerPlural} nach erfolgreicher Buchung.
         </p>
       </div>
@@ -1006,18 +1018,16 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
   );
 
   return (
-    <div className="mx-auto max-w-xl">
-      <div className="rounded-3xl border border-white/10 bg-zinc-900 p-8 shadow-xl shadow-black/20">
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-3 text-emerald-400">
-          <Sparkles className="h-5 w-5" />
-          <span className="text-sm font-semibold uppercase tracking-wide">Setup-Assistent</span>
+    <div className="mx-auto w-full max-w-[1180px] px-6 lg:px-8">
+      <div className="app-panel rounded-[32px] p-10 shadow-[0_28px_70px_rgba(15,23,42,0.10)] sm:p-12 lg:p-14">
+        <div className="mb-10 flex items-center gap-3 text-[#2563EB]">
+          <ListChecks className="h-6 w-6" />
+          <span className="text-base font-semibold uppercase tracking-[0.18em] text-[#2563EB]">Setup-Assistent</span>
         </div>
 
         {renderStepIndicator()}
 
-        {/* Step Content */}
-        <div className="min-h-[360px]">
+        <div className="min-h-[460px]">
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
@@ -1026,13 +1036,12 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
           {step === 6 && renderStep6()}
         </div>
 
-        {/* Navigation */}
-        <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">
+        <div className="mt-12 flex items-center justify-between border-t border-[#E2E8F0] pt-8">
           {step > 1 ? (
             <button
               type="button"
               onClick={prevStep}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-400 hover:border-white/20 hover:text-white"
+              className="inline-flex items-center gap-2 rounded-full border border-[#E2E8F0] px-6 py-3 text-base font-semibold text-[#475569] transition-colors hover:border-[#BFDBFE] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
             >
               <ArrowLeft className="h-4 w-4" />
               Zurück
@@ -1041,7 +1050,7 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
             <button
               type="button"
               onClick={onCancel}
-              className="text-sm font-semibold text-zinc-500 hover:text-zinc-300"
+              className="text-base font-semibold text-[#64748B] transition-colors hover:text-[#0F172A]"
             >
               Abbrechen
             </button>
@@ -1052,7 +1061,7 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
               type="button"
               onClick={nextStep}
               disabled={!canProceed()}
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 disabled:opacity-50 disabled:shadow-none"
+              className="inline-flex items-center gap-2 rounded-full bg-[#2450b2] px-7 py-3 text-base font-semibold text-white shadow-[0_10px_28px_rgba(36,80,178,0.22)] transition-all hover:bg-[#1a46c4] disabled:opacity-50 disabled:shadow-none"
             >
               Weiter
               <ArrowRight className="h-4 w-4" />
@@ -1061,17 +1070,16 @@ export default function FlowSetupWizard({ onComplete, onCancel, vertical }: Flow
             <button
               type="button"
               onClick={generateFlow}
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400"
+              className="inline-flex items-center gap-2 rounded-full bg-[#2450b2] px-7 py-3 text-base font-semibold text-white shadow-[0_10px_28px_rgba(36,80,178,0.22)] transition-all hover:bg-[#1a46c4]"
             >
-              <Sparkles className="h-4 w-4" />
+              <ListChecks className="h-4 w-4" />
               Flow erstellen
             </button>
           )}
         </div>
       </div>
 
-      {/* Progress Summary */}
-      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-zinc-500">
+      <div className="mt-5 flex items-center justify-center gap-4 text-sm text-[#94A3B8]">
         <span>Schritt {step} von 6</span>
         <span>•</span>
         <span>

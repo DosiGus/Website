@@ -1,12 +1,21 @@
 'use client';
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Bell, CalendarCheck, ChevronDown, LogOut, Plug, Search, Settings, User } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  CalendarCheck,
+  ChevronDown,
+  Menu,
+  LogOut,
+  Plug,
+  Settings,
+} from "lucide-react";
+import type { Edge, Node as FlowNode } from "reactflow";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { lintFlow } from "../../lib/flowLint";
-import type { Edge, Node as FlowNode } from "reactflow";
 import type { FlowTrigger } from "../../lib/flowTypes";
 import useAccountVertical from "../../lib/useAccountVertical";
 import { getBookingLabels } from "../../lib/verticals";
@@ -20,7 +29,43 @@ type NotificationItem = {
   Icon: typeof AlertTriangle;
 };
 
+function getInitials(name: string | null) {
+  if (!name) return "WE";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
+}
+
+function getPageTitle(pathname: string) {
+  if (pathname === "/app/dashboard") {
+    return { title: "Dashboard" };
+  }
+  if (pathname === "/app/flows") {
+    return { title: "Flows" };
+  }
+  if (pathname === "/app/flows/new") {
+    return { title: "Neuer Flow", breadcrumb: "Flows" };
+  }
+  if (/^\/app\/flows\/[^/]+$/.test(pathname)) {
+    return { title: "Flow Builder", breadcrumb: "Flows" };
+  }
+  if (pathname === "/app/reservations") {
+    return { title: "Reservierungen" };
+  }
+  if (pathname === "/app/conversations") {
+    return { title: "Konversationen" };
+  }
+  if (pathname === "/app/integrations") {
+    return { title: "Integrationen" };
+  }
+  if (pathname === "/app/settings") {
+    return { title: "Einstellungen" };
+  }
+  return { title: "Wesponde App" };
+}
+
 export default function AppTopbar() {
+  const pathname = usePathname();
+  const page = getPageTitle(pathname);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
   const [userName, setUserName] = useState<string | null>(null);
@@ -35,18 +80,24 @@ export default function AppTopbar() {
 
   useEffect(() => {
     async function loadUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const name = user.user_metadata?.full_name ||
-                     user.user_metadata?.name ||
-                     user.email?.split('@')[0] ||
-                     'Benutzer';
-        setUserName(name);
-        setUserEmail(user.email || null);
-      }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const name =
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split("@")[0] ||
+        "Benutzer";
+
+      setUserName(name);
+      setUserEmail(user.email || null);
     }
+
     loadUser();
-  }, [supabase, labels.bookingPlural, labels.bookingSingular]);
+  }, [supabase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,8 +133,9 @@ export default function AppTopbar() {
         const integrations = integrationsRes.data ?? [];
         const hasMetaConnected = integrations.some(
           (integration) =>
-            integration.provider === "meta" && integration.status === "connected"
+            integration.provider === "meta" && integration.status === "connected",
         );
+
         if (!hasMetaConnected) {
           items.push({
             id: "integration-meta",
@@ -102,7 +154,7 @@ export default function AppTopbar() {
           const lint = lintFlow(
             (flow.nodes as FlowNode[]) ?? [],
             (flow.edges as Edge[]) ?? [],
-            (flow.triggers as FlowTrigger[]) ?? []
+            (flow.triggers as FlowTrigger[]) ?? [],
           );
           return lint.warnings.length > 0;
         });
@@ -124,9 +176,10 @@ export default function AppTopbar() {
         if (pendingCount > 0) {
           items.push({
             id: "pending-reservations",
-            title: pendingCount === 1
-              ? `1 ${labels.bookingSingular} offen`
-              : `${pendingCount} ${labels.bookingPlural} offen`,
+            title:
+              pendingCount === 1
+                ? `1 ${labels.bookingSingular} offen`
+                : `${pendingCount} ${labels.bookingPlural} offen`,
             description: "Warten auf Bestätigung.",
             href: "/app/reservations?status=pending",
             tone: "info",
@@ -146,6 +199,11 @@ export default function AppTopbar() {
   }, [supabase, labels.bookingPlural, labels.bookingSingular, accountId, accountLoading]);
 
   useEffect(() => {
+    setNotificationsOpen(false);
+    setUserMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
         notificationsOpen &&
@@ -154,6 +212,7 @@ export default function AppTopbar() {
       ) {
         setNotificationsOpen(false);
       }
+
       if (
         userMenuOpen &&
         userMenuRef.current &&
@@ -167,118 +226,172 @@ export default function AppTopbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [notificationsOpen, userMenuOpen]);
 
+  useEffect(() => {
+    if (!notificationsOpen && !userMenuOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setNotificationsOpen(false);
+        setUserMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [notificationsOpen, userMenuOpen]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.replace("/login");
   };
 
   return (
-    <header className="relative z-30 flex items-center justify-between border-b border-white/10 bg-zinc-900/50 px-8 py-4 backdrop-blur-xl">
-      {/* Search */}
-      <div className="relative w-full max-w-md">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-        <input
-          className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-11 pr-4 text-sm text-white placeholder-zinc-500 transition-all focus:border-indigo-500/50 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          placeholder={`Flows, ${labels.bookingPlural} durchsuchen …`}
-        />
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[#E2E8F0] bg-white px-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-3">
+        <button
+          type="button"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md text-[#475569] transition-colors hover:bg-[#F8FAFC] hover:text-[#0F172A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 lg:hidden"
+          onClick={() => window.dispatchEvent(new Event("wesponde:sidebar:toggle"))}
+          aria-controls="app-sidebar-drawer"
+          aria-label="Navigation öffnen"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
+        <div className="min-w-0">
+          {page.breadcrumb ? (
+            <p className="mb-0.5 text-xs font-medium text-[#94A3B8]">
+              {page.breadcrumb}
+            </p>
+          ) : null}
+          <h1 className="truncate text-[18px] font-semibold text-[#0F172A]">
+            {page.title}
+          </h1>
+        </div>
       </div>
 
-      {/* Right side */}
       <div className="flex items-center gap-3">
-        {/* Notifications */}
-        <div ref={notificationsRef} className="relative">
-          <button
-            onClick={() => {
-              setNotificationsOpen((prev) => !prev);
-              setUserMenuOpen(false);
-            }}
-            className="relative rounded-xl border border-white/10 bg-white/5 p-2.5 text-zinc-400 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
-          >
-            <Bell className="h-4 w-4" />
-            {notifications.length > 0 ? (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-indigo-500 px-1 text-[10px] font-bold text-white">
+        {notifications.length > 0 ? (
+          <div ref={notificationsRef} className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setNotificationsOpen((current) => !current);
+                setUserMenuOpen(false);
+              }}
+              aria-expanded={notificationsOpen}
+              aria-haspopup="menu"
+              aria-controls="app-topbar-notifications"
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-[#E2E8F0] bg-white text-[#475569] transition-colors hover:bg-[#F8FAFC] hover:text-[#0F172A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2"
+              aria-label="Benachrichtigungen öffnen"
+            >
+              <Bell className="h-4 w-4" />
+              <span className="absolute right-1.5 top-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[#2563EB] px-1 text-[10px] font-semibold text-white">
                 {notifications.length}
               </span>
-            ) : null}
-          </button>
+            </button>
 
-          {notificationsOpen ? (
-            <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-xl shadow-black/40 backdrop-blur-xl">
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                <p className="text-sm font-semibold text-white">Benachrichtigungen</p>
-                <span className="text-xs text-zinc-500">
-                  {notifications.length} neu
-                </span>
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.length > 0 ? (
-                  notifications.map((item) => {
-                    const toneStyles =
-                      item.tone === "warning"
-                        ? "bg-amber-500/10 text-amber-400"
-                        : "bg-indigo-500/10 text-indigo-400";
+            {notificationsOpen ? (
+              <div
+                id="app-topbar-notifications"
+                className="absolute right-0 mt-3 w-80 overflow-hidden rounded-lg border border-[#E2E8F0] bg-white shadow-lg"
+                role="menu"
+              >
+                <div className="flex items-center justify-between border-b border-[#E2E8F0] px-4 py-3">
+                  <p className="text-sm font-semibold text-[#0F172A]">
+                    Benachrichtigungen
+                  </p>
+                  <span className="text-xs text-[#94A3B8]">
+                    {notifications.length} neu
+                  </span>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.map((item) => {
                     const Icon = item.Icon;
+
                     return (
                       <Link
                         key={item.id}
                         href={item.href}
                         onClick={() => setNotificationsOpen(false)}
-                        className="flex items-start gap-3 border-b border-white/5 px-4 py-3 text-left transition-colors hover:bg-white/5"
+                        role="menuitem"
+                        className="flex gap-3 border-b border-[#F0F4F9] px-4 py-3 transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-inset last:border-b-0"
                       >
-                        <span className={`mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl ${toneStyles}`}>
+                        <span
+                          className={[
+                            "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                            item.tone === "warning"
+                              ? "bg-[#FEF3C7] text-[#B45309]"
+                              : "bg-[#E0F2FE] text-[#0369A1]",
+                          ].join(" ")}
+                        >
                           <Icon className="h-4 w-4" />
                         </span>
-                        <span className="flex-1">
-                          <span className="block text-sm font-semibold text-white">
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-[#0F172A]">
                             {item.title}
                           </span>
-                          <span className="block text-xs text-zinc-500">
+                          <span className="mt-0.5 block text-xs text-[#475569]">
                             {item.description}
                           </span>
                         </span>
                       </Link>
                     );
-                  })
-                ) : (
-                  <div className="px-4 py-6 text-center text-sm text-zinc-500">
-                    Alles erledigt. Keine neuen Hinweise.
-                  </div>
-                )}
+                  })}
+                </div>
               </div>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
+          </div>
+        ) : null}
 
-        {/* User Menu */}
+        {notifications.length > 0 ? (
+          <div className="hidden h-5 w-px bg-[#E2E8F0] sm:block" aria-hidden="true" />
+        ) : null}
+
         <div ref={userMenuRef} className="relative">
           <button
+            type="button"
             onClick={() => {
-              setUserMenuOpen((prev) => !prev);
+              setUserMenuOpen((current) => !current);
               setNotificationsOpen(false);
             }}
-            className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:border-white/20 hover:bg-white/10"
+            aria-expanded={userMenuOpen}
+            aria-haspopup="menu"
+            aria-controls="app-topbar-user-menu"
+            className="flex min-h-10 items-center gap-3 rounded-md border border-[#E2E8F0] bg-white px-2.5 py-1.5 text-left transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500">
-              <User className="h-4 w-4 text-white" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#DBEAFE] text-[11px] font-semibold text-[#1D4ED8]">
+              {getInitials(userName)}
             </div>
-            <div className="text-left leading-tight">
-              <p className="text-sm font-medium text-white">{userName || 'Laden...'}</p>
-              <p className="text-xs text-zinc-500">{userEmail || ''}</p>
+            <div className="hidden min-w-0 lg:block">
+              <p className="truncate text-sm font-medium text-[#0F172A]">
+                {userName || "Benutzer"}
+              </p>
+              <p className="truncate text-xs text-[#94A3B8]">{userEmail || ""}</p>
             </div>
-            <ChevronDown className="h-4 w-4 text-zinc-500" />
+            <ChevronDown className="h-4 w-4 text-[#94A3B8]" aria-hidden="true" />
           </button>
 
           {userMenuOpen ? (
-            <div className="absolute right-0 z-50 mt-3 w-56 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-xl shadow-black/40 backdrop-blur-xl">
-              <div className="border-b border-white/10 px-4 py-3">
-                <p className="text-xs uppercase tracking-wider text-zinc-500">Account</p>
-                <p className="mt-1 text-sm font-semibold text-white">{userName || "Benutzer"}</p>
+            <div
+              id="app-topbar-user-menu"
+              className="absolute right-0 mt-3 w-60 overflow-hidden rounded-lg border border-[#E2E8F0] bg-white shadow-lg"
+              role="menu"
+            >
+              <div className="border-b border-[#E2E8F0] px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-[#94A3B8]">
+                  Konto
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[#0F172A]">
+                  {userName || "Benutzer"}
+                </p>
               </div>
               <div className="py-2">
                 <Link
                   href="/app/settings"
                   onClick={() => setUserMenuOpen(false)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
+                  role="menuitem"
+                  className="flex min-h-10 items-center gap-2 px-4 py-2 text-sm text-[#334155] transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-inset"
                 >
                   <Settings className="h-4 w-4" />
                   Einstellungen
@@ -286,14 +399,18 @@ export default function AppTopbar() {
                 <Link
                   href="/app/integrations"
                   onClick={() => setUserMenuOpen(false)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
+                  role="menuitem"
+                  className="flex min-h-10 items-center gap-2 px-4 py-2 text-sm text-[#334155] transition-colors hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-inset"
                 >
                   <Plug className="h-4 w-4" />
                   Integrationen
                 </Link>
+                <div className="mx-4 my-2 h-px bg-[#E2E8F0]" />
                 <button
+                  type="button"
                   onClick={handleSignOut}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-sm text-rose-400 transition-colors hover:bg-rose-500/10"
+                  role="menuitem"
+                  className="flex min-h-10 w-full items-center gap-2 px-4 py-2 text-sm text-[#B91C1C] transition-colors hover:bg-[#FEF2F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-inset"
                 >
                   <LogOut className="h-4 w-4" />
                   Abmelden

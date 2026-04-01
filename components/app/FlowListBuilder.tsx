@@ -31,7 +31,20 @@ type FlowListBuilderProps = {
   edges: Edge[];
   startNodeIds: Set<string>;
   triggers: FlowTrigger[];
-  onOpenTriggerModal: () => void;
+  triggerForm: FlowTrigger | null;
+  editingTriggerId: string | null;
+  keywordInput: string;
+  triggerTestInput: string;
+  onOpenTriggerEditor: (trigger?: FlowTrigger) => void;
+  onCloseTriggerEditor: () => void;
+  onSaveTrigger: () => void;
+  onDeleteTrigger: (id: string) => void;
+  onKeywordInputChange: (value: string) => void;
+  onTriggerTestInputChange: (value: string) => void;
+  onAddKeyword: () => void;
+  onRemoveKeyword: (keyword: string) => void;
+  onTriggerMatchTypeChange: (matchType: FlowTrigger["config"]["matchType"]) => void;
+  onTriggerStartNodeChange: (nodeId: string | null) => void;
   onNodesChange: (nodes: Node[]) => void;
   onEdgesChange: (edges: Edge[]) => void;
   selectedNodeId: string | null;
@@ -114,6 +127,23 @@ const deriveInputMode = (node: Node, edges: Edge[]) => {
   return hasFreeTextEdge ? "free_text" : "buttons";
 };
 
+function testTriggerMatch(message: string, keywords: string[], matchType: "EXACT" | "CONTAINS"): boolean {
+  if (!message.trim() || !keywords.length) return false;
+  const normalized = message.toLowerCase().trim();
+  for (const keyword of keywords) {
+    const kw = keyword.toLowerCase().trim();
+    if (!kw) continue;
+    if (matchType === "EXACT") {
+      if (normalized === kw) return true;
+    } else {
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(^|\\s|[.,!?])${escaped}($|\\s|[.,!?])`, "i");
+      if (regex.test(normalized)) return true;
+    }
+  }
+  return false;
+}
+
 const buildFreeTextDefaults = (label: string | undefined, labels: BookingLabels) => {
   const lower = (label ?? "").toLowerCase();
   if (lower.includes("datum")) {
@@ -153,86 +183,88 @@ type NodeStatus = { type: "error" | "end" | null; message?: string };
 
 function IPhoneMockup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative mx-auto" style={{ width: 264 }}>
-      {/* Side buttons */}
-      <div className="absolute -left-[3px] top-[96px] h-8 w-[3px] rounded-l-sm bg-zinc-700" />
-      <div className="absolute -left-[3px] top-[136px] h-14 w-[3px] rounded-l-sm bg-zinc-700" />
-      <div className="absolute -left-[3px] top-[196px] h-14 w-[3px] rounded-l-sm bg-zinc-700" />
-      <div className="absolute -right-[3px] top-[156px] h-20 w-[3px] rounded-r-sm bg-zinc-700" />
+    <div className="relative mx-auto h-[626px] w-[304px]">
+      <div className="origin-top scale-[1.15]">
+        <div className="relative mx-auto" style={{ width: 264 }}>
+          <div className="absolute -left-[3px] top-[96px] h-8 w-[3px] rounded-l-sm bg-[#2F3137]" />
+          <div className="absolute -left-[3px] top-[136px] h-14 w-[3px] rounded-l-sm bg-[#2F3137]" />
+          <div className="absolute -left-[3px] top-[196px] h-14 w-[3px] rounded-l-sm bg-[#2F3137]" />
+          <div className="absolute -right-[3px] top-[156px] h-20 w-[3px] rounded-r-sm bg-[#2F3137]" />
 
-      {/* Phone body */}
-      <div className="relative overflow-hidden rounded-[40px] border-[2px] border-zinc-800 bg-zinc-900 shadow-2xl shadow-black/60">
-        {/* Screen */}
-        <div className="relative flex flex-col bg-zinc-950" style={{ height: 540 }}>
-          {/* Screen reflection */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.03] via-transparent to-transparent z-10" />
+          <div className="relative overflow-hidden rounded-[40px] border-[2px] border-[#2D2F36] bg-[#0B0B0E] shadow-[0_30px_70px_rgba(0,0,0,0.42)]">
+            <div
+              className="relative flex flex-col"
+              style={{
+                height: 540,
+                background: "linear-gradient(180deg, #121216 0%, #0A0A0D 100%)",
+              }}
+            >
+              <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-br from-white/5 via-transparent to-transparent" />
 
-          {/* Dynamic Island */}
-          <div className="absolute left-1/2 top-3 z-20 flex h-[26px] w-[90px] -translate-x-1/2 items-center justify-center gap-2 rounded-full bg-black">
-            <div className="h-2.5 w-2.5 rounded-full bg-zinc-900 ring-1 ring-zinc-800" />
-            <div className="h-[5px] w-[5px] rounded-full bg-zinc-800" />
-          </div>
-
-          {/* Status Bar */}
-          <div className="relative z-10 flex shrink-0 items-center justify-between px-7 pt-4 pb-1">
-            <span className="text-[12px] font-semibold text-white">9:41</span>
-            <div className="flex items-center gap-[5px]">
-              <div className="flex items-end gap-[2px]">
-                <div className="h-[3px] w-[2px] rounded-sm bg-white" />
-                <div className="h-[5px] w-[2px] rounded-sm bg-white" />
-                <div className="h-[7px] w-[2px] rounded-sm bg-white" />
-                <div className="h-[9px] w-[2px] rounded-sm bg-white" />
+              <div className="absolute left-1/2 top-3 z-20 flex h-[26px] w-[90px] -translate-x-1/2 items-center justify-center gap-2 rounded-full bg-black">
+                <div className="h-2.5 w-2.5 rounded-full bg-[#18181B] ring-1 ring-[#27272A]" />
+                <div className="h-[5px] w-[5px] rounded-full bg-[#2F2F35]" />
               </div>
-              <svg className="h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 3C7.5 3 3.75 4.95 1 8l1.5 1.5C4.75 6.75 8.25 5 12 5s7.25 1.75 9.5 4.5L23 8c-2.75-3.05-6.5-5-11-5zm0 4c-3 0-5.75 1.35-7.5 3.5L6 12c1.25-1.5 3.25-2.5 6-2.5s4.75 1 6 2.5l1.5-1.5C17.75 8.35 15 7 12 7zm0 4c-1.75 0-3.25.75-4.5 2L9 14.5c.75-.75 1.75-1 3-1s2.25.25 3 1L16.5 13c-1.25-1.25-2.75-2-4.5-2zm0 4c-1 0-1.75.5-2.25 1L12 18l2.25-2c-.5-.5-1.25-1-2.25-1z" />
-              </svg>
-              <div className="flex items-center">
-                <div className="h-[10px] w-[20px] rounded-[2px] border border-white p-[1px]">
-                  <div className="h-full w-[70%] rounded-[1px] bg-white" />
+
+              <div className="relative z-10 flex shrink-0 items-center justify-between px-7 pt-4 pb-1">
+                <span className="text-[12px] font-semibold text-white">9:41</span>
+                <div className="flex items-center gap-[5px]">
+                  <div className="flex items-end gap-[2px]">
+                    <div className="h-[3px] w-[2px] rounded-sm bg-white" />
+                    <div className="h-[5px] w-[2px] rounded-sm bg-white" />
+                    <div className="h-[7px] w-[2px] rounded-sm bg-white" />
+                    <div className="h-[9px] w-[2px] rounded-sm bg-white" />
+                  </div>
+                  <svg className="h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 3C7.5 3 3.75 4.95 1 8l1.5 1.5C4.75 6.75 8.25 5 12 5s7.25 1.75 9.5 4.5L23 8c-2.75-3.05-6.5-5-11-5zm0 4c-3 0-5.75 1.35-7.5 3.5L6 12c1.25-1.5 3.25-2.5 6-2.5s4.75 1 6 2.5l1.5-1.5C17.75 8.35 15 7 12 7zm0 4c-1.75 0-3.25.75-4.5 2L9 14.5c.75-.75 1.75-1 3-1s2.25.25 3 1L16.5 13c-1.25-1.25-2.75-2-4.5-2zm0 4c-1 0-1.75.5-2.25 1L12 18l2.25-2c-.5-.5-1.25-1-2.25-1z" />
+                  </svg>
+                  <div className="flex items-center">
+                    <div className="h-[10px] w-[20px] rounded-[2px] border border-white p-[1px]">
+                      <div className="h-full w-[70%] rounded-[1px] bg-white" />
+                    </div>
+                    <div className="ml-[1px] h-[3px] w-[1px] rounded-r-sm bg-white" />
+                  </div>
                 </div>
-                <div className="ml-[1px] h-[3px] w-[1px] rounded-r-sm bg-white" />
               </div>
-            </div>
-          </div>
 
-          {/* Instagram DM Header */}
-          <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-white/5 px-4 pb-3 pt-1">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/5">
-                <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <div className="relative">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400">
-                  <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+              <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-white/10 px-4 pb-3 pt-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/10">
+                    <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div className="relative">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400">
+                      <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                      </svg>
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-zinc-950 bg-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-semibold leading-tight text-white">Dein Flow</p>
+                    <p className="text-[10px] text-[#22C55E]">Online</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2.5 text-white/90">
+                  <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-zinc-950 bg-emerald-500" />
               </div>
-              <div>
-                <p className="text-[12px] font-semibold text-white leading-tight">Dein Flow</p>
-                <p className="text-[10px] text-emerald-400">Online</p>
+
+              {/* Chat content */}
+              <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
+                {children}
               </div>
-            </div>
-            <div className="flex items-center gap-2.5 text-white">
-              <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+
+              <div className="absolute bottom-1.5 left-1/2 z-20 h-1 w-24 -translate-x-1/2 rounded-full bg-white/30" />
             </div>
           </div>
-
-          {/* Chat content */}
-          <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
-            {children}
-          </div>
-
-          {/* Home Indicator */}
-          <div className="absolute bottom-1.5 left-1/2 z-20 h-1 w-24 -translate-x-1/2 rounded-full bg-white/25" />
         </div>
       </div>
     </div>
@@ -244,7 +276,20 @@ export default function FlowListBuilder({
   edges,
   startNodeIds,
   triggers,
-  onOpenTriggerModal,
+  triggerForm,
+  editingTriggerId,
+  keywordInput,
+  triggerTestInput,
+  onOpenTriggerEditor,
+  onCloseTriggerEditor,
+  onSaveTrigger,
+  onDeleteTrigger,
+  onKeywordInputChange,
+  onTriggerTestInputChange,
+  onAddKeyword,
+  onRemoveKeyword,
+  onTriggerMatchTypeChange,
+  onTriggerStartNodeChange,
   onNodesChange,
   onEdgesChange,
   selectedNodeId,
@@ -279,6 +324,7 @@ export default function FlowListBuilder({
     });
     return Array.from(new Set(keywords));
   }, [triggers]);
+  const isTriggerExpanded = Boolean(triggerForm);
 
   // When simulator moves to a new node, scroll the card into view —
   // but skip the initial node (user is already looking at it when they clicked Eye).
@@ -518,18 +564,18 @@ export default function FlowListBuilder({
   if (nodes.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-8">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500/20 to-violet-500/20">
-          <MessageSquare className="h-10 w-10 text-indigo-400" />
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#EFF6FF]">
+          <MessageSquare className="h-10 w-10 text-[#2563EB]" />
         </div>
-        <h3 className="mt-6 font-display text-2xl font-semibold text-white">
+        <h3 className="mt-6 text-2xl font-semibold text-[#0F172A]">
           Dein Flow ist noch leer
         </h3>
-        <p className="mt-2 max-w-md text-center text-zinc-500">
+        <p className="mt-2 max-w-md text-center text-[#475569]">
           Erstelle deinen ersten Schritt, um mit dem Aufbau deines Konversations-Flows zu beginnen.
         </p>
         <button
           onClick={() => onAddNode("message", "Willkommen! Wie kann ich dir heute helfen?")}
-          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25"
+          className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#2450b2] px-6 py-3 text-[15px] font-semibold text-white shadow-[0_2px_16px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1a46c4]"
         >
           <Sparkles className="h-4 w-4" />
           Ersten Schritt erstellen
@@ -539,32 +585,32 @@ export default function FlowListBuilder({
   }
 
   return (
-    <div ref={outerRef} className="flex gap-0 relative">
+    <div ref={outerRef} className="relative flex gap-8">
       {/* Left: node list */}
       <div className={`${previewNodeId ? "flex-1 min-w-0" : "w-full"} space-y-0`}>
       {/* Flow Header Stats */}
-      <div className="mb-6 flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-sm">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20">
-              <MessageSquare className="h-4 w-4 text-indigo-400" />
+      <div className="mb-8 flex items-center justify-between rounded-[22px] border border-[#E2E8F0] bg-white px-6 py-5 shadow-sm">
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-3 text-base">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EFF6FF]">
+              <MessageSquare className="h-4.5 w-4.5 text-[#2563EB]" />
             </div>
-            <span className="font-semibold text-white">{nodes.length}</span>
-            <span className="text-zinc-500">Schritte</span>
+            <span className="text-[17px] font-semibold text-[#0F172A]">{nodes.length}</span>
+            <span className="text-[#64748B]">Schritte</span>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20">
-              <Flag className="h-4 w-4 text-emerald-400" />
+          <div className="flex items-center gap-3 text-base">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ECFDF5]">
+              <Flag className="h-4.5 w-4.5 text-[#10B981]" />
             </div>
-            <span className="font-semibold text-white">{startNodeIds.size}</span>
-            <span className="text-zinc-500">Startpunkte</span>
+            <span className="text-[17px] font-semibold text-[#0F172A]">{startNodeIds.size}</span>
+            <span className="text-[#64748B]">Startpunkte</span>
           </div>
         </div>
         <button
           onClick={() => onAddNode("message")}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-shadow"
+          className="inline-flex items-center gap-2.5 rounded-full bg-[#2450b2] px-6 py-3 text-base font-semibold text-white shadow-[0_2px_16px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1a46c4]"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4.5 w-4.5" />
           Neuer Schritt
         </button>
       </div>
@@ -572,57 +618,246 @@ export default function FlowListBuilder({
       {/* Flow Steps */}
       <div className="relative">
         {/* Vertical Connection Line */}
-        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-500/30 via-white/10 to-white/10" />
+        <div className="absolute bottom-0 left-10 top-0 w-0.5 bg-gradient-to-b from-[#BFDBFE] via-[#E2E8F0] to-[#E2E8F0]" />
 
         {/* Trigger Card */}
-        <div className="relative mb-4 ml-16">
-          <div className="absolute -left-[52px] top-4 flex h-10 w-10 items-center justify-center rounded-full border-2 border-emerald-500 bg-emerald-500 text-white">
-            <Zap className="h-4 w-4" />
+        <div className="relative mb-5 ml-20">
+          <div className="absolute -left-[64px] top-5 flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#2450b2] bg-[#2450b2] text-white">
+            <Zap className="h-5 w-5" />
           </div>
-          <button
-            type="button"
-            onClick={onOpenTriggerModal}
-            className="relative w-full rounded-xl border-2 border-white/10 bg-zinc-900/50 p-4 text-left transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md"
+          <div
+            className={`relative w-full rounded-[22px] border bg-white shadow-sm transition-all duration-300 ${
+              isTriggerExpanded
+                ? "border-[#86EFAC] shadow-[0_14px_30px_rgba(16,185,129,0.12)]"
+                : "border-[#E2E8F0] hover:border-[#A7F3D0] hover:shadow-md"
+            }`}
           >
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20">
-                <Zap className="h-5 w-5 text-emerald-400" />
+            <div
+              onClick={() => {
+                if (isTriggerExpanded) {
+                  onCloseTriggerEditor();
+                } else {
+                  onOpenTriggerEditor();
+                }
+              }}
+              className="flex cursor-pointer items-start gap-4 p-5"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EFF6FF]">
+                <Zap className="h-5.5 w-5.5 text-[#2450b2]" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-white">Trigger</h3>
-                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                  <h3 className="text-[18px] font-semibold text-[#0F172A]">Trigger</h3>
+                  <span className="rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2.5 py-0.5 text-xs font-semibold text-[#047857]">
                     {triggers.length}
                   </span>
                 </div>
-                <p className="mt-0.5 text-sm text-zinc-500">
+                <p className="mt-1 text-[15px] text-[#475569]">
                   Startpunkt der Unterhaltung – definiert, womit {labels.contactPlural} beginnen.
                 </p>
                 {triggerKeywords.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {triggerKeywords.slice(0, 5).map((keyword) => (
                       <span
                         key={keyword}
-                        className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-xs font-semibold text-emerald-300"
+                        className="rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1 text-xs font-semibold text-[#2563EB]"
                       >
                         {keyword}
                       </span>
                     ))}
                     {triggerKeywords.length > 5 ? (
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-xs text-[#2563EB]">
                         +{triggerKeywords.length - 5} weitere
                       </span>
                     ) : null}
                   </div>
                 ) : (
-                  <p className="mt-2 text-xs text-amber-400">
+                  <p className="mt-3 text-sm text-[#B45309]">
                     Noch keine Startwörter hinterlegt.
                   </p>
                 )}
               </div>
-              <ChevronRight className="h-5 w-5 text-zinc-500" />
+              <ChevronRight className={`h-6 w-6 text-[#94A3B8] transition-transform ${isTriggerExpanded ? "rotate-90" : ""}`} />
             </div>
-          </button>
+            {isTriggerExpanded && triggerForm && (
+              <div className="animate-fade-in-up space-y-5 border-t border-[#E2E8F0] p-5">
+                {!editingTriggerId && triggers.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Bestehende Trigger</p>
+                    <div className="max-h-44 space-y-2 overflow-y-auto">
+                      {triggers.map((trigger) => (
+                        <div key={trigger.id} className="flex items-center justify-between rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3">
+                          <div className="flex flex-wrap gap-1">
+                            {trigger.config.keywords.slice(0, 3).map((keyword) => (
+                              <span key={keyword} className="rounded-full border border-[#E2E8F0] bg-white px-2 py-0.5 text-xs font-semibold text-[#475569]">
+                                {keyword}
+                              </span>
+                            ))}
+                            {trigger.config.keywords.length > 3 && (
+                              <span className="text-xs text-[#64748B]">+{trigger.config.keywords.length - 3}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => onOpenTriggerEditor(trigger)}
+                              className="rounded-md px-2 py-1 text-xs font-semibold text-[#475569] transition-colors hover:bg-white hover:text-[#0F172A]"
+                            >
+                              Bearbeiten
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onDeleteTrigger(trigger.id)}
+                              className="rounded-full p-1.5 text-[#64748B] transition-colors hover:bg-[#FEE2E2] hover:text-[#DC2626]"
+                              title="Trigger löschen"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-sm font-semibold text-[#0F172A]">Keywords</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {triggerForm.config.keywords.map((keyword) => (
+                      <span
+                        key={keyword}
+                        className="inline-flex items-center gap-1 rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-xs font-semibold text-[#2563EB]"
+                      >
+                        {keyword}
+                        <button
+                          type="button"
+                          onClick={() => onRemoveKeyword(keyword)}
+                          className="text-[#2563EB]/60 hover:text-[#2563EB]"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <input
+                      value={keywordInput}
+                      onChange={(event) => onKeywordInputChange(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          onAddKeyword();
+                        }
+                      }}
+                      placeholder="Keyword hinzufügen"
+                      className="app-input flex-1 px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
+                    />
+                    <button
+                      type="button"
+                      onClick={onAddKeyword}
+                      className="rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-2 text-sm font-medium text-[#0F172A] transition-colors hover:bg-white"
+                    >
+                      Hinzufügen
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-[#334155]">Match Type</label>
+                  <select
+                    value={triggerForm.config.matchType}
+                    onChange={(event) =>
+                      onTriggerMatchTypeChange(event.target.value as FlowTrigger["config"]["matchType"])
+                    }
+                    className="app-select mt-2 w-full"
+                  >
+                    <option value="CONTAINS">enthält Schlagwort</option>
+                    <option value="EXACT">exaktes Schlagwort</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-[#334155]">Start Node</label>
+                  <select
+                    value={triggerForm.startNodeId ?? ""}
+                    onChange={(event) => onTriggerStartNodeChange(event.target.value || null)}
+                    className="app-select mt-2 w-full"
+                  >
+                    <option value="">Node wählen...</option>
+                    {nodes.map((node) => (
+                      <option key={node.id} value={node.id}>
+                        {node.data?.label ?? node.id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-[#334155]">Testen</label>
+                  <p className="mt-0.5 text-xs text-[#64748B]">
+                    Würde eine Nachricht irgendeinen Trigger dieses Flows auslösen?
+                  </p>
+                  <input
+                    value={triggerTestInput}
+                    onChange={(event) => onTriggerTestInputChange(event.target.value)}
+                    placeholder='z.B. "Ich möchte gerne reservieren"'
+                    className="app-input mt-2 px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
+                  />
+                  {triggerTestInput.trim() && (() => {
+                    const persistedTriggers = editingTriggerId
+                      ? triggers.filter((trigger) => trigger.id !== editingTriggerId)
+                      : triggers;
+                    const allTriggers = [
+                      ...persistedTriggers,
+                      ...(triggerForm.config.keywords.length > 0 ? [triggerForm] : []),
+                    ];
+                    const matchedTrigger = allTriggers.find((trigger) =>
+                      testTriggerMatch(triggerTestInput, trigger.config.keywords, trigger.config.matchType),
+                    );
+                    return (
+                      <div
+                        className={`mt-2 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                          matchedTrigger
+                            ? "border-[#A7F3D0] bg-[#ECFDF5] text-[#047857]"
+                            : "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
+                        }`}
+                      >
+                        {matchedTrigger ? (
+                          <>
+                            <Check className="h-4 w-4 shrink-0" />
+                            Würde Flow auslösen ({matchedTrigger.config.keywords[0] ?? "Trigger"})
+                          </>
+                        ) : (
+                          <>
+                            <X className="h-4 w-4 shrink-0" />
+                            Würde diesen Flow NICHT auslösen
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onSaveTrigger}
+                    className="flex-1 rounded-full bg-[#2450b2] px-5 py-2.5 text-[15px] font-semibold text-white shadow-[0_2px_16px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1a46c4] disabled:opacity-50"
+                    disabled={!triggerForm.config.keywords.length || !triggerForm.startNodeId}
+                  >
+                    Speichern
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCloseTriggerEditor}
+                    className="rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-2 text-sm font-medium text-[#475569] transition-colors hover:bg-white hover:text-[#0F172A]"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {orderedNodes.map((node, index) => {
@@ -646,64 +881,64 @@ export default function FlowListBuilder({
                   else nodeCardRefs.current.delete(node.id);
                 }}
                 className={`
-                  relative ml-16 mb-4 rounded-xl border-2 bg-zinc-900/50 transition-all duration-300
+                  relative ml-20 mb-5 rounded-[22px] border bg-white shadow-sm transition-all duration-300
                   ${isSimulatorActive
-                    ? 'border-indigo-500 shadow-xl shadow-indigo-500/25 ring-2 ring-indigo-500/20'
+                    ? 'border-[#2563EB] shadow-[0_18px_40px_rgba(37,99,235,0.18)] ring-2 ring-[#DBEAFE]'
                     : isSelected
-                      ? 'border-indigo-500/50 shadow-lg shadow-indigo-500/10'
-                      : 'border-white/10 hover:border-white/20 hover:shadow-md'
+                      ? 'border-[#93C5FD] shadow-[0_14px_30px_rgba(15,23,42,0.10)]'
+                      : 'border-[#E2E8F0] hover:border-[#BFDBFE] hover:shadow-md'
                   }
                 `}
               >
                 {/* Step Number Circle */}
                 <div
                   className={`
-                    absolute -left-[52px] top-4 flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300
+                    absolute -left-[64px] top-5 flex h-12 w-12 items-center justify-center rounded-full border-2 text-base font-bold transition-all duration-300
                     ${isSimulatorActive
-                      ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/40'
+                      ? 'border-[#2563EB] bg-[#2563EB] text-white shadow-lg shadow-[#2563EB]/30'
                       : isStart
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                        ? 'border-[#10B981] bg-[#10B981] text-white'
                         : isSelected
-                          ? 'bg-indigo-500 border-indigo-500 text-white'
-                          : 'bg-zinc-800 border-zinc-600 text-zinc-400'
+                          ? 'border-[#2563EB] bg-[#2563EB] text-white'
+                          : 'border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B]'
                     }
                   `}
                 >
-                  {isStart ? <Flag className="h-4 w-4" /> : index + 1}
+                  {isStart ? <Flag className="h-5 w-5" /> : index + 1}
                 </div>
 
                 {/* Card Header - Always Visible */}
                 <div
                   onClick={() => toggleExpanded(node.id)}
-                  className="flex cursor-pointer items-center gap-3 p-4"
+                  className="flex cursor-pointer items-center gap-4 p-5"
                 >
                   {/* Node Type Icon */}
                   <div className={`
-                    flex h-10 w-10 items-center justify-center rounded-xl shrink-0
+                    flex h-12 w-12 items-center justify-center rounded-2xl shrink-0
                     ${inputMode === 'free_text'
-                      ? 'bg-gradient-to-br from-amber-400 to-orange-500'
-                      : 'bg-gradient-to-br from-indigo-500 to-purple-500'
+                      ? 'bg-[#FEF3C7] text-[#B45309]'
+                      : 'bg-[#EFF6FF] text-[#2563EB]'
                     }
                   `}>
                     {inputMode === 'free_text'
-                      ? <Keyboard className="h-5 w-5 text-white" />
-                      : <MessageSquare className="h-5 w-5 text-white" />
+                      ? <Keyboard className="h-5.5 w-5.5" />
+                      : <MessageSquare className="h-5.5 w-5.5" />
                     }
                   </div>
 
                   {/* Title & Preview */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-white truncate">
+                      <h3 className="truncate text-[18px] font-semibold text-[#0F172A]">
                         {node.data?.label || "Ohne Titel"}
                       </h3>
                       {isStart && (
-                        <span className="shrink-0 rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-xs font-semibold text-emerald-400">
+                        <span className="shrink-0 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2.5 py-0.5 text-xs font-semibold text-[#047857]">
                           Start
                         </span>
                       )}
                       {inputMode === 'free_text' && (
-                        <span className="shrink-0 rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-xs font-semibold text-amber-400">
+                        <span className="shrink-0 rounded-full border border-[#FCD34D] bg-[#FFFBEB] px-2.5 py-0.5 text-xs font-semibold text-[#B45309]">
                           {(() => {
                             const c = (node.data as any)?.collects;
                             if (!c || c === "__custom_empty__") return 'Freitext';
@@ -712,30 +947,30 @@ export default function FlowListBuilder({
                         </span>
                       )}
                       {status.type === 'error' && (
-                        <span className="shrink-0 text-amber-500" title={status.message}>
-                          <AlertCircle className="h-4 w-4" />
+                        <span className="shrink-0 text-[#D97706]" title={status.message}>
+                          <AlertCircle className="h-4.5 w-4.5" />
                         </span>
                       )}
                       {status.type === 'end' && (
-                        <span className="shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-xs font-semibold text-emerald-400">
+                        <span className="shrink-0 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2.5 py-0.5 text-xs font-semibold text-[#047857]">
                           Ende
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-sm text-zinc-500 truncate">
+                    <p className="mt-1 text-[15px] text-[#475569] truncate">
                       {node.data?.text || "Keine Nachricht"}
                     </p>
                   </div>
 
                   {/* Action buttons */}
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     {/* Inspect button */}
                     <button
                       onClick={(e) => { e.stopPropagation(); onSelectNode(node.id); onOpenInspector(node.id); }}
-                      className="rounded-lg p-1.5 text-zinc-500 hover:bg-white/10 hover:text-white transition-colors"
+                      className="rounded-lg p-2 text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
                       title="Inspizieren"
                     >
-                      <Settings2 className="h-4 w-4" />
+                      <Settings2 className="h-4.5 w-4.5" />
                     </button>
                     {/* Preview button */}
                     <button
@@ -758,49 +993,45 @@ export default function FlowListBuilder({
                           });
                         }
                       }}
-                      className={`rounded-lg p-1.5 transition-colors ${
+                      className={`rounded-lg p-2 transition-colors ${
                         previewNodeId === node.id
-                          ? 'bg-indigo-500/20 text-indigo-400'
-                          : 'text-zinc-500 hover:bg-white/10 hover:text-white'
+                          ? 'bg-[#DBEAFE] text-[#2563EB]'
+                          : 'text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]'
                       }`}
                       title="Vorschau"
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-4.5 w-4.5" />
                     </button>
-                    {/* Expand arrow */}
-                    <ChevronRight className={`h-5 w-5 text-zinc-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                    <ChevronRight className={`h-6 w-6 text-[#94A3B8] transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                   </div>
                 </div>
 
-                {/* Expanded Content */}
                 {isExpanded && (
-                  <div className="border-t border-white/10 p-4 space-y-4 animate-fade-in-up">
-                    {/* Message Text */}
+                  <div className="animate-fade-in-up space-y-5 border-t border-[#E2E8F0] p-5">
                     <div>
-                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                         Nachricht
                       </label>
                       <textarea
                         value={node.data?.text || ""}
                         onChange={(e) => updateNodeText(node.id, e.target.value)}
                         placeholder="Was soll der Bot sagen?"
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-colors resize-none"
+                        className="w-full resize-none rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] transition-colors focus:border-[#2563EB] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#DBEAFE]"
                         rows={3}
                       />
                     </div>
 
-                    {/* Response Type Toggle */}
                     <div>
-                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                         Wie antwortet der {labels.contactLabel}?
                       </label>
-                      <div className="flex rounded-xl bg-white/5 p-1 border border-white/10">
+                      <div className="flex rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-1">
                         <button
                           onClick={() => updateInputMode(node.id, "buttons")}
                           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
                             inputMode === "buttons"
-                              ? "bg-white/10 text-white shadow-sm"
-                              : "text-zinc-500 hover:text-zinc-300"
+                              ? "bg-white text-[#0F172A] shadow-sm"
+                              : "text-[#64748B] hover:text-[#0F172A]"
                           }`}
                         >
                           <MessageSquare className="h-4 w-4" />
@@ -810,8 +1041,8 @@ export default function FlowListBuilder({
                           onClick={() => updateInputMode(node.id, "free_text")}
                           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
                             inputMode === "free_text"
-                              ? "bg-white/10 text-white shadow-sm"
-                              : "text-zinc-500 hover:text-zinc-300"
+                              ? "bg-white text-[#0F172A] shadow-sm"
+                              : "text-[#64748B] hover:text-[#0F172A]"
                           }`}
                         >
                           <Keyboard className="h-4 w-4" />
@@ -820,16 +1051,15 @@ export default function FlowListBuilder({
                       </div>
                     </div>
 
-                    {/* Free Text Config */}
                     {inputMode === "free_text" && (
-                      <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-4 space-y-3">
-                        <p className="text-sm text-amber-400">
+                      <div className="rounded-xl border border-[#FCD34D] bg-[#FFFBEB] p-4 space-y-3">
+                        <p className="text-sm text-[#B45309]">
                           Der {labels.contactLabel} tippt seine Antwort frei ein.
                         </p>
 
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
-                            <label className="mb-1 block text-xs font-medium text-amber-300">
+                            <label className="mb-1 block text-xs font-medium text-[#B45309]">
                               Dieses Feld sammelt
                             </label>
                             {(() => {
@@ -844,11 +1074,11 @@ export default function FlowListBuilder({
                                     autoFocus={collectsVal === "__custom_empty__"}
                                     onChange={(e) => updateFreeTextMeta(node.id, "collects", e.target.value || "__custom_empty__")}
                                     placeholder="z. B. lieblingsfarbe"
-                                    className="flex-1 rounded-lg border border-amber-500/30 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-amber-500/60 focus:outline-none"
+                                    className="flex-1 rounded-md border border-[#FCD34D] bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#D97706] focus:outline-none"
                                   />
                                   <button
                                     onClick={() => updateFreeTextMeta(node.id, "collects", "")}
-                                    className="rounded-lg p-2 text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                                    className="rounded-lg p-2 text-[#64748B] transition-colors hover:bg-white hover:text-[#0F172A]"
                                     title="Zurück zur Auswahl"
                                   >
                                     <X className="h-3 w-3" />
@@ -881,7 +1111,7 @@ export default function FlowListBuilder({
                             })()}
                           </div>
                           <div>
-                            <label className="mb-1 block text-xs font-medium text-amber-300">
+                            <label className="mb-1 block text-xs font-medium text-[#B45309]">
                               Danach weiter zu
                             </label>
                             <select
@@ -900,12 +1130,12 @@ export default function FlowListBuilder({
                         </div>
 
                         {freeTextTarget ? (
-                          <div className="flex items-center gap-2 text-sm text-amber-400">
+                          <div className="flex items-center gap-2 text-sm text-[#B45309]">
                             <ArrowRight className="h-4 w-4" />
                             <span>Weiter zu: <strong>{getNodeLabel(freeTextTarget)}</strong></span>
                           </div>
                         ) : (
-                          <p className="flex items-center gap-1.5 text-xs text-emerald-400/80">
+                          <p className="flex items-center gap-1.5 text-xs text-[#047857]">
                             <Flag className="h-3 w-3 shrink-0" />
                             Kein nächster Schritt – Konversation endet hier.
                           </p>
@@ -913,16 +1143,15 @@ export default function FlowListBuilder({
                       </div>
                     )}
 
-                    {/* Buttons Config */}
                     {inputMode === "buttons" && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                          <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                             Antwort-Buttons ({quickReplies.length})
                           </label>
                           <button
                             onClick={() => addQuickReply(node.id)}
-                            className="inline-flex items-center gap-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 px-3 py-1 text-xs font-semibold text-indigo-400 hover:bg-indigo-500/30 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-xs font-semibold text-[#2563EB] transition-colors hover:bg-[#DBEAFE]"
                           >
                             <Plus className="h-3 w-3" />
                             Button
@@ -930,13 +1159,13 @@ export default function FlowListBuilder({
                         </div>
 
                         {quickReplies.length === 0 ? (
-                          <div className="rounded-xl border-2 border-dashed border-white/20 p-6 text-center">
-                            <p className="text-sm text-zinc-500">
+                          <div className="rounded-xl border-2 border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-6 text-center">
+                            <p className="text-sm text-[#475569]">
                               Noch keine Buttons. Füge Buttons hinzu, damit der {labels.contactLabel} antworten kann.
                             </p>
                             <button
                               onClick={() => addQuickReply(node.id)}
-                              className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-400 hover:border-indigo-500/50 hover:text-indigo-400 transition-colors"
+                              className="mt-3 inline-flex items-center gap-2 rounded-md border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-medium text-[#0F172A] transition-colors hover:bg-[#F8FAFC]"
                             >
                               <Plus className="h-4 w-4" />
                               Ersten Button hinzufügen
@@ -947,9 +1176,9 @@ export default function FlowListBuilder({
                             {quickReplies.map((reply, replyIndex) => (
                               <div
                                 key={reply.id}
-                                className="group flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-800/50 p-3"
+                                className="group flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3"
                               >
-                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-xs font-bold text-zinc-300">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-[#64748B] border border-[#E2E8F0]">
                                   {replyIndex + 1}
                                 </div>
                                 <input
@@ -957,10 +1186,10 @@ export default function FlowListBuilder({
                                   value={reply.label}
                                   onChange={(e) => updateQuickReply(node.id, reply.id, { label: e.target.value })}
                                   placeholder="Button-Text"
-                                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none"
+                                  className="flex-1 rounded-md border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#2563EB] focus:outline-none"
                                 />
-                                <ArrowRight className="h-4 w-4 text-zinc-500" />
-                                <span className="text-xs font-medium text-zinc-500 whitespace-nowrap">
+                                <ArrowRight className="h-4 w-4 text-[#94A3B8]" />
+                                <span className="text-xs font-medium text-[#64748B] whitespace-nowrap">
                                   führt zu
                                 </span>
                                 <select
@@ -978,7 +1207,7 @@ export default function FlowListBuilder({
                                 </select>
                                 <button
                                   onClick={() => removeQuickReply(node.id, reply.id)}
-                                  className="rounded-full p-1.5 text-zinc-500 opacity-0 group-hover:opacity-100 hover:bg-rose-500/20 hover:text-rose-400 transition-all"
+                                  className="rounded-full p-1.5 text-[#64748B] opacity-0 transition-all group-hover:opacity-100 hover:bg-[#FEE2E2] hover:text-[#DC2626]"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </button>
@@ -989,11 +1218,10 @@ export default function FlowListBuilder({
                       </div>
                     )}
 
-                    {/* Delete Button */}
-                    <div className="pt-2 border-t border-white/10">
+                    <div className="border-t border-[#E2E8F0] pt-2">
                       <button
                         onClick={() => onDeleteNode(node.id)}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 py-2.5 text-sm font-semibold text-rose-400 hover:bg-rose-500/20 transition-colors"
+                        className="flex w-full items-center justify-center gap-2 rounded-md border border-[#FECACA] bg-[#FEF2F2] py-2.5 text-sm font-medium text-[#DC2626] transition-colors hover:bg-[#FEE2E2]"
                       >
                         <Trash2 className="h-4 w-4" />
                         Schritt löschen
@@ -1003,26 +1231,24 @@ export default function FlowListBuilder({
                 )}
               </div>
 
-              {/* Connection Arrow between steps */}
               {!isLast && (
                 <div className="absolute -left-[28px] bottom-0 translate-y-1/2 flex h-6 w-6 items-center justify-center">
-                  <ArrowDown className="h-4 w-4 text-zinc-600" />
+                  <ArrowDown className="h-4 w-4 text-[#94A3B8]" />
                 </div>
               )}
             </div>
           );
         })}
 
-        {/* Add New Step at End */}
-        <div className="relative ml-16">
-          <div className="absolute -left-[52px] top-4 flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-zinc-600 bg-zinc-800">
-            <Plus className="h-5 w-5 text-zinc-500" />
+        <div className="relative ml-20">
+          <div className="absolute -left-[64px] top-5 flex h-12 w-12 items-center justify-center rounded-full border-2 border-dashed border-[#CBD5E1] bg-white">
+            <Plus className="h-5.5 w-5.5 text-[#94A3B8]" />
           </div>
           <button
             onClick={() => onAddNode("message")}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/20 bg-white/5 py-6 text-sm font-semibold text-zinc-500 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:text-indigo-400 transition-all"
+            className="flex w-full items-center justify-center gap-2.5 rounded-[22px] border-2 border-dashed border-[#CBD5E1] bg-[#F8FAFC] py-8 text-base font-medium text-[#64748B] transition-all hover:border-[#93C5FD] hover:bg-[#EFF6FF] hover:text-[#2563EB]"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-5.5 w-5.5" />
             Weiteren Schritt hinzufügen
           </button>
         </div>
@@ -1031,11 +1257,10 @@ export default function FlowListBuilder({
 
     {/* Right: preview panel — only rendered when preview is open */}
     {previewNodeId && (
-      <div className="w-[300px] shrink-0 pl-4">
+      <div className="w-[352px] shrink-0 pl-6">
         <div className="sticky top-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Vorschau</p>
+          <div className="mb-4 flex items-center justify-between pr-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Vorschau</p>
             <button onClick={() => {
               const container = getScrollContainer();
               const savedScrollTop = container?.scrollTop ?? 0;
@@ -1044,7 +1269,7 @@ export default function FlowListBuilder({
                 requestAnimationFrame(() => { container.scrollTop = savedScrollTop; });
               }
             }}>
-              <X className="h-4 w-4 text-zinc-400 hover:text-white transition-colors" />
+              <X className="h-4 w-4 text-[#94A3B8] transition-colors hover:text-[#0F172A]" />
             </button>
           </div>
           <IPhoneMockup>

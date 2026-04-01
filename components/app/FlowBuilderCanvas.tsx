@@ -34,24 +34,24 @@ type FlowBuilderCanvasProps = {
   onFitView?: () => void;
 };
 
-// Custom edge styles based on tone - updated for dark theme
+// App-light edge styles for the new builder surface.
 const getEdgeStyle = (edge: Edge) => {
   const tone = (edge.data as any)?.tone ?? 'neutral';
 
   switch (tone) {
     case 'positive':
       return {
-        stroke: '#34D399',
+        stroke: '#10B981',
         strokeWidth: 2.5,
       };
     case 'negative':
       return {
-        stroke: '#F87171',
+        stroke: '#EF4444',
         strokeWidth: 2.5,
       };
     default:
       return {
-        stroke: '#52525b',
+        stroke: '#94A3B8',
         strokeWidth: 2,
       };
   }
@@ -72,7 +72,6 @@ function Canvas({
 }: FlowBuilderCanvasProps) {
   const nodeTypes = useMemo(() => ({ wesponde: FlowNode }), []);
 
-  // Apply custom edge styles
   const styledEdges = useMemo(() =>
     edges.map(edge => ({
       ...edge,
@@ -83,7 +82,7 @@ function Canvas({
   );
 
   return (
-    <div className="relative h-[calc(100vh-200px)] min-h-[500px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/50 backdrop-blur-sm">
+    <div className="relative h-[calc(100vh-220px)] min-h-[560px] overflow-hidden rounded-[24px] border border-[#E2E8F0] bg-[#F8FAFC] shadow-[0_16px_36px_rgba(15,23,42,0.08)]">
       <ReactFlow
         nodes={nodes}
         edges={styledEdges}
@@ -108,64 +107,60 @@ function Canvas({
         snapGrid={[20, 20]}
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#52525b' },
-          style: { stroke: '#52525b', strokeWidth: 2 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#94A3B8' },
+          style: { stroke: '#94A3B8', strokeWidth: 2 },
         }}
         className="bg-transparent"
       >
-        {/* Dot Grid Background - Dark Theme */}
         <Background
           gap={20}
           size={1}
-          color="#3f3f46"
+          color="#D1D9E6"
           variant={BackgroundVariant.Dots}
         />
 
-        {/* MiniMap with dark styling */}
         <MiniMap
           pannable
           zoomable
           position="bottom-right"
           style={{
-            backgroundColor: 'rgba(24, 24, 27, 0.95)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backgroundColor: 'rgba(255, 255, 255, 0.96)',
+            border: '1px solid #E2E8F0',
             borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+            boxShadow: '0 14px 28px rgba(15, 23, 42, 0.12)',
           }}
           nodeColor={(node) => {
             if (node.data?.isStart) return '#10B981';
             if (node.data?.inputMode === 'free_text') return '#F59E0B';
-            if (node.data?.variant === 'choice') return '#8B5CF6';
-            return '#6366F1';
+            if (node.data?.variant === 'choice') return '#7C3AED';
+            return '#2563EB';
           }}
-          maskColor="rgba(0, 0, 0, 0.3)"
+          maskColor="rgba(148, 163, 184, 0.18)"
         />
 
-        {/* Controls with dark styling */}
         <Controls
           position="bottom-left"
           style={{
             display: 'flex',
             flexDirection: 'row',
             gap: '4px',
-            backgroundColor: 'rgba(24, 24, 27, 0.95)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backgroundColor: 'rgba(255, 255, 255, 0.96)',
+            border: '1px solid #E2E8F0',
             borderRadius: '12px',
             padding: '4px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+            boxShadow: '0 12px 24px rgba(15, 23, 42, 0.12)',
           }}
           showInteractive={false}
         />
       </ReactFlow>
 
-      {/* Zoom to Fit Button */}
       <div className="pointer-events-none absolute right-4 top-4 flex gap-2">
         <button
           type="button"
-          className="pointer-events-auto rounded-xl border border-white/10 bg-zinc-900/90 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-zinc-300 shadow-lg hover:border-indigo-500/50 hover:text-white transition-colors"
+          className="pointer-events-auto rounded-md border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-medium text-[#0F172A] shadow-sm transition-colors hover:bg-[#F8FAFC]"
           onClick={onFitView}
         >
-          Zoom to Fit
+          Ansicht zentrieren
         </button>
       </div>
     </div>

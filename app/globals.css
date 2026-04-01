@@ -57,6 +57,83 @@
   --accent-error: #f87171;
 }
 
+/* ========================================
+   APP DESIGN TOKENS
+   ======================================== */
+
+:root {
+  /* --- Sidebar --- */
+  --app-sidebar-bg:          #0C1322;
+  --app-sidebar-text:        #94A3B8;
+  --app-sidebar-text-hover:  #F1F5F9;
+  --app-sidebar-active-bg:   #1E2D4A;
+  --app-sidebar-active-txt:  #FFFFFF;
+  --app-sidebar-icon-muted:  #64748B;
+  --app-sidebar-border:      #1E293B;
+  --app-sidebar-width:       320px;
+
+  /* --- Content Area --- */
+  --app-bg-base:             #F0F4F9;
+  --app-bg-surface:          #FFFFFF;
+  --app-bg-elevated:         #FFFFFF;
+  --app-bg-subtle:           #F8FAFC;
+
+  /* --- Text --- */
+  --app-text-primary:        #0F172A;
+  --app-text-secondary:      #475569;
+  --app-text-muted:          #94A3B8;
+  --app-text-disabled:       #CBD5E1;
+
+  /* --- Borders --- */
+  --app-border-default:      #E2E8F0;
+  --app-border-strong:       #CBD5E1;
+  --app-border-focus:        #2563EB;
+
+  /* --- Accent (Blue) --- */
+  --app-accent-primary:      #1E4FD8;
+  --app-accent-coral:        #FF6B35;
+  --app-accent-600:          #1D4ED8;
+  --app-accent-500:          #2563EB;
+  --app-accent-400:          #3B82F6;
+  --app-accent-100:          #DBEAFE;
+  --app-accent-50:           #EFF6FF;
+
+  /* --- Semantic Colors --- */
+  --app-success-500:         #10B981;
+  --app-success-100:         #D1FAE5;
+  --app-warning-500:         #F59E0B;
+  --app-warning-100:         #FEF3C7;
+  --app-danger-500:          #EF4444;
+  --app-danger-100:          #FEE2E2;
+  --app-info-500:            #0EA5E9;
+  --app-info-100:            #E0F2FE;
+
+  /* --- Node Colors (Flow Builder) --- */
+  --app-node-trigger:        #2563EB;
+  --app-node-message:        #0EA5E9;
+  --app-node-question:       #8B5CF6;
+  --app-node-condition:      #F59E0B;
+  --app-node-action:         #10B981;
+  --app-node-end:            #94A3B8;
+
+  /* --- Shadows (neutral elevation, no colored glow) --- */
+  --app-shadow-xs:  0 1px 2px rgba(0,0,0,0.05);
+  --app-shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --app-shadow-md:  0 4px 8px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+  --app-shadow-lg:  0 8px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04);
+  --app-shadow-xl:  0 16px 40px rgba(0,0,0,0.10), 0 8px 16px rgba(0,0,0,0.06);
+
+  /* --- Radius --- */
+  --app-radius-sm:   8px;
+  --app-radius-md:   12px;
+  --app-radius-lg:   16px;
+  --app-radius-xl:   20px;
+  --app-radius-full: 999px;
+
+  /* --- Layout --- */
+  --app-topbar-height: 56px;
+}
+
 html {
   scroll-padding-top: 80px;
   overflow-x: hidden;
@@ -196,25 +273,6 @@ body {
   }
 }
 
-/* Gradient shift */
-@keyframes gradientShift {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-/* Glow pulse */
-@keyframes glowPulse {
-  0%, 100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
 
 /* Fade in up */
 @keyframes fadeInUp {
@@ -259,40 +317,6 @@ body {
   }
 }
 
-/* Card hover lift */
-@keyframes cardLift {
-  from {
-    transform: translateY(0);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-  to {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
-  }
-}
-
-/* Stat counter */
-@keyframes countUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Badge shine */
-@keyframes badgeShine {
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
-}
-
 /* Legacy Animations (for flow builder) */
 @keyframes messageIn {
   0% {
@@ -305,23 +329,6 @@ body {
   }
 }
 
-@keyframes floatSlow {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes dotPulse {
-  0%, 80%, 100% {
-    opacity: 0.3;
-  }
-  40% {
-    opacity: 1;
-  }
-}
 
 @keyframes edgeDraw {
   from {
@@ -352,6 +359,11 @@ body {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
+}
+
+@keyframes appShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 /* ========================================
@@ -445,6 +457,22 @@ body {
   opacity: 0.02;
   pointer-events: none;
   z-index: 1;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #E2E8F0 0%,
+    #F1F5F9 40%,
+    #E2E8F0 80%
+  );
+  background-size: 200% 100%;
+  animation: appShimmer 1.4s ease-in-out infinite;
+}
+
+.font-display {
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  font-feature-settings: "tnum";
 }
 
 /* ========================================
@@ -554,21 +582,6 @@ body {
   background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, rgba(238, 242, 255, 0.3) 100%);
 }
 
-.node-header-start {
-  background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
-}
-
-.node-header-message {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-}
-
-.node-header-input {
-  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
-}
-
-.node-header-confirmation {
-  background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
-}
 
 .react-flow__edge-path {
   stroke-width: 2;
@@ -576,7 +589,7 @@ body {
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #6366f1;
+  stroke: #2563EB;
   stroke-width: 3;
 }
 
@@ -603,4 +616,172 @@ body {
 
 .text-ink {
   color: var(--fg-dark);
+}
+
+/* ========================================
+   APP SHELL (SCOPED TO /app)
+   ======================================== */
+
+@keyframes appFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes appSlideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.app-shell {
+  background: var(--app-bg-base);
+  color: var(--app-text-primary);
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+}
+
+.app-shell .app-card {
+  background: var(--app-bg-surface);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.app-shell .app-card-interactive {
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease;
+}
+
+.app-shell .app-card-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--app-shadow-md);
+}
+
+.app-shell .app-panel {
+  background: var(--app-bg-surface);
+  border: 1px solid var(--app-border-default);
+  border-radius: var(--app-radius-xl);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.app-shell .app-divider {
+  background: var(--app-border-default);
+}
+
+.app-shell .app-input,
+.app-shell .app-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: 42px;
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-border-default);
+  background-color: var(--app-bg-surface);
+  color: var(--app-text-primary);
+  font-size: 14px;
+  line-height: 1.4;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.app-shell .app-input::placeholder {
+  color: var(--app-text-muted);
+}
+
+.app-shell .app-input:focus,
+.app-shell .app-select:focus {
+  outline: none;
+  border-color: var(--app-border-focus);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.app-shell .app-input:disabled,
+.app-shell .app-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.app-shell .app-select {
+  padding: 0.5rem 2.5rem 0.5rem 0.875rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.9rem 0.9rem;
+}
+
+.app-shell .app-select option {
+  background: var(--app-bg-surface);
+  color: var(--app-text-primary);
+}
+
+.app-shell .status-dot {
+  display: inline-flex;
+  height: 0.375rem;
+  width: 0.375rem;
+  border-radius: 999px;
+}
+
+.app-shell .app-badge-success,
+.app-shell .app-badge-warning,
+.app-shell .app-badge-danger,
+.app-shell .app-badge-info,
+.app-shell .app-badge-neutral {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 4px;
+  padding: 0.125rem 0.5rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-shell .app-badge-success {
+  background: var(--app-success-100);
+  color: #047857;
+}
+
+.app-shell .app-badge-warning {
+  background: var(--app-warning-100);
+  color: #b45309;
+}
+
+.app-shell .app-badge-danger {
+  background: var(--app-danger-100);
+  color: #b91c1c;
+}
+
+.app-shell .app-badge-info {
+  background: var(--app-info-100);
+  color: #0369a1;
+}
+
+.app-shell .app-badge-neutral {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.app-shell .app-page-enter {
+  animation: appFadeIn 180ms ease-out;
+}
+
+.app-shell .app-slideover-enter {
+  animation: appSlideInRight 250ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .app-card-interactive,
+  .app-shell .app-page-enter,
+  .app-shell .app-slideover-enter {
+    animation: none !important;
+    transition: none !important;
+  }
 }

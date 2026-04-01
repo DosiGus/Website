@@ -3,13 +3,30 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronUp, ChevronDown, Copy, Search, Star, Trash2, Pencil, Check, X, AlertTriangle, CheckCircle } from "lucide-react";
+import {
+  ArrowUpRight,
+  ChevronUp,
+  ChevronDown,
+  Search,
+  Star,
+  Trash2,
+  Pencil,
+  Check,
+  X,
+  AlertTriangle,
+  CheckCircle,
+  Zap,
+} from "lucide-react";
 import type { Edge, Node } from "reactflow";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { lintFlow } from "../../lib/flowLint";
 import type { FlowMetadata, FlowTrigger } from "../../lib/flowTypes";
 import useAccountVertical from "../../lib/useAccountVertical";
 import { getBookingLabels } from "../../lib/verticals";
+import Badge from "../ui/Badge";
+import Button from "../ui/Button";
+import DataTable, { type DataTableColumn } from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
 
 type FlowSummary = {
   id: string;
@@ -35,7 +52,7 @@ type ReservationCountRow = {
   flow_id: string | null;
 };
 
-type PendingAction = { id: string; type: "duplicate" | "template" | "delete" } | null;
+type PendingAction = { id: string; type: "template" | "delete" } | null;
 
 export default function FlowListClient({
   variant,
@@ -50,33 +67,30 @@ export default function FlowListClient({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<FlowFilter>("all");
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("wesponde-flow-favorites");
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const [reservationCounts, setReservationCounts] = useState<Record<string, number>>({});
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [error, setError] = useState<string | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [priorityUpdating, setPriorityUpdating] = useState<string | null>(null);
+const [priorityUpdating, setPriorityUpdating] = useState<string | null>(null);
   const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  const selectAllRef = useRef<HTMLInputElement | null>(null);
   const lastStatusParamRef = useRef<string | null>(null);
   const { vertical } = useAccountVertical();
   const labels = getBookingLabels(vertical);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("wesponde-flow-favorites");
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        setFavorites(parsed);
-      } else {
-        setFavorites([]);
-      }
-    } catch (error) {
-      console.warn("Invalid flow favorites in localStorage:", error);
-      setFavorites([]);
-    }
-  }, []);
 
   useEffect(() => {
     localStorage.setItem("wesponde-flow-favorites", JSON.stringify(favorites));
@@ -200,7 +214,12 @@ export default function FlowListClient({
   const flowsWithWarnings = useMemo(
     () =>
       flows.map((flow) => {
-        const lint = lintFlow(flow.nodes ?? [], flow.edges ?? [], flow.triggers ?? []);
+        const lint = lintFlow(
+          flow.nodes ?? [],
+          flow.edges ?? [],
+          flow.triggers ?? [],
+          flow.metadata,
+        );
         return {
           ...flow,
           warningCount: lint.warnings.length,
@@ -252,6 +271,13 @@ export default function FlowListClient({
       prev.includes(flowId) ? prev.filter((id) => id !== flowId) : [...prev, flowId],
     );
   };
+
+  // Clear selection when search/filter changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setBulkDeleteConfirm(false);
+  }, [searchQuery, statusFilter]);
+
 
   // Active flows sorted by priority — used for rank badges and up/down controls.
   const activeFlowsSortedByPriority = useMemo(
@@ -341,48 +367,6 @@ export default function FlowListClient({
     }
   };
 
-  const duplicateFlow = async (flowId: string) => {
-    setPendingAction({ id: flowId, type: "duplicate" });
-    setError(null);
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      router.replace("/login");
-      return;
-    }
-    const baseResponse = await fetch(`/api/flows/${flowId}`, {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-    if (!baseResponse.ok) {
-      setPendingAction(null);
-      setError("Flow konnte nicht dupliziert werden.");
-      return;
-    }
-    const baseFlow = await baseResponse.json();
-    const response = await fetch("/api/flows", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        name: `${baseFlow.name} Kopie`,
-        nodes: baseFlow.nodes,
-        edges: baseFlow.edges,
-        triggers: baseFlow.triggers,
-        metadata: baseFlow.metadata,
-      }),
-    });
-    setPendingAction(null);
-    if (response.ok) {
-      router.refresh();
-    } else {
-      setError("Duplizieren fehlgeschlagen.");
-    }
-  };
 
   const saveAsTemplate = async (flowId: string, name: string) => {
     setPendingAction({ id: flowId, type: "template" });
@@ -416,32 +400,7 @@ export default function FlowListClient({
     router.refresh();
   };
 
-  const deleteFlow = async (flowId: string) => {
-    setPendingAction({ id: flowId, type: "delete" });
-    setError(null);
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      router.replace("/login");
-      return;
-    }
-    const response = await fetch(`/api/flows/${flowId}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-    setPendingAction(null);
-    setDeleteConfirmId(null);
-    if (response.ok) {
-      setFlows((prev) => prev.filter((f) => f.id !== flowId));
-    } else {
-      setError("Flow konnte nicht gelöscht werden.");
-    }
-  };
-
-  const startEditing = (flow: FlowSummary) => {
+const startEditing = (flow: FlowSummary) => {
     setEditingFlowId(flow.id);
     setEditingName(flow.name);
   };
@@ -497,354 +456,745 @@ export default function FlowListClient({
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const bulkDelete = async () => {
+    setBulkDeleting(true);
+    setError(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) { router.replace("/login"); return; }
+
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        fetch(`/api/flows/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+      )
+    );
+
+    const succeeded = ids.filter(
+      (_, i) =>
+        results[i].status === "fulfilled" &&
+        (results[i] as PromiseFulfilledResult<Response>).value.ok
+    );
+    const failedCount = ids.length - succeeded.length;
+
+    setFlows((prev) => prev.filter((f) => !succeeded.includes(f.id)));
+    setSelectedIds(new Set());
+    setBulkDeleteConfirm(false);
+    setBulkDeleting(false);
+
+    if (failedCount > 0) {
+      setError(`${failedCount} Flow${failedCount > 1 ? "s" : ""} konnte nicht gelöscht werden.`);
+    }
+  };
+
+  const toggleFlowStatus = async (flow: FlowSummary) => {
+    const newStatus: FlowStatus = flow.status === "Aktiv" ? "Entwurf" : "Aktiv";
+    setError(null);
+
+    if (newStatus === "Aktiv") {
+      const lintResult = lintFlow(
+        flow.nodes ?? [],
+        flow.edges ?? [],
+        flow.triggers ?? [],
+        flow.metadata,
+      );
+      const blockingWarnings = lintResult.warnings.filter(
+        (warning) => warning.severity === "warning",
+      );
+
+      if (blockingWarnings.length > 0) {
+        const firstWarning = blockingWarnings[0]?.message;
+        setError(
+          blockingWarnings.length === 1
+            ? `"${flow.name}" kann nicht live gestellt werden. Bitte behebe zuerst: ${firstWarning}.`
+            : `"${flow.name}" kann nicht live gestellt werden, weil noch ${blockingWarnings.length} Probleme offen sind. Bitte starte mit: ${firstWarning}.`,
+        );
+        return;
+      }
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      router.replace("/login");
+      return;
+    }
+
+    setStatusUpdating(flow.id);
+    setFlows((prev) => prev.map((f) => f.id === flow.id ? { ...f, status: newStatus } : f));
+
+    try {
+      const response = await fetch(`/api/flows/${flow.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          name: flow.name,
+          status: newStatus,
+          nodes: flow.nodes,
+          edges: flow.edges,
+          triggers: flow.triggers ?? [],
+          metadata: flow.metadata,
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as
+          | { error?: string; code?: string; warnings?: { message?: string }[] }
+          | null;
+        const serverWarnings = Array.isArray(body?.warnings) ? body.warnings : [];
+        const firstServerWarning = serverWarnings[0]?.message;
+
+        if (response.status === 401) {
+          router.replace("/login");
+        } else if (body?.code === "LINT_FAILED") {
+          setError(
+            firstServerWarning
+              ? `"${flow.name}" kann nicht live gestellt werden. Bitte behebe zuerst: ${firstServerWarning}.`
+              : body?.error ?? `"${flow.name}" kann nicht live gestellt werden, weil noch Fehler offen sind.`,
+          );
+        } else if (body?.error) {
+          setError(body.error);
+        } else if (response.status === 409) {
+          setError("Dieser Flow wurde in einem anderen Tab geändert. Bitte lade die Liste neu.");
+        } else {
+          setError("Status konnte nicht geändert werden.");
+        }
+
+        setFlows((prev) => prev.map((f) => f.id === flow.id ? { ...f, status: flow.status } : f));
+        return;
+      }
+
+      const body = await response.json().catch(() => null) as
+        | { updated_at?: string }
+        | null;
+      if (body?.updated_at) {
+        setFlows((prev) =>
+          prev.map((f) =>
+            f.id === flow.id ? { ...f, updated_at: body.updated_at ?? f.updated_at } : f,
+          ),
+        );
+      }
+    } catch {
+      setFlows((prev) => prev.map((f) => f.id === flow.id ? { ...f, status: flow.status } : f));
+      setError("Status konnte nicht geändert werden. Bitte versuche es erneut.");
+    } finally {
+      setStatusUpdating(null);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-6 text-sm text-zinc-400">
-        Flows werden geladen …
-      </div>
+      <section className="app-panel p-6">
+        <div className="space-y-4">
+          <div className="h-4 w-28 animate-pulse rounded bg-[#E2E8F0]" />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-[110px] animate-pulse rounded-lg border border-[#E2E8F0] bg-[#F8FAFC]"
+              />
+            ))}
+          </div>
+        </div>
+      </section>
     );
   }
 
-  if (!filteredFlows.length) {
-    const emptyMessage = searchQuery
-      ? "Keine Flows gefunden."
-      : effectiveStatusFilter === "Aktiv"
-        ? "Noch keine aktiven Flows vorhanden."
-        : effectiveStatusFilter === "Entwurf"
-          ? "Noch keine Entwürfe vorhanden."
-          : effectiveStatusFilter === "Favoriten"
-            ? "Noch keine Favoriten markiert."
-            : effectiveStatusFilter === "Warnungen"
-              ? "Keine Flows mit Warnungen."
-              : effectiveStatusFilter === "Valide"
-                ? "Keine validen Flows gefunden."
-                : "Noch keine Flows vorhanden.";
-
-    return (
-      <div className="rounded-xl border border-dashed border-white/20 bg-zinc-900/30 p-8 text-center text-sm text-zinc-400">
-        {emptyMessage}{" "}
-        <Link href="/app/flows/new" className="font-semibold text-indigo-400 hover:text-indigo-300">
-          Erstelle den ersten Flow.
-        </Link>
-      </div>
-    );
-  }
+  const emptyMessage = searchQuery
+    ? "Keine Flows gefunden."
+    : effectiveStatusFilter === "Aktiv"
+      ? "Noch keine aktiven Flows vorhanden."
+      : effectiveStatusFilter === "Entwurf"
+        ? "Noch keine Entwuerfe vorhanden."
+        : effectiveStatusFilter === "Favoriten"
+          ? "Noch keine Favoriten markiert."
+          : effectiveStatusFilter === "Warnungen"
+            ? "Keine Flows mit Warnungen."
+            : effectiveStatusFilter === "Valide"
+              ? "Keine validen Flows gefunden."
+              : "Noch keine Flows vorhanden.";
 
   const renderWarningPill = (count: number) =>
     count > 0 ? (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">
+      <Badge variant="warning">
         <AlertTriangle className="h-3 w-3" />
         {count} Warnung{count > 1 ? "en" : ""}
-      </span>
+      </Badge>
     ) : (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
+      <Badge variant="success">
         <CheckCircle className="h-3 w-3" />
         Valide
-      </span>
+      </Badge>
     );
 
+  const renderStatusBadge = (flow: FlowSummary) => (
+    <Badge variant={flow.status === "Aktiv" ? "success" : "neutral"}>
+      {flow.status}
+    </Badge>
+  );
+
   const filterControls = (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-      <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5">
-        <Search className="h-4 w-4 text-zinc-500" />
-        <input
-          className="w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
-          placeholder="Flows durchsuchen..."
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-        />
-      </div>
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px]">
+      <label className="space-y-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+          Suche
+        </span>
+        <span className="flex min-h-[42px] items-center gap-3 rounded-md border border-[#E2E8F0] bg-white px-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <Search className="h-4 w-4 text-[#94A3B8]" />
+          <input
+            className="app-input min-h-0 border-0 bg-transparent p-0 shadow-none focus:border-0 focus:shadow-none"
+            placeholder="Flows durchsuchen..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+        </span>
+      </label>
+
       {!statusFilterOverride ? (
-        <select
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value as FlowFilter)}
-          className="app-select"
-        >
-          <option value="all">Status filtern</option>
-          <option value="Aktiv">Aktive</option>
-          <option value="Entwurf">Entwürfe</option>
-          <option value="Favoriten">Favoriten</option>
-          <option value="Warnungen">Mit Warnungen</option>
-          <option value="Valide">Ohne Warnungen</option>
-        </select>
+        <label className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+            Filter
+          </span>
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as FlowFilter)}
+            className="app-select"
+          >
+            <option value="all">Alle</option>
+            <option value="Aktiv">Aktive</option>
+            <option value="Entwurf">Entwuerfe</option>
+            <option value="Favoriten">Favoriten</option>
+            <option value="Warnungen">Mit Warnungen</option>
+            <option value="Valide">Ohne Warnungen</option>
+          </select>
+        </label>
       ) : null}
     </div>
   );
 
-  if (variant === "grid") {
+  const renderFlowName = (flow: FlowSummary) =>
+    editingFlowId === flow.id ? (
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={editingName}
+          onChange={(event) => setEditingName(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") saveFlowName(flow.id);
+            if (event.key === "Escape") cancelEditing();
+          }}
+          className="app-input min-h-9 px-3 py-1.5"
+          autoFocus
+        />
+        <button
+          type="button"
+          onClick={() => saveFlowName(flow.id)}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#BBF7D0] bg-[#ECFDF5] text-[#047857] transition-colors hover:bg-[#D1FAE5]"
+          title="Speichern"
+        >
+          <Check className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={cancelEditing}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#E2E8F0] bg-white text-[#64748B] transition-colors hover:bg-[#F8FAFC]"
+          title="Abbrechen"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    ) : (
+      <div className="group/name flex items-center gap-2">
+        <span className="font-medium text-[#0F172A]">{flow.name}</span>
+        <button
+          type="button"
+          onClick={() => startEditing(flow)}
+          className="rounded-md p-1 text-[#94A3B8] opacity-0 transition-all hover:bg-[#F0F4F9] hover:text-[#0F172A] group-hover/name:opacity-100"
+          title="Namen bearbeiten"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+
+  const renderPriority = (flow: FlowSummary) =>
+    flow.status === "Aktiv" && activeFlowsSortedByPriority.length > 1 ? (
+      <div className="flex items-center gap-2">
+        <Badge variant="accent">#{priorityRankOf(flow.id)}</Badge>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => movePriority(flow.id, -1)}
+            disabled={priorityRankOf(flow.id) === 1 || priorityUpdating === flow.id}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E2E8F0] bg-white text-[#64748B] transition-colors hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
+            title="Hoeher"
+          >
+            <ChevronUp className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => movePriority(flow.id, 1)}
+            disabled={
+              priorityRankOf(flow.id) === activeFlowsSortedByPriority.length ||
+              priorityUpdating === flow.id
+            }
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E2E8F0] bg-white text-[#64748B] transition-colors hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
+            title="Niedriger"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    ) : (
+      <span className="text-sm text-[#94A3B8]">-</span>
+    );
+
+  const renderActions = (flow: FlowSummary) => (
+    <div className="flex flex-wrap items-center gap-2">
+      <Link
+        href={`/app/flows/${flow.id}`}
+        className="text-sm font-medium text-[#2450b2] transition-colors hover:text-[#1a46c4] hover:underline"
+      >
+        Öffnen
+      </Link>
+      <button
+        type="button"
+        onClick={() => toggleFavorite(flow.id)}
+        className={[
+          "flex items-center justify-center p-1 transition-colors",
+          favorites.includes(flow.id)
+            ? "text-[#2450b2]"
+            : "text-[#CBD5E1] hover:text-[#2450b2]",
+        ].join(" ")}
+        title="Favorit"
+      >
+        <Star
+          className="h-5 w-5"
+          fill={favorites.includes(flow.id) ? "currentColor" : "none"}
+        />
+      </button>
+    </div>
+  );
+
+  const allPageSelected =
+    filteredFlows.length > 0 && filteredFlows.every((f) => selectedIds.has(f.id));
+  const somePageSelected =
+    filteredFlows.some((f) => selectedIds.has(f.id)) && !allPageSelected;
+
+  const columns: DataTableColumn<(FlowSummary & { warningCount: number })>[] = [
+    {
+      id: "select",
+      header: (
+        <input
+          ref={(el) => {
+            selectAllRef.current = el;
+            if (el) el.indeterminate = somePageSelected;
+          }}
+          type="checkbox"
+          checked={allPageSelected}
+          onChange={() => {
+            if (allPageSelected) {
+              setSelectedIds(new Set());
+            } else {
+              setSelectedIds(new Set(filteredFlows.map((f) => f.id)));
+            }
+            setBulkDeleteConfirm(false);
+          }}
+          className="h-4 w-4 cursor-pointer rounded border-[#CBD5E1] text-[#1E4FD8] accent-[#1E4FD8] focus:ring-[#1E4FD8]"
+          aria-label="Alle auswählen"
+        />
+      ),
+      render: (flow) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(flow.id)}
+          onChange={() => toggleSelect(flow.id)}
+          onClick={(e) => e.stopPropagation()}
+          className="h-4 w-4 cursor-pointer rounded border-[#CBD5E1] text-[#1E4FD8] accent-[#1E4FD8] focus:ring-[#1E4FD8]"
+          aria-label={`${flow.name} auswählen`}
+        />
+      ),
+      headerClassName: "w-12",
+      cellClassName: "w-12",
+    },
+    {
+      id: "name",
+      header: "Name",
+      sortValue: (flow) => flow.name,
+      render: (flow) => (
+        <div className="min-w-[240px]">
+          {renderFlowName(flow)}
+          <div className="mt-1 text-[13px] text-[#64748B]">
+            {flow.nodes.length} Nodes · {flow.edges.length} Verbindungen
+            {showReservationCounts ? (
+              <> · {(reservationCounts[flow.id] ?? 0).toLocaleString("de-DE")} {labels.bookingPlural}</>
+            ) : null}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      sortValue: (flow) => flow.status,
+      render: (flow) => (
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={flow.status === "Aktiv"}
+            disabled={statusUpdating === flow.id}
+            onClick={() => toggleFlowStatus(flow)}
+            className={[
+              "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4FD8] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
+              flow.status === "Aktiv" ? "bg-[#1E4FD8]" : "bg-[#CBD5E1]",
+            ].join(" ")}
+            title={flow.status === "Aktiv" ? "Aktiv – klicken zum Deaktivieren" : "Entwurf – klicken zum Aktivieren"}
+          >
+            <span
+              className={[
+                "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                flow.status === "Aktiv" ? "translate-x-5" : "translate-x-0",
+              ].join(" ")}
+            />
+          </button>
+          <span className={[
+            "text-[13px] font-medium",
+            flow.status === "Aktiv" ? "text-[#1E4FD8]" : "text-[#94A3B8]",
+          ].join(" ")}>
+            {flow.status}
+          </span>
+        </div>
+      ),
+    },
+    {
+      id: "priority",
+      header: "Prioritaet",
+      render: (flow) => renderPriority(flow),
+    },
+    {
+      id: "quality",
+      header: "Qualitaet",
+      sortValue: (flow) => flow.warningCount,
+      render: (flow) => renderWarningPill(flow.warningCount),
+    },
+    {
+      id: "updated",
+      header: "Aktualisiert",
+      sortValue: (flow) => flow.updated_at,
+      render: (flow) => (
+        <span className="text-sm text-[#475569]">
+          {new Date(flow.updated_at).toLocaleDateString("de-DE")}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Aktionen",
+      render: (flow) => renderActions(flow),
+      cellClassName: "min-w-[300px]",
+    },
+  ];
+
+  const statCards = [
+    {
+      key: "all",
+      label: "Alle Flows",
+      value: flows.length,
+      description: "Gesamte verfügbare Automationen",
+      tone: "bg-[#DBEAFE] text-[#2563EB]",
+    },
+    {
+      key: "active",
+      label: "Aktiv",
+      value: flows.filter((flow) => flow.status === "Aktiv").length,
+      description: "Derzeit live geschaltet",
+      tone: "bg-[#D1FAE5] text-[#047857]",
+    },
+    {
+      key: "favorites",
+      label: "Favoriten",
+      value: favorites.length,
+      description: "Schnellzugriff fuer wichtige Flows",
+      tone: "bg-[#FFFBEB] text-[#B45309]",
+    },
+    {
+      key: "warnings",
+      label: "Mit Warnungen",
+      value: flowsWithWarnings.filter((flow) => flow.warningCount > 0).length,
+      description: "Flows mit offenen Lint-Hinweisen",
+      tone: "bg-[#FEF3C7] text-[#B45309]",
+    },
+  ] as const;
+
+  if (!filteredFlows.length) {
     return (
-      <div className="space-y-4">
-        {filterControls}
-        {error ? (
-          <p className="rounded-xl bg-rose-500/10 border border-rose-500/20 px-4 py-3 text-sm font-medium text-rose-400">
-            {error}
-          </p>
-        ) : null}
-        <div className="grid gap-4 lg:grid-cols-2">
-          {filteredFlows.map((flow) => (
-            <div
-              key={flow.id}
-              className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-white/10 bg-zinc-900/50 p-5 transition-all hover:border-white/20 hover:bg-zinc-900"
-            >
-              <div className="flex items-start justify-between gap-3">
+      <section className="space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {statCards.map((card) => (
+            <div key={card.key} className="app-card rounded-2xl p-6">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                      flow.status === "Aktiv"
-                        ? "bg-emerald-500/10 text-emerald-400"
-                        : "bg-zinc-500/10 text-zinc-400"
-                    }`}>
-                      {flow.status}
-                    </span>
-                    {flow.status === "Aktiv" && activeFlowsSortedByPriority.length > 1 && (
-                      <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-400">
-                        #{priorityRankOf(flow.id)}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="mt-2 text-lg font-semibold text-white">{flow.name}</h3>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Zuletzt aktualisiert {new Date(flow.updated_at).toLocaleDateString("de-DE")}
+                  <p className="text-[13px] font-medium text-[#94A3B8]">
+                    {card.label}
+                  </p>
+                  <p className="mt-3 text-[28px] font-bold text-[#0F172A]">
+                    {card.value.toLocaleString("de-DE")}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <button
-                    onClick={() => toggleFavorite(flow.id)}
-                    className={`rounded-lg border p-2 transition-all ${
-                      favorites.includes(flow.id)
-                        ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                        : "border-white/10 bg-white/5 text-zinc-500 hover:border-white/20 hover:text-white"
-                    }`}
-                    title="Favorit"
-                  >
-                    <Star className="h-4 w-4" fill={favorites.includes(flow.id) ? "currentColor" : "none"} />
-                  </button>
-                  {flow.status === "Aktiv" && activeFlowsSortedByPriority.length > 1 && (
-                    <div className="flex flex-col">
-                      <button
-                        onClick={() => movePriority(flow.id, -1)}
-                        disabled={priorityRankOf(flow.id) === 1 || priorityUpdating === flow.id}
-                        className="rounded p-1 text-zinc-600 transition-colors hover:bg-white/10 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-25"
-                        title="Priorität erhöhen"
-                      >
-                        <ChevronUp className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => movePriority(flow.id, 1)}
-                        disabled={priorityRankOf(flow.id) === activeFlowsSortedByPriority.length || priorityUpdating === flow.id}
-                        className="rounded p-1 text-zinc-600 transition-colors hover:bg-white/10 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-25"
-                        title="Priorität senken"
-                      >
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                {renderWarningPill(flow.warningCount)}
-                <span className="text-zinc-600">•</span>
-                <span>{flow.nodes.length} Nodes · {flow.edges.length} Verbindungen</span>
-                {showReservationCounts ? (
-                  <>
-                    <span className="text-zinc-600">•</span>
-                    <span>
-                      {(reservationCounts[flow.id] ?? 0).toLocaleString("de-DE")} {labels.bookingPlural}
-                    </span>
-                  </>
-                ) : null}
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Link
-                  href={`/app/flows/${flow.id}`}
-                  className="flex-1 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-center text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-indigo-500/25"
+                <span
+                  className={[
+                    "flex h-9 w-9 items-center justify-center rounded-lg",
+                    card.tone,
+                  ].join(" ")}
                 >
-                  Flow öffnen
-                </Link>
-                <button
-                  onClick={() => duplicateFlow(flow.id)}
-                  className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-300 transition-all hover:border-white/20 hover:bg-white/10"
-                  disabled={pendingAction?.id === flow.id && pendingAction.type === "duplicate"}
-                >
-                  <Copy className="h-4 w-4" />
-                  {pendingAction?.id === flow.id && pendingAction.type === "duplicate"
-                    ? "..."
-                    : "Kopie"}
-                </button>
+                  <Zap className="h-4 w-4" />
+                </span>
               </div>
+              <p className="mt-3 text-xs leading-5 text-[#475569]">
+                {card.description}
+              </p>
             </div>
           ))}
         </div>
+
+        <section className="app-panel space-y-5 p-6">
+          {filterControls}
+          {error ? (
+            <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+              {error}
+            </div>
+          ) : null}
+          <EmptyState
+            icon={Zap}
+            title={emptyMessage}
+            description="Erstelle einen neuen Flow oder passe die Filter an, um bestehende Automationen schneller zu finden."
+            action={
+              <Link
+                href="/app/flows/new"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#2450b2] px-5 py-2.5 text-[15px] font-semibold text-white shadow-[0_2px_16px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1a46c4]"
+              >
+                Ersten Flow erstellen
+              </Link>
+            }
+          />
+        </section>
+      </section>
+    );
+  }
+
+  if (variant === "grid") {
+    return (
+      <div className="space-y-6 app-page-enter">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {statCards.map((card) => (
+            <div key={card.key} className="app-card rounded-2xl p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[13px] font-medium text-[#94A3B8]">
+                    {card.label}
+                  </p>
+                  <p className="mt-3 text-[28px] font-bold text-[#0F172A]">
+                    {card.value.toLocaleString("de-DE")}
+                  </p>
+                </div>
+                <span
+                  className={[
+                    "flex h-9 w-9 items-center justify-center rounded-lg",
+                    card.tone,
+                  ].join(" ")}
+                >
+                  <Zap className="h-4 w-4" />
+                </span>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-[#475569]">
+                {card.description}
+              </p>
+            </div>
+          ))}
+        </section>
+
+        <section className="app-panel space-y-5 p-6">
+          {filterControls}
+          {error ? (
+            <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+              {error}
+            </div>
+          ) : null}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {filteredFlows.map((flow) => (
+              <article
+                key={flow.id}
+                className="app-card app-card-interactive flex flex-col justify-between rounded-2xl p-6"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {renderStatusBadge(flow)}
+                      {flow.status === "Aktiv" &&
+                      activeFlowsSortedByPriority.length > 1 ? (
+                        <Badge variant="accent">#{priorityRankOf(flow.id)}</Badge>
+                      ) : null}
+                    </div>
+                    <div className="mt-3">{renderFlowName(flow)}</div>
+                    <p className="mt-2 text-sm text-[#64748B]">
+                      Zuletzt aktualisiert{" "}
+                      {new Date(flow.updated_at).toLocaleDateString("de-DE")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite(flow.id)}
+                    className={[
+                      "inline-flex h-10 w-10 items-center justify-center rounded-md border transition-colors",
+                      favorites.includes(flow.id)
+                        ? "border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]"
+                        : "border-[#E2E8F0] bg-white text-[#94A3B8] hover:bg-[#F8FAFC] hover:text-[#0F172A]",
+                    ].join(" ")}
+                    title="Favorit"
+                  >
+                    <Star
+                      className="h-4 w-4"
+                      fill={favorites.includes(flow.id) ? "currentColor" : "none"}
+                    />
+                  </button>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-[#64748B]">
+                  {renderWarningPill(flow.warningCount)}
+                  <span>{flow.nodes.length} Nodes</span>
+                  <span>{flow.edges.length} Verbindungen</span>
+                  {showReservationCounts ? (
+                    <span>
+                      {(reservationCounts[flow.id] ?? 0).toLocaleString("de-DE")}{" "}
+                      {labels.bookingPlural}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <Link
+                    href={`/app/flows/${flow.id}`}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full bg-[#2450b2] px-5 py-2.5 text-[15px] font-semibold text-white shadow-[0_2px_16px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1a46c4]"
+                  >
+                    Flow öffnen
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 overflow-hidden rounded-xl border border-white/10 bg-zinc-900/50">
-      <div className="px-6 pt-5">
+    <div className="space-y-6 app-page-enter">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {statCards.map((card) => (
+          <div key={card.key} className="app-card rounded-2xl p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[13px] font-medium text-[#94A3B8]">
+                  {card.label}
+                </p>
+                <p className="mt-3 text-[28px] font-bold text-[#0F172A]">
+                  {card.value.toLocaleString("de-DE")}
+                </p>
+              </div>
+              <span
+                className={[
+                  "flex h-9 w-9 items-center justify-center rounded-lg",
+                  card.tone,
+                ].join(" ")}
+              >
+                <Zap className="h-4 w-4" />
+              </span>
+            </div>
+            <p className="mt-3 text-xs leading-5 text-[#475569]">
+              {card.description}
+            </p>
+          </div>
+        ))}
+      </section>
+
+      <section className="app-panel space-y-5 p-6">
         {filterControls}
         {error ? (
-          <p className="mt-3 rounded-xl bg-rose-500/10 border border-rose-500/20 px-4 py-3 text-sm font-medium text-rose-400">
+          <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
             {error}
-          </p>
+          </div>
         ) : null}
-      </div>
-      <table className="min-w-full divide-y divide-white/10 text-sm">
-        <thead className="bg-white/5">
-          <tr>
-            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Name</th>
-            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Status</th>
-            <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Priorität</th>
-            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Qualität</th>
-            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Aktualisiert</th>
-            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Aktionen</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/5">
-          {filteredFlows.map((flow) => (
-            <tr key={flow.id} className="transition-colors hover:bg-white/5">
-              <td className="whitespace-nowrap px-6 py-4 font-medium text-white">
-                {editingFlowId === flow.id ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveFlowName(flow.id);
-                        if (e.key === "Escape") cancelEditing();
-                      }}
-                      className="rounded-lg border border-indigo-500/50 bg-white/5 px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                      autoFocus
-                    />
-                    <button
-                      onClick={() => saveFlowName(flow.id)}
-                      className="rounded-lg p-1.5 text-emerald-400 hover:bg-emerald-500/10"
-                      title="Speichern"
-                    >
-                      <Check className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={cancelEditing}
-                      className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10"
-                      title="Abbrechen"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="group/name flex items-center gap-2">
-                    <span>{flow.name}</span>
-                    <button
-                      onClick={() => startEditing(flow)}
-                      className="rounded-lg p-1 text-zinc-500 opacity-0 transition-all hover:bg-white/10 hover:text-white group-hover/name:opacity-100"
-                      title="Namen bearbeiten"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-              </td>
-              <td className="px-6 py-4">
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    flow.status === "Aktiv"
-                      ? "bg-emerald-500/10 text-emerald-400"
-                      : "bg-zinc-500/10 text-zinc-400"
-                  }`}
+
+        {selectedIds.size > 0 ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3">
+            <span className="text-sm font-semibold text-[#1E4FD8]">
+              {selectedIds.size} {selectedIds.size === 1 ? "Flow" : "Flows"} ausgewählt
+            </span>
+            <button
+              type="button"
+              onClick={() => { setSelectedIds(new Set()); setBulkDeleteConfirm(false); }}
+              className="text-sm text-[#475569] underline-offset-2 hover:text-[#0F172A] hover:underline"
+            >
+              Auswahl aufheben
+            </button>
+            <div className="ml-auto flex items-center gap-2">
+              {bulkDeleteConfirm ? (
+                <>
+                  <span className="text-sm font-medium text-[#B91C1C]">
+                    {selectedIds.size} {selectedIds.size === 1 ? "Flow" : "Flows"} wirklich löschen?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={bulkDelete}
+                    disabled={bulkDeleting}
+                    className="inline-flex min-h-9 items-center gap-2 rounded-full bg-[#EF4444] px-4 py-2 text-sm font-semibold text-white shadow-[0_2px_8px_rgba(239,68,68,0.25)] transition-all hover:bg-[#DC2626] disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {bulkDeleting ? "Löscht..." : "Bestätigen"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBulkDeleteConfirm(false)}
+                    className="inline-flex min-h-9 items-center rounded-full border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-medium text-[#475569] transition-colors hover:bg-[#F8FAFC]"
+                  >
+                    Abbrechen
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setBulkDeleteConfirm(true)}
+                  className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[#FECACA] bg-white px-4 py-2 text-sm font-semibold text-[#EF4444] transition-colors hover:bg-[#FEF2F2]"
                 >
-                  {flow.status}
-                </span>
-              </td>
-              <td className="px-4 py-4">
-                {flow.status === "Aktiv" && activeFlowsSortedByPriority.length > 1 ? (
-                  <div className="flex items-center gap-1">
-                    <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-xs font-semibold text-indigo-400">
-                      #{priorityRankOf(flow.id)}
-                    </span>
-                    <button
-                      onClick={() => movePriority(flow.id, -1)}
-                      disabled={priorityRankOf(flow.id) === 1 || priorityUpdating === flow.id}
-                      className="rounded p-1 text-zinc-600 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-25"
-                      title="Höher"
-                    >
-                      <ChevronUp className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={() => movePriority(flow.id, 1)}
-                      disabled={priorityRankOf(flow.id) === activeFlowsSortedByPriority.length || priorityUpdating === flow.id}
-                      className="rounded p-1 text-zinc-600 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-25"
-                      title="Niedriger"
-                    >
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <span className="text-zinc-600">—</span>
-                )}
-              </td>
-              <td className="px-6 py-4">{renderWarningPill(flow.warningCount)}</td>
-              <td className="px-6 py-4 text-zinc-400">
-                {new Date(flow.updated_at).toLocaleDateString("de-DE")}
-              </td>
-              <td className="px-6 py-4">
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/app/flows/${flow.id}`}
-                    className="text-sm font-medium text-indigo-400 hover:text-indigo-300"
-                  >
-                    Öffnen →
-                  </Link>
-                  <button
-                    onClick={() => duplicateFlow(flow.id)}
-                    className="flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1 text-xs font-medium text-zinc-300 hover:border-white/20 hover:bg-white/10"
-                    disabled={pendingAction?.id === flow.id && pendingAction.type === "duplicate"}
-                  >
-                    <Copy className="h-3 w-3" />
-                    Kopie
-                  </button>
-                  <button
-                    onClick={() => toggleFavorite(flow.id)}
-                    className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium ${
-                      favorites.includes(flow.id)
-                        ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                        : "border-white/10 text-zinc-400 hover:border-white/20"
-                    }`}
-                  >
-                    <Star className="h-3 w-3" fill={favorites.includes(flow.id) ? "currentColor" : "none"} />
-                  </button>
-                  {deleteConfirmId === flow.id ? (
-                    <>
-                      <button
-                        onClick={() => deleteFlow(flow.id)}
-                        disabled={pendingAction?.id === flow.id && pendingAction.type === "delete"}
-                        className="rounded-lg bg-rose-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-600 disabled:opacity-50"
-                      >
-                        {pendingAction?.id === flow.id && pendingAction.type === "delete"
-                          ? "..."
-                          : "Löschen"}
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirmId(null)}
-                        className="rounded-lg border border-white/10 px-2.5 py-1 text-xs font-medium text-zinc-400 hover:bg-white/10"
-                      >
-                        Abbrechen
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => setDeleteConfirmId(flow.id)}
-                      className="flex items-center gap-1 rounded-lg border border-rose-500/20 px-2.5 py-1 text-xs font-medium text-rose-400 hover:bg-rose-500/10"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Löschen
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        <DataTable
+          data={filteredFlows}
+          columns={columns}
+          getRowKey={(flow) => flow.id}
+          initialSort={{ columnId: "updated", direction: "desc" }}
+        />
+      </section>
     </div>
   );
 }

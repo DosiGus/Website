@@ -1,21 +1,33 @@
 'use client';
 
-import { X, User, Calendar, Clock, Users, Phone, Mail, MessageSquare, Instagram, Edit3 } from "lucide-react";
+import {
+  Calendar,
+  Clock3,
+  Edit3,
+  Instagram,
+  Mail,
+  MessageSquare,
+  Phone,
+  User,
+  Users,
+  X,
+} from "lucide-react";
 import type { Reservation, ReservationStatus } from "../../lib/reservationTypes";
 import type { BookingLabels } from "../../lib/verticals";
+import Badge from "../ui/Badge";
+import Button from "../ui/Button";
 
-type StatusBadgeConfig = {
+type StatusMeta = {
   label: string;
-  bgClass: string;
-  textClass: string;
+  badgeVariant: "warning" | "success" | "neutral" | "info" | "danger";
 };
 
-const STATUS_CONFIG: Record<ReservationStatus, StatusBadgeConfig> = {
-  pending: { label: "Ausstehend", bgClass: "bg-amber-500/10", textClass: "text-amber-400" },
-  confirmed: { label: "Bestätigt", bgClass: "bg-emerald-500/10", textClass: "text-emerald-400" },
-  cancelled: { label: "Storniert", bgClass: "bg-zinc-500/10", textClass: "text-zinc-400" },
-  completed: { label: "Abgeschlossen", bgClass: "bg-blue-500/10", textClass: "text-blue-400" },
-  no_show: { label: "Nicht erschienen", bgClass: "bg-rose-500/10", textClass: "text-rose-400" },
+const STATUS_META: Record<ReservationStatus, StatusMeta> = {
+  pending: { label: "Ausstehend", badgeVariant: "warning" },
+  confirmed: { label: "Bestaetigt", badgeVariant: "success" },
+  cancelled: { label: "Storniert", badgeVariant: "neutral" },
+  completed: { label: "Abgeschlossen", badgeVariant: "info" },
+  no_show: { label: "Nicht erschienen", badgeVariant: "danger" },
 };
 
 type Props = {
@@ -24,7 +36,11 @@ type Props = {
   labels: BookingLabels;
 };
 
-export default function ReservationDetailModal({ reservation, onClose, labels }: Props) {
+export default function ReservationDetailModal({
+  reservation,
+  onClose,
+  labels,
+}: Props) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("de-DE", {
@@ -46,8 +62,8 @@ export default function ReservationDetailModal({ reservation, onClose, labels }:
     });
   };
 
-  const statusConfig = STATUS_CONFIG[reservation.status];
   const contactName = reservation.contacts?.display_name;
+  const statusMeta = STATUS_META[reservation.status];
 
   const getSourceLabel = (source: string) => {
     switch (source) {
@@ -60,157 +76,200 @@ export default function ReservationDetailModal({ reservation, onClose, labels }:
     }
   };
 
-  const getSourceIcon = (source: string) => {
-    switch (source) {
-      case "instagram_dm":
-        return <Instagram className="h-4 w-4" />;
-      default:
-        return <Edit3 className="h-4 w-4" />;
-    }
-  };
+  const SourceIcon =
+    reservation.source === "instagram_dm" ? Instagram : Edit3;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <h2 className="text-xl font-semibold text-white">{labels.bookingDetails}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm">
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="app-slideover-enter w-full max-w-2xl overflow-hidden rounded-[20px] border border-[#E2E8F0] bg-white shadow-[0_32px_80px_rgba(15,23,42,0.24)]"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[#E2E8F0] px-6 py-5">
+          <div>
+            <Badge variant="accent">Detail</Badge>
+            <h2 className="mt-3 text-xl font-semibold text-[#0F172A]">
+              {labels.bookingDetails}
+            </h2>
+            <p className="mt-1 text-sm text-[#475569]">
+              Alle gespeicherten Informationen zu {labels.bookingAccusativeArticle}{" "}
+              {labels.bookingSingular.toLowerCase()} auf einen Blick.
+            </p>
+          </div>
           <button
+            type="button"
+            aria-label="Dialog schliessen"
             onClick={onClose}
-            className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[#E2E8F0] bg-white text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#0F172A]"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="space-y-6 p-6">
-          {/* Status Badge */}
-          <div className="flex items-center gap-3">
-            <span className={`rounded-lg px-4 py-2 text-sm font-medium ${statusConfig.bgClass} ${statusConfig.textClass}`}>
-              {statusConfig.label}
-            </span>
-            <div className="flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm text-zinc-300">
-              {getSourceIcon(reservation.source)}
+        <div className="space-y-6 px-6 py-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant={statusMeta.badgeVariant}>{statusMeta.label}</Badge>
+            <span className="inline-flex items-center gap-2 rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-1.5 text-xs font-medium uppercase tracking-[0.08em] text-[#64748B]">
+              <SourceIcon className="h-3.5 w-3.5" />
               {getSourceLabel(reservation.source)}
-            </div>
+            </span>
           </div>
 
-          {/* Main Info */}
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* Guest Name */}
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-violet-500/10 p-2">
-                <User className="h-5 w-5 text-violet-400" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wider text-zinc-500">{labels.contactLabel}</p>
-                <p className="font-medium text-white">{contactName || reservation.guest_name}</p>
-                {contactName && contactName !== reservation.guest_name && (
-                  <p className="text-xs text-zinc-500">
-                    {labels.bookingSingular}: {reservation.guest_name}
+            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#DBEAFE] text-[#2563EB]">
+                  <User className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                    {labels.contactLabel}
                   </p>
-                )}
+                  <p className="mt-2 text-sm font-semibold text-[#0F172A]">
+                    {contactName || reservation.guest_name}
+                  </p>
+                  {contactName && contactName !== reservation.guest_name ? (
+                    <p className="mt-1 text-xs text-[#64748B]">
+                      {labels.bookingSingular}: {reservation.guest_name}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             </div>
 
-            {/* Guest Count */}
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-indigo-500/10 p-2">
-                <Users className="h-5 w-5 text-indigo-400" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wider text-zinc-500">{labels.participantsLabel}</p>
-                <p className="font-medium text-white">{reservation.guest_count}</p>
-              </div>
-            </div>
-
-            {/* Date */}
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-blue-500/10 p-2">
-                <Calendar className="h-5 w-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wider text-zinc-500">Datum</p>
-                <p className="font-medium text-white">{formatDate(reservation.reservation_date)}</p>
+            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E0F2FE] text-[#0369A1]">
+                  <Users className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                    {labels.participantsLabel}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[#0F172A]">
+                    {reservation.guest_count}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Time */}
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-emerald-500/10 p-2">
-                <Clock className="h-5 w-5 text-emerald-400" />
+            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#DBEAFE] text-[#1D4ED8]">
+                  <Calendar className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                    Datum
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[#0F172A]">
+                    {formatDate(reservation.reservation_date)}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs uppercase tracking-wider text-zinc-500">Uhrzeit</p>
-                <p className="font-medium text-white">{reservation.reservation_time} Uhr</p>
+            </div>
+
+            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#D1FAE5] text-[#047857]">
+                  <Clock3 className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                    Uhrzeit
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[#0F172A]">
+                    {reservation.reservation_time} Uhr
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Contact Info */}
-          {(reservation.phone_number || reservation.email) && (
-            <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">Kontaktdaten</p>
-              <div className="space-y-2">
-                {reservation.phone_number && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-zinc-500" />
-                    <a
-                      href={`tel:${reservation.phone_number}`}
-                      className="text-sm font-medium text-indigo-400 hover:text-indigo-300"
-                    >
-                      {reservation.phone_number}
-                    </a>
-                  </div>
-                )}
-                {reservation.email && (
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-zinc-500" />
-                    <a
-                      href={`mailto:${reservation.email}`}
-                      className="text-sm font-medium text-indigo-400 hover:text-indigo-300"
-                    >
-                      {reservation.email}
-                    </a>
-                  </div>
-                )}
+          {reservation.phone_number || reservation.email ? (
+            <div className="rounded-xl border border-[#E2E8F0] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                Kontaktdaten
+              </p>
+              <div className="mt-4 space-y-3">
+                {reservation.phone_number ? (
+                  <a
+                    href={`tel:${reservation.phone_number}`}
+                    className="flex items-center gap-3 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm font-medium text-[#0F172A] transition-colors hover:border-[#BFDBFE] hover:bg-[#EFF6FF]"
+                  >
+                    <Phone className="h-4 w-4 text-[#64748B]" />
+                    {reservation.phone_number}
+                  </a>
+                ) : null}
+                {reservation.email ? (
+                  <a
+                    href={`mailto:${reservation.email}`}
+                    className="flex items-center gap-3 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm font-medium text-[#0F172A] transition-colors hover:border-[#BFDBFE] hover:bg-[#EFF6FF]"
+                  >
+                    <Mail className="h-4 w-4 text-[#64748B]" />
+                    {reservation.email}
+                  </a>
+                ) : null}
               </div>
             </div>
-          )}
+          ) : null}
 
-          {/* Special Requests */}
-          {reservation.special_requests && (
-            <div className="space-y-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-amber-400" />
-                <p className="text-xs font-medium uppercase tracking-wider text-amber-400">Besondere Wünsche</p>
+          {reservation.special_requests ? (
+            <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-5">
+              <div className="flex items-center gap-2 text-[#B45309]">
+                <MessageSquare className="h-4 w-4" />
+                <p className="text-xs font-semibold uppercase tracking-[0.08em]">
+                  Besondere Wuensche
+                </p>
               </div>
-              <p className="text-sm text-zinc-300">{reservation.special_requests}</p>
+              <p className="mt-3 text-sm leading-6 text-[#92400E]">
+                {reservation.special_requests}
+              </p>
             </div>
-          )}
+          ) : null}
 
-          {/* Timestamps */}
-          <div className="space-y-2 border-t border-white/10 pt-4 text-xs text-zinc-500">
-            <p>Erstellt: {formatTimestamp(reservation.created_at)}</p>
-            <p>Aktualisiert: {formatTimestamp(reservation.updated_at)}</p>
-            {reservation.confirmed_at && (
-              <p>Bestätigt: {formatTimestamp(reservation.confirmed_at)}</p>
-            )}
-            {reservation.conversation_id && (
-              <p>Konversation: {reservation.conversation_id}</p>
-            )}
+          <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+              Zeitstempel
+            </p>
+            <div className="mt-4 grid gap-3 text-sm text-[#475569] sm:grid-cols-2">
+              <div>
+                <span className="block text-xs uppercase tracking-[0.08em] text-[#94A3B8]">
+                  Erstellt
+                </span>
+                <span className="mt-1 block">{formatTimestamp(reservation.created_at)}</span>
+              </div>
+              <div>
+                <span className="block text-xs uppercase tracking-[0.08em] text-[#94A3B8]">
+                  Aktualisiert
+                </span>
+                <span className="mt-1 block">{formatTimestamp(reservation.updated_at)}</span>
+              </div>
+              {reservation.confirmed_at ? (
+                <div>
+                  <span className="block text-xs uppercase tracking-[0.08em] text-[#94A3B8]">
+                    Bestaetigt
+                  </span>
+                  <span className="mt-1 block">{formatTimestamp(reservation.confirmed_at)}</span>
+                </div>
+              ) : null}
+              {reservation.conversation_id ? (
+                <div>
+                  <span className="block text-xs uppercase tracking-[0.08em] text-[#94A3B8]">
+                    Konversation
+                  </span>
+                  <span className="mt-1 block break-all">{reservation.conversation_id}</span>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-white/10 px-6 py-4">
-          <button
-            onClick={onClose}
-            className="w-full rounded-xl bg-white/10 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-white/20"
-          >
-            Schließen
-          </button>
+        <div className="flex justify-end border-t border-[#E2E8F0] px-6 py-4">
+          <Button variant="secondary" onClick={onClose}>
+            Schliessen
+          </Button>
         </div>
       </div>
     </div>

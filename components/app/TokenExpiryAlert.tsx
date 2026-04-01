@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AlertTriangle, Clock3 } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 
 interface TokenInfo {
@@ -61,20 +62,24 @@ export default function TokenExpiryAlert() {
 
   if (tokenInfo.isExpired) {
     return (
-      <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm">
-        <div className="flex items-center justify-between gap-4">
+      <div className="app-panel mb-6 border border-[#FECACA] bg-[#FEF2F2] px-4 py-4 text-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-3">
-            <span className="text-xl">⚠️</span>
+            <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-[#FEE2E2] text-[#B91C1C]">
+              <AlertTriangle className="h-4 w-4" />
+            </span>
             <div>
-              <div className="font-semibold text-rose-700">Instagram-Verbindung abgelaufen</div>
-              <div className="text-rose-600">
+              <div className="font-semibold text-[#B91C1C]">
+                Instagram-Verbindung abgelaufen
+              </div>
+              <div className="mt-1 text-[#991B1B]">
                 Dein Instagram-Zugang ist abgelaufen. Nachrichten werden nicht mehr empfangen.
               </div>
             </div>
           </div>
           <Link
             href="/app/integrations"
-            className="whitespace-nowrap rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+            className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#DC2626] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#B91C1C]"
           >
             Jetzt erneuern
           </Link>
@@ -85,30 +90,32 @@ export default function TokenExpiryAlert() {
 
   if (tokenInfo.isExpiringSoon) {
     return (
-      <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-        <div className="flex items-center justify-between gap-4">
+      <div className="app-panel mb-6 border border-[#FDE68A] bg-[#FFFBEB] px-4 py-4 text-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-3">
-            <span className="text-xl">⏰</span>
+            <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-[#FEF3C7] text-[#B45309]">
+              <Clock3 className="h-4 w-4" />
+            </span>
             <div>
-              <div className="font-semibold text-amber-700">
+              <div className="font-semibold text-[#B45309]">
                 Instagram-Verbindung läuft in {tokenInfo.daysUntilExpiry}{" "}
                 {tokenInfo.daysUntilExpiry === 1 ? "Tag" : "Tagen"} ab
               </div>
-              <div className="text-amber-600">
+              <div className="mt-1 text-[#92400E]">
                 Bitte erneuere die Verbindung, um Unterbrechungen zu vermeiden.
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setDismissed(true)}
-              className="whitespace-nowrap rounded-full border border-amber-300 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100"
+              className="inline-flex min-h-10 items-center justify-center rounded-md border border-[#FCD34D] px-3 py-2 text-sm font-medium text-[#92400E] transition-colors hover:bg-[#FEF3C7]"
             >
               Später
             </button>
             <Link
               href="/app/integrations"
-              className="whitespace-nowrap rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+              className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#D97706] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#B45309]"
             >
               Erneuern
             </Link>

@@ -237,16 +237,17 @@ export default function FlowSimulator({
     return inputMode === "free_text" && quickReplies.length === 0 && outgoing.length > 0;
   }, [currentNodeId, isFlowEnded, findNode, findOutgoingEdges, deriveInputMode, getEffectiveQuickReplies]);
 
+  const isDarkPreview = Boolean(hideHeader);
+
   return (
     <div className={`flex flex-col ${hideHeader ? "flex-1 min-h-0" : "h-[400px]"}`}>
-      {/* Header — hidden in iPhone mockup mode */}
       {!hideHeader && (
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <p className="text-sm font-semibold text-zinc-300">Chat-Simulation</p>
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+          <p className="text-sm font-semibold text-[#0F172A]">Chat-Simulation</p>
           {isStarted && (
             <button
               onClick={handleReset}
-              className="flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-indigo-400 transition-colors"
+              className="flex items-center gap-1 text-xs font-semibold text-[#475569] transition-colors hover:text-[#2563EB]"
             >
               <RotateCcw className="h-3 w-3" />
               Neustart
@@ -255,24 +256,23 @@ export default function FlowSimulator({
         </div>
       )}
 
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto py-3 space-y-2 px-3 no-scrollbar">
+      <div className={`flex-1 overflow-y-auto space-y-2.5 px-3 py-3 no-scrollbar ${hideHeader ? "bg-transparent" : "bg-[#F8FAFC]"}`}>
         {hasNoStartNode ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-            <AlertCircle className="h-8 w-8 text-amber-500" />
-            <p className="text-sm text-zinc-500">
+            <AlertCircle className="h-8 w-8 text-[#D97706]" />
+            <p className={`text-sm ${isDarkPreview ? "text-white/65" : "text-[#64748B]"}`}>
               Kein Start-Node gefunden. Erstelle einen Trigger oder einen
               Start-Node.
             </p>
           </div>
         ) : !isStarted ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
-            <p className="text-sm text-zinc-500 text-center px-4">
+            <p className={`px-4 text-center text-sm ${isDarkPreview ? "text-white/65" : "text-[#64748B]"}`}>
               Teste deinen Flow ohne echte Instagram-Verbindung.
             </p>
             <button
               onClick={handleStart}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all"
+              className="flex items-center gap-2 rounded-full bg-[#2450b2] px-5 py-2.5 text-[15px] font-semibold text-white shadow-[0_2px_16px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1a46c4]"
             >
               <Play className="h-4 w-4" />
               Simulation starten
@@ -290,14 +290,18 @@ export default function FlowSimulator({
                 <div
                   className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
                     msg.type === "user"
-                      ? "rounded-tr-sm bg-gradient-to-r from-indigo-500 to-violet-500 text-white"
-                      : "rounded-tl-sm bg-zinc-800 text-white"
+                      ? isDarkPreview
+                        ? "rounded-br-md bg-[linear-gradient(135deg,#4F5BD5_0%,#833AB4_45%,#C13584_100%)] text-white shadow-[0_8px_20px_rgba(131,58,180,0.34)]"
+                        : "rounded-tr-sm bg-[#2563EB] text-white"
+                      : isDarkPreview
+                        ? "rounded-tl-md border border-[#3A3A41] bg-[#2B2B31] text-[#F4F4F5] shadow-[0_10px_24px_rgba(0,0,0,0.24)]"
+                        : "rounded-tl-sm border border-[#E2E8F0] bg-white text-[#0F172A] shadow-sm"
                   }`}
                 >
                   {!hideHeader && (
                     <div className="flex items-center gap-2 mb-1">
                       {msg.type === "bot" ? (
-                        <MessageCircle className="h-3 w-3 text-zinc-500" />
+                        <MessageCircle className="h-3 w-3 text-[#64748B]" />
                       ) : (
                         <User className="h-3 w-3 text-white/70" />
                       )}
@@ -326,7 +330,11 @@ export default function FlowSimulator({
                           key={qr.id}
                           onClick={() => handleQuickReplyClick(qr)}
                           disabled={msg.id !== messages[messages.length - 1]?.id}
-                          className="rounded-full border border-zinc-600 bg-zinc-700/80 px-3 py-1 text-[11px] font-medium text-white hover:border-indigo-400 hover:bg-indigo-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            isDarkPreview
+                              ? "border-[#5A5A62] bg-[#3A3A40] text-[#F5F5F7] hover:bg-[#44444D]"
+                              : "border-[#DBEAFE] bg-[#EFF6FF] text-[#1D4ED8] hover:bg-[#DBEAFE]"
+                          }`}
                         >
                           {qr.label}
                         </button>
@@ -339,12 +347,14 @@ export default function FlowSimulator({
 
             {isFlowEnded && (
               <div className="text-center py-4">
-                <p className="text-xs text-zinc-500 mb-2">
+                <p className={`mb-2 text-xs ${isDarkPreview ? "text-white/45" : "text-[#64748B]"}`}>
                   -- Flow beendet --
                 </p>
                 <button
                   onClick={handleReset}
-                  className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                  className={`text-xs font-semibold transition-colors ${
+                    isDarkPreview ? "text-white/75 hover:text-white" : "text-[#2563EB] hover:text-[#1D4ED8]"
+                  }`}
                 >
                   Erneut testen
                 </button>
@@ -356,12 +366,11 @@ export default function FlowSimulator({
         )}
       </div>
 
-      {/* Input Area */}
       {isStarted && !isFlowEnded && expectsFreeText && (
-        <div className={`border-t border-white/10 ${hideHeader ? "px-3 py-2" : "pt-3"}`}>
-          <div className="flex items-center gap-2">
+        <div className={`border-t ${hideHeader ? "border-white/10 px-3 py-3" : "border-[#E2E8F0] pt-3"}`}>
+          <div className="flex items-center gap-2.5">
             {hideHeader && (
-              <div className="flex-1 flex items-center rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5">
+              <div className="flex min-h-[46px] flex-1 items-center rounded-full border border-[#2F3137] bg-[#1A1B20] px-4 py-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.18)]">
                 <input
                   value={userInput}
                   onChange={(e) => setUserInput(e.target.value)}
@@ -369,7 +378,7 @@ export default function FlowSimulator({
                     if (e.key === "Enter") { e.preventDefault(); handleFreeTextSubmit(); }
                   }}
                   placeholder={currentPlaceholder}
-                  className="flex-1 bg-transparent text-[12px] text-white placeholder:text-zinc-500 focus:outline-none"
+                  className="flex-1 bg-transparent text-[13px] text-white placeholder:text-[#7C7F89] focus:outline-none"
                 />
               </div>
             )}
@@ -381,19 +390,19 @@ export default function FlowSimulator({
                   if (e.key === "Enter") { e.preventDefault(); handleFreeTextSubmit(); }
                 }}
                 placeholder={currentPlaceholder}
-                className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20"
+                className="flex-1 rounded-md border border-[#E2E8F0] bg-white px-4 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#2563EB] focus:outline-none focus:ring-4 focus:ring-[#DBEAFE]"
               />
             )}
             <button
               onClick={handleFreeTextSubmit}
               disabled={!userInput.trim()}
-              className={`${hideHeader ? "rounded-full bg-indigo-500 p-1.5" : "rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 p-2"} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all`}
+              className={`${hideHeader ? "rounded-full bg-[#0095F6] p-2.5" : "rounded-md bg-[#2563EB] p-2"} text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${hideHeader ? "hover:bg-[#1877F2]" : "hover:bg-[#1D4ED8]"}`}
             >
-              <Send className="h-3.5 w-3.5" />
+              <Send className={`${hideHeader ? "h-4 w-4" : "h-3.5 w-3.5"}`} />
             </button>
           </div>
           {!hideHeader && (
-            <p className="text-[10px] text-zinc-500 mt-2 text-center">
+            <p className="mt-2 text-center text-[10px] text-[#64748B]">
               Dieser Node erwartet eine Texteingabe
             </p>
           )}

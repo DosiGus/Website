@@ -25,55 +25,69 @@ type FlowNodeData = Node["data"] & {
   collects?: string;
 };
 
-// Node style configurations with gradients and colors
+// Node styles — left border color is the primary type indicator per the design plan.
 const nodeStyles = {
   start: {
-    headerBg: 'bg-gradient-to-r from-emerald-500 to-teal-500',
-    headerText: 'text-white',
+    borderColor: '#1E4FD8',
+    headerBg: 'rgba(30, 79, 216, 0.045)',
+    chipBg: 'bg-[#DBEAFE]',
+    chipText: 'text-[#1D4ED8]',
     icon: Flag,
-    ring: 'ring-emerald-500/50',
+    iconWrap: 'bg-[#EFF6FF] text-[#1E4FD8]',
     label: 'Start',
   },
   message: {
-    headerBg: 'bg-gradient-to-r from-indigo-500 to-violet-500',
-    headerText: 'text-white',
+    borderColor: '#0EA5E9',
+    headerBg: 'rgba(14, 165, 233, 0.045)',
+    chipBg: 'bg-[#E0F2FE]',
+    chipText: 'text-[#0369A1]',
     icon: MessageSquare,
-    ring: 'ring-indigo-500/50',
+    iconWrap: 'bg-[#F0F9FF] text-[#0EA5E9]',
     label: 'Nachricht',
   },
   input: {
-    headerBg: 'bg-gradient-to-r from-amber-400 to-orange-500',
-    headerText: 'text-white',
+    borderColor: '#8B5CF6',
+    headerBg: 'rgba(139, 92, 246, 0.045)',
+    chipBg: 'bg-[#EDE9FE]',
+    chipText: 'text-[#6D28D9]',
     icon: Keyboard,
-    ring: 'ring-amber-500/50',
+    iconWrap: 'bg-[#F5F3FF] text-[#8B5CF6]',
     label: 'Eingabe',
   },
   choice: {
-    headerBg: 'bg-gradient-to-r from-violet-500 to-purple-600',
-    headerText: 'text-white',
+    borderColor: '#F59E0B',
+    headerBg: 'rgba(245, 158, 11, 0.045)',
+    chipBg: 'bg-[#FEF3C7]',
+    chipText: 'text-[#B45309]',
     icon: GitBranch,
-    ring: 'ring-violet-500/50',
+    iconWrap: 'bg-[#FFFBEB] text-[#F59E0B]',
     label: 'Auswahl',
   },
   confirmation: {
-    headerBg: 'bg-gradient-to-r from-pink-500 to-rose-500',
-    headerText: 'text-white',
+    borderColor: '#10B981',
+    headerBg: 'rgba(16, 185, 129, 0.045)',
+    chipBg: 'bg-[#D1FAE5]',
+    chipText: 'text-[#047857]',
     icon: CheckCircle,
-    ring: 'ring-pink-500/50',
+    iconWrap: 'bg-[#ECFDF5] text-[#10B981]',
     label: 'Bestätigung',
   },
   link: {
-    headerBg: 'bg-gradient-to-r from-cyan-500 to-sky-500',
-    headerText: 'text-white',
+    borderColor: '#0EA5E9',
+    headerBg: 'rgba(14, 165, 233, 0.045)',
+    chipBg: 'bg-[#E0F2FE]',
+    chipText: 'text-[#0369A1]',
     icon: ExternalLink,
-    ring: 'ring-cyan-500/50',
+    iconWrap: 'bg-[#F0F9FF] text-[#0EA5E9]',
     label: 'Link',
   },
   info: {
-    headerBg: 'bg-gradient-to-r from-slate-400 to-slate-500',
-    headerText: 'text-white',
+    borderColor: '#94A3B8',
+    headerBg: 'rgba(148, 163, 184, 0.045)',
+    chipBg: 'bg-[#E2E8F0]',
+    chipText: 'text-[#475569]',
     icon: Info,
-    ring: 'ring-slate-400/50',
+    iconWrap: 'bg-[#F8FAFC] text-[#64748B]',
     label: 'Info',
   },
 };
@@ -101,43 +115,49 @@ function FlowNode({ data, selected }: NodeProps<FlowNodeData>) {
 
   return (
     <div
-      className={`
-        flow-node w-64 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/90 backdrop-blur-sm
-        transition-all duration-200 ease-out
-        ${selected
-          ? `ring-2 ${style.ring} shadow-2xl shadow-indigo-500/20 -translate-y-1`
-          : 'shadow-xl shadow-black/20 hover:shadow-2xl hover:shadow-black/30 hover:-translate-y-0.5 hover:border-white/20'
-        }
-      `}
+      className={[
+        'flow-node w-[220px] overflow-hidden rounded-md border border-[#E2E8F0] bg-white',
+        'transition-all duration-200 ease-out',
+        selected
+          ? 'ring-2 ring-[#1E4FD8] ring-offset-1 -translate-y-px'
+          : 'shadow-sm hover:-translate-y-px hover:shadow-md hover:border-[#C7D7F0]',
+      ].join(' ')}
+      style={{
+        borderLeftColor: style.borderColor,
+        borderLeftWidth: 3,
+        ...(selected && {
+          boxShadow: `0 0 0 2px ${style.borderColor}30, 0 6px 20px ${style.borderColor}18`,
+        }),
+      }}
     >
-      {/* Colored Header */}
-      <div className={`${style.headerBg} px-4 py-3`}>
+      <div
+        className="border-b border-[#E2E8F0] px-4 py-3"
+        style={{ backgroundColor: style.headerBg }}
+      >
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-            <Icon className={`h-4 w-4 ${style.headerText}`} />
+          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${style.iconWrap}`}>
+            <Icon className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-xs font-semibold uppercase tracking-wider ${style.headerText} opacity-80`}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#64748B]">
               {nodeLabel}{collectsLabel}
             </p>
-            <p className={`text-sm font-semibold ${style.headerText} truncate`}>
+            <p className="text-sm font-semibold text-[#0F172A] truncate">
               {data.text?.slice(0, 30) || "Neue Nachricht"}
               {(data.text?.length ?? 0) > 30 ? "…" : ""}
             </p>
           </div>
           {data.inputMode === "free_text" && (
-            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white">
+            <span className="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[10px] font-bold text-[#B45309]">
               Freitext
             </span>
           )}
         </div>
       </div>
 
-      {/* Dark Body */}
       <div className="p-4">
-        {/* Image Preview */}
         {data.imageUrl && (
-          <div className="mb-3 overflow-hidden rounded-xl border border-white/10">
+          <div className="mb-3 overflow-hidden rounded-xl border border-[#E2E8F0]">
             <div className="relative h-24 w-full">
               <Image
                 src={data.imageUrl}
@@ -150,55 +170,50 @@ function FlowNode({ data, selected }: NodeProps<FlowNodeData>) {
           </div>
         )}
 
-        {/* Message Text */}
-        <p className="text-sm text-zinc-300 leading-relaxed line-clamp-3">
+        <p className="text-sm leading-relaxed text-[#334155] line-clamp-3">
           {data.text || "Keine Nachricht"}
         </p>
 
-        {/* Quick Reply Pills */}
         {quickReplies.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {quickReplies.slice(0, 4).map((reply) => (
               <span
                 key={reply.id}
-                className="quick-reply-pill inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-zinc-300 border border-white/10 hover:bg-white/15 transition-colors"
+                className="quick-reply-pill inline-flex items-center rounded-full border border-[#DBEAFE] bg-[#F8FBFF] px-2.5 py-1 text-xs font-medium text-[#1D4ED8]"
               >
                 {reply.label || "Button"}
               </span>
             ))}
             {quickReplies.length > 4 && (
-              <span className="inline-flex items-center rounded-full bg-white/5 px-2 py-1 text-xs font-medium text-zinc-500">
+              <span className="inline-flex items-center rounded-full bg-[#F1F5F9] px-2 py-1 text-xs font-medium text-[#64748B]">
                 +{quickReplies.length - 4}
               </span>
             )}
           </div>
         )}
 
-        {/* Free Text Indicator */}
         {data.inputMode === "free_text" && !quickReplies.length && (
-          <div className="mt-3 rounded-lg border border-dashed border-amber-500/30 bg-amber-500/10 px-3 py-2">
-            <p className="text-xs text-amber-400 font-medium">
+          <div className="mt-3 rounded-lg border border-dashed border-[#FCD34D] bg-[#FFFBEB] px-3 py-2">
+            <p className="text-xs font-medium text-[#B45309]">
               {data.placeholder || "Antwort wird erwartet…"}
             </p>
           </div>
         )}
       </div>
 
-      {/* Connection Handles */}
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-3 !h-3 !bg-zinc-600 !border-2 !border-zinc-800 hover:!bg-indigo-500 transition-colors"
+        className="!h-2 !w-2 !border-2 !border-white !bg-[#CBD5E1] hover:!bg-[#1E4FD8] transition-colors"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-3 !h-3 !bg-zinc-600 !border-2 !border-zinc-800 hover:!bg-indigo-500 transition-colors"
+        className="!h-2 !w-2 !border-2 !border-white !bg-[#CBD5E1] hover:!bg-[#1E4FD8] transition-colors"
       />
 
-      {/* Image Indicator Badge */}
       {data.imageUrl && (
-        <div className="pointer-events-none absolute right-2 top-2 rounded-full bg-black/50 p-1.5 text-zinc-300 shadow-sm backdrop-blur-sm">
+        <div className="pointer-events-none absolute right-2 top-2 rounded-full border border-[#E2E8F0] bg-white/95 p-1.5 text-[#64748B] shadow-sm">
           <ImageIcon className="h-3 w-3" />
         </div>
       )}
