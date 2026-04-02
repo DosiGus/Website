@@ -43,6 +43,7 @@ import {
   Trash2,
   TriangleAlert,
   Upload,
+  X,
   Zap,
 } from "lucide-react";
 import FlowBuilderCanvas from "./FlowBuilderCanvas";
@@ -258,6 +259,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [conflictWarnings, setConflictWarnings] = useState<Array<{ keyword: string; conflictingFlowName: string }>>([]);
   const [isAddMenuOpen, setAddMenuOpen] = useState(false);
   const [showPflichtfelderDropdown, setShowPflichtfelderDropdown] = useState(false);
+  const [showCustomFieldInput, setShowCustomFieldInput] = useState(false);
+  const [customFieldInput, setCustomFieldInput] = useState("");
   const [showBuilderGuide, setShowBuilderGuide] = useState(false);
   const { vertical } = useAccountVertical();
   const labels = getBookingLabels(vertical);
@@ -312,6 +315,8 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     [outputConfig?.requiredFields, outputType],
   );
 
+  const customFields = outputConfig?.customFields ?? [];
+
   const COLLECTS_LABELS: Record<string, string> = {
     name: "Name",
     date: "Datum",
@@ -323,6 +328,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
     reviewRating: "Bewertung",
     reviewFeedback: "Feedback",
     googleReviewUrl: "Google-Link",
+    ...Object.fromEntries(customFields.map((f) => [f.key, f.label])),
   };
 
   const collectedKeys = useMemo(() => {
@@ -455,15 +461,72 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
           delete prevDefaults.guestCount;
         }
       }
+      const prevCustomFields = prevConfig.customFields ?? [];
+      const nextCustomFields = isRemoving
+        ? prevCustomFields.filter((f) => f.key !== field)
+        : prevCustomFields;
       return {
         ...prev,
         output_config: {
           ...prevConfig,
           requiredFields: next,
           ...(Object.keys(prevDefaults).length > 0 ? { defaults: prevDefaults } : {}),
+          ...(nextCustomFields.length > 0 ? { customFields: nextCustomFields } : {}),
         } as FlowOutputConfig,
       };
     });
+    setHasUnsavedChanges(true);
+  };
+
+  const handleAddCustomField = (label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+
+    const key = "custom_" + trimmed.toLowerCase().replace(/[^a-z0-9äöüß]+/g, "_").replace(/^_|_$/g, "");
+
+    if (requiredFields.includes(key) || customFields.some((f) => f.key === key)) return;
+
+    const id = uuid();
+    let posX = 200;
+    let posY = 200;
+    if (reactFlowInstance) {
+      const vp = reactFlowInstance.getViewport();
+      posX = (400 - vp.x) / vp.zoom + (nodes.length % 5) * 30;
+      posY = (250 - vp.y) / vp.zoom + (nodes.length % 5) * 30;
+    } else {
+      posX = 200 + nodes.length * 30;
+      posY = 200 + nodes.length * 30;
+    }
+    const newNode: Node = {
+      id,
+      type: "wesponde",
+      position: { x: posX, y: posY },
+      data: {
+        label: `${trimmed} abfragen`,
+        text: `Bitte gib dein/deine ${trimmed} ein.`,
+        variant: "message" as const,
+        quickReplies: [],
+        inputMode: "free_text",
+        placeholder: "",
+        collects: key,
+      },
+    };
+    setNodes((prev) => [...prev, newNode]);
+
+    setMetadata((prev) => {
+      const prevConfig = (prev.output_config as FlowOutputConfig) ?? {};
+      return {
+        ...prev,
+        output_config: {
+          ...prevConfig,
+          requiredFields: [...(prevConfig.requiredFields ?? []), key],
+          customFields: [...(prevConfig.customFields ?? []), { key, label: trimmed }],
+        } as FlowOutputConfig,
+      };
+    });
+
+    setCustomFieldInput("");
+    setShowCustomFieldInput(false);
     setHasUnsavedChanges(true);
   };
 
@@ -1969,7 +2032,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
                     {showPflichtfelderDropdown && (
                       <>
-                        <div className="fixed inset-0 z-40" onClick={() => setShowPflichtfelderDropdown(false)} />
+                        <div className="fixed inset-0 z-40" onClick={() => { setShowPflichtfelderDropdown(false); setShowCustomFieldInput(false); setCustomFieldInput(""); }} />
                         <div className="absolute left-0 top-full z-50 mt-2 w-72 rounded-2xl border border-[#E2E8F0] bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.12)]">
                           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
                             Pflichtfelder aktivieren
@@ -2000,6 +2063,88 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                               </button>
                             ))}
                           </div>
+
+                          {/* Custom fields */}
+                          {customFields.length > 0 && (
+                            <>
+                              <div className="my-3 h-px bg-[#F1F5F9]" />
+                              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                                Eigene Felder
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {customFields.map(({ key, label: cfLabel }) => (
+                                  <span
+                                    key={key}
+                                    className="flex items-center gap-1.5 rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1.5 text-[13px] font-medium text-[#2563EB]"
+                                  >
+                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#2563EB]" />
+                                    {cfLabel}
+                                    <button
+                                      onClick={() => {
+                                        const nodeToDelete = nodes.find((n) => (n.data as any)?.collects === key);
+                                        if (nodeToDelete) {
+                                          const confirmed = window.confirm(
+                                            `Die Node „${nodeToDelete.data?.label || cfLabel}" sammelt das Pflichtfeld „${cfLabel}" und wird beim Entfernen gelöscht. Trotzdem entfernen?`
+                                          );
+                                          if (!confirmed) return;
+                                          setNodes((prev) => prev.filter((n) => n.id !== nodeToDelete.id));
+                                          setEdges((prev) => prev.filter((e) => e.source !== nodeToDelete.id && e.target !== nodeToDelete.id));
+                                        }
+                                        setMetadata((prev) => {
+                                          const prevConfig = (prev.output_config as FlowOutputConfig) ?? {};
+                                          return {
+                                            ...prev,
+                                            output_config: {
+                                              ...prevConfig,
+                                              requiredFields: (prevConfig.requiredFields ?? []).filter((r) => r !== key),
+                                              customFields: (prevConfig.customFields ?? []).filter((f) => f.key !== key),
+                                            } as FlowOutputConfig,
+                                          };
+                                        });
+                                        setHasUnsavedChanges(true);
+                                      }}
+                                      className="ml-0.5 rounded p-0.5 transition-colors hover:bg-[#BFDBFE]"
+                                    >
+                                      <X className="h-3 w-3 opacity-60" />
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            </>
+                          )}
+
+                          {/* Add custom field */}
+                          {showCustomFieldInput ? (
+                            <div className="mt-3 flex gap-2">
+                              <input
+                                autoFocus
+                                value={customFieldInput}
+                                onChange={(e) => setCustomFieldInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleAddCustomField(customFieldInput);
+                                  if (e.key === "Escape") { setShowCustomFieldInput(false); setCustomFieldInput(""); }
+                                }}
+                                placeholder="z. B. Allergien"
+                                maxLength={40}
+                                className="min-w-0 flex-1 rounded-xl border border-[#E2E8F0] px-3 py-1.5 text-[13px] text-[#1E293B] placeholder-[#CBD5E1] focus:border-[#BFDBFE] focus:outline-none focus:ring-2 focus:ring-[#BFDBFE]/40"
+                              />
+                              <button
+                                onClick={() => handleAddCustomField(customFieldInput)}
+                                className="rounded-xl bg-[#2563EB] px-3 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-[#1D4ED8]"
+                              >
+                                +
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setShowCustomFieldInput(true)}
+                              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#BFDBFE] bg-[#F8FBFF] px-3 py-2 text-[12px] font-medium text-[#2563EB] transition-all hover:border-[#93C5FD] hover:bg-[#EFF6FF]"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              Eigenes Feld hinzufügen
+                            </button>
+                          )}
+
                           <p className="mt-3 text-[11px] text-[#94A3B8]">
                             Buchung wird erst erstellt wenn alle aktiven Felder gesammelt wurden.
                           </p>

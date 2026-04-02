@@ -11,7 +11,7 @@ import type { Node, Edge } from "reactflow";
 import type { FlowMetadata, FlowTrigger } from "../../../../lib/flowTypes";
 import { getBookingLabels, getDefaultTemplateVertical } from "../../../../lib/verticals";
 import useAccountVertical from "../../../../lib/useAccountVertical";
-import { getDefaultFlowPreset } from "../../../../lib/defaultFlow";
+import { getDefaultFlowPreset, getEmptyReservationFlowPreset } from "../../../../lib/defaultFlow";
 import Badge from "../../../../components/ui/Badge";
 import Button from "../../../../components/ui/Button";
 
@@ -255,7 +255,14 @@ export default function NewFlowPage() {
                     metadata: preset.metadata,
                   });
                 } else {
-                  createFlow();
+                  const preset = getEmptyReservationFlowPreset(accountVertical);
+                  createFlowFromWizard({
+                    name: flowName,
+                    nodes: preset.nodes,
+                    edges: preset.edges,
+                    triggers: preset.triggers,
+                    metadata: preset.metadata,
+                  });
                 }
               }}
               loading={status === "creating"}

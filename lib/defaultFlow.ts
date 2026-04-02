@@ -163,3 +163,120 @@ export const getDefaultFlowPreset = (
     metadata: buildDefaultMetadata(vertical),
   };
 };
+
+const buildEmptyReservationNodes = (vertical?: VerticalKey | null): Node[] => {
+  const isGastro = vertical === "gastro" || !vertical;
+  const copy = getWizardCopy(vertical);
+  const participantsLabel = copy.flowNameSuffix === "Reservierung"
+    ? "Für wie viele Personen soll ich reservieren?"
+    : "Für wie viele Personen soll ich buchen?";
+
+  const nodes: Node[] = [
+    {
+      id: "start",
+      position: { x: 120, y: 120 },
+      type: "wesponde",
+      data: {
+        label: "Hallo! Wie kann ich dir helfen?",
+        text: "Hallo! Wie kann ich dir helfen?",
+        variant: "message",
+        inputMode: "buttons",
+        quickReplies: [],
+      },
+    },
+    {
+      id: "collect-name",
+      position: { x: 400, y: 120 },
+      type: "wesponde",
+      data: {
+        label: "Name abfragen",
+        text: "Wie ist dein Name?",
+        variant: "message",
+        inputMode: "free_text",
+        collects: "name",
+      },
+    },
+    {
+      id: "collect-date",
+      position: { x: 680, y: 120 },
+      type: "wesponde",
+      data: {
+        label: "Datum abfragen",
+        text: "Wann möchtest du kommen?",
+        variant: "message",
+        inputMode: "free_text",
+        collects: "date",
+      },
+    },
+    {
+      id: "collect-time",
+      position: { x: 960, y: 120 },
+      type: "wesponde",
+      data: {
+        label: "Uhrzeit abfragen",
+        text: "Zu welcher Uhrzeit möchtest du kommen?",
+        variant: "message",
+        inputMode: "free_text",
+        collects: "time",
+      },
+    },
+  ];
+
+  if (isGastro) {
+    nodes.push({
+      id: "collect-guest-count",
+      position: { x: 1240, y: 120 },
+      type: "wesponde",
+      data: {
+        label: "Personenanzahl abfragen",
+        text: participantsLabel,
+        variant: "message",
+        inputMode: "free_text",
+        collects: "guestCount",
+      },
+    });
+  }
+
+  return nodes;
+};
+
+const buildEmptyReservationEdges = (vertical?: VerticalKey | null): Edge[] => {
+  const isGastro = vertical === "gastro" || !vertical;
+
+  const edges: Edge[] = [
+    {
+      id: "e-start-name",
+      source: "start",
+      target: "collect-name",
+    },
+    {
+      id: "e-name-date",
+      source: "collect-name",
+      target: "collect-date",
+    },
+    {
+      id: "e-date-time",
+      source: "collect-date",
+      target: "collect-time",
+    },
+  ];
+
+  if (isGastro) {
+    edges.push({
+      id: "e-time-guest",
+      source: "collect-time",
+      target: "collect-guest-count",
+    });
+  }
+
+  return edges;
+};
+
+export const getEmptyReservationFlowPreset = (vertical?: VerticalKey | null) => {
+  return {
+    nodes: buildEmptyReservationNodes(vertical),
+    edges: buildEmptyReservationEdges(vertical),
+    triggers: buildDefaultTriggers(vertical),
+    metadata: buildDefaultMetadata(vertical),
+  };
+};

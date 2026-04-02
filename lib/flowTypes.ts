@@ -52,6 +52,7 @@ export type FlowOutputConfig = {
   type: FlowOutputType;
   requiredFields?: string[];
   defaults?: Record<string, string | number>;
+  customFields?: Array<{ key: string; label: string }>;
 };
 
 export type FlowExport = {

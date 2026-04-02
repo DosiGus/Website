@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 type FlowNodeData = Node["data"] & {
+  label?: string;
   text?: string;
   imageUrl?: string | null;
   quickReplies?: { id: string; label: string }[];
@@ -143,12 +144,11 @@ function FlowNode({ data, selected }: NodeProps<FlowNodeData>) {
               {nodeLabel}{collectsLabel}
             </p>
             <p className="text-sm font-semibold text-[#0F172A] truncate">
-              {data.text?.slice(0, 30) || "Neue Nachricht"}
-              {(data.text?.length ?? 0) > 30 ? "…" : ""}
+              {data.label || "Ohne Name"}
             </p>
           </div>
           {data.inputMode === "free_text" && (
-            <span className="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[10px] font-bold text-[#B45309]">
+            <span className="rounded-full bg-[#E2E8F0] px-2 py-0.5 text-[10px] font-bold text-[#475569]">
               Freitext
             </span>
           )}
@@ -193,8 +193,8 @@ function FlowNode({ data, selected }: NodeProps<FlowNodeData>) {
         )}
 
         {data.inputMode === "free_text" && !quickReplies.length && (
-          <div className="mt-3 rounded-lg border border-dashed border-[#FCD34D] bg-[#FFFBEB] px-3 py-2">
-            <p className="text-xs font-medium text-[#B45309]">
+          <div className="mt-3 rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-3 py-2">
+            <p className="text-xs font-medium text-[#64748B]">
               {data.placeholder || "Antwort wird erwartet…"}
             </p>
           </div>
