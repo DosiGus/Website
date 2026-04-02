@@ -7,7 +7,14 @@ import {
   Trash2,
   CheckCircle2,
   TriangleAlert,
-  Focus,
+  ChevronDown,
+  Plus,
+  ArrowRight,
+  MessageSquare,
+  Keyboard,
+  Copy,
+  Check,
+  AlertCircle,
 } from 'lucide-react';
 import type { Node as ReactFlowNode, Edge } from 'reactflow';
 import type { FlowQuickReply } from '../../lib/flowTypes';
@@ -15,13 +22,12 @@ import type { FlowLintWarning } from '../../lib/flowLint';
 import FlowSimulator from './FlowSimulator';
 import type { FlowTrigger } from '../../lib/flowTypes';
 import useAccountVertical from '../../lib/useAccountVertical';
-import { getBookingLabels, getWizardCopy } from '../../lib/verticals';
+import { getBookingLabels } from '../../lib/verticals';
 
-type InspectorTab = 'content' | 'logic' | 'variables' | 'preview';
-type EdgeTone = 'neutral' | 'positive' | 'negative';
+export type InspectorTab = 'content' | 'flow';
 type InputMode = 'buttons' | 'free_text';
 
-type InspectorSlideOverProps = {
+export type InspectorSlideOverProps = {
   isOpen: boolean;
   onClose: () => void;
   inspectorTab: InspectorTab;
@@ -71,7 +77,7 @@ type InspectorSlideOverProps = {
   lintWarnings: FlowLintWarning[];
   onFocusWarning: (warning: FlowLintWarning) => void;
 
-  // Output config (flow-level, shown in Variables tab)
+  // Output config (flow-level)
   outputType: 'reservation' | 'custom';
   requiredFields: string[];
   onToggleFlowType: (type: 'reservation' | 'custom') => void;
@@ -82,235 +88,16 @@ type InspectorSlideOverProps = {
 };
 
 const VARIABLE_LABELS: Record<string, string> = {
-  name: "Name",
-  date: "Datum",
-  time: "Uhrzeit",
-  guestCount: "Personenanzahl",
-  phone: "Telefon",
-  email: "E-Mail",
-  specialRequests: "Sonderwünsche",
-  reviewRating: "Bewertung",
-  reviewFeedback: "Feedback",
-  googleReviewUrl: "Google-Link",
-};
-
-function VariablesTab({
-  selectedNode,
-  nodes,
-  labels,
-  outputType,
-  requiredFields,
-  onToggleFlowType,
-  onToggleRequiredField,
-}: {
-  selectedNode: ReactFlowNode | null;
-  nodes: ReactFlowNode[];
-  labels: ReturnType<typeof import('../../lib/verticals').getBookingLabels>;
-  outputType: 'reservation' | 'custom';
-  requiredFields: string[];
-  onToggleFlowType: (type: 'reservation' | 'custom') => void;
-  onToggleRequiredField: (field: string) => void;
-}) {
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const allCollectedKeys = useMemo(() => {
-    const seen = new Set<string>();
-    const keys: string[] = [];
-    for (const node of nodes) {
-      const c = (node.data as any)?.collects;
-      if (c && typeof c === "string" && c.trim() && c !== "__custom_empty__") {
-        if (!seen.has(c)) { seen.add(c); keys.push(c); }
-      }
-    }
-    return keys;
-  }, [nodes]);
-
-  const placeholdersInText = useMemo(() => {
-    const text = (selectedNode?.data as any)?.text ?? "";
-    const matches = [...text.matchAll(/\{\{([^}]+)\}\}/g)];
-    return Array.from(new Set(matches.map((m: RegExpMatchArray) => m[1].trim())));
-  }, [selectedNode]);
-
-  const nodeCollects = (selectedNode?.data as any)?.collects;
-  const hasCollects = nodeCollects && nodeCollects !== "__custom_empty__";
-
-  const handleCopy = (placeholder: string) => {
-    navigator.clipboard.writeText(`{{${placeholder}}}`).then(() => {
-      setCopied(placeholder);
-      setTimeout(() => setCopied(null), 1500);
-    });
-  };
-
-  return (
-    <div className="space-y-4">
-      {selectedNode && (
-        <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-            Dieser Schritt sammelt
-          </p>
-          {hasCollects ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-sm font-semibold text-[#2563EB]">
-                {VARIABLE_LABELS[nodeCollects] ?? nodeCollects}
-              </span>
-              <span className="text-xs text-[#64748B]">
-                → gespeichert als{" "}
-                <code className="rounded bg-white px-1 text-[#2563EB]">{`{{${nodeCollects}}}`}</code>
-              </span>
-            </div>
-          ) : (
-            <p className="text-sm text-[#64748B]">
-              Dieser Schritt sammelt keine Variable.{" "}
-              {(selectedNode?.data as any)?.inputMode === "free_text" && (
-                <span className="text-[#475569]">
-                  Wähle im Feld &quot;Dieses Feld sammelt&quot; was gespeichert werden soll.
-                </span>
-              )}
-            </p>
-          )}
-        </div>
-      )}
-
-      {selectedNode && (
-        <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-            Platzhalter im Text dieses Schritts
-          </p>
-          {placeholdersInText.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {placeholdersInText.map((p) => (
-                <span
-                  key={p}
-                  className={`rounded-full border px-2 py-0.5 text-xs font-mono font-semibold ${
-                    allCollectedKeys.includes(p)
-                      ? "border-[#A7F3D0] bg-[#ECFDF5] text-[#047857]"
-                      : "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
-                  }`}
-                  title={allCollectedKeys.includes(p) ? "Wird gesammelt ✓" : "Wird NICHT gesammelt — fehlt ein Freitext-Schritt?"}
-                >
-                  {`{{${p}}}`}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-[#64748B]">
-              Kein Platzhalter verwendet.{" "}
-              <span className="text-[#475569]">Tipp: Schreibe {"{{"}<span className="text-[#0F172A]">name</span>{"}}"} um den Namen einzufügen.</span>
-            </p>
-          )}
-        </div>
-      )}
-
-      <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-          Verfügbare Platzhalter in diesem Flow
-        </p>
-        {allCollectedKeys.length > 0 ? (
-          <div className="space-y-2">
-            {allCollectedKeys.map((key) => (
-              <div
-                key={key}
-                className="flex items-center justify-between rounded-lg border border-[#E2E8F0] bg-white px-3 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <code className="text-sm font-mono text-[#2563EB]">{`{{${key}}}`}</code>
-                  <span className="text-xs text-[#64748B]">{VARIABLE_LABELS[key] ?? key}</span>
-                </div>
-                <button
-                  onClick={() => handleCopy(key)}
-                  className="text-xs font-semibold text-[#64748B] transition-colors hover:text-[#2563EB]"
-                >
-                  {copied === key ? "Kopiert ✓" : "Kopieren"}
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-[#64748B]">
-            Noch keine Felder konfiguriert. Füge Freitext-Schritte hinzu und wähle jeweils &quot;Dieses Feld sammelt&quot;.
-          </p>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Buchungskonfiguration</p>
-
-        {/* Flow type toggle */}
-        <div className="space-y-2">
-          <p className="text-xs text-[#64748B]">Flow-Typ</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => onToggleFlowType('reservation')}
-              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
-                outputType === 'reservation'
-                  ? 'border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]'
-                  : 'border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A]'
-              }`}
-            >
-              Buchungs-Flow
-            </button>
-            <button
-              onClick={() => onToggleFlowType('custom')}
-              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
-                outputType === 'custom'
-                  ? 'border-[#DDD6FE] bg-[#F5F3FF] text-[#7C3AED]'
-                  : 'border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A]'
-              }`}
-            >
-              Freier Flow
-            </button>
-          </div>
-          <p className="text-xs text-[#64748B]">
-            {outputType === 'reservation'
-              ? 'Erstellt automatisch Buchungen wenn alle Pflichtfelder vorliegen.'
-              : 'Keine automatische Buchung — freie Konversation.'}
-          </p>
-        </div>
-
-        {/* Required fields — only for reservation type */}
-        {outputType === 'reservation' && (
-          <div className="space-y-2">
-            <p className="text-xs text-[#64748B]">Pflichtfelder für Buchungserstellung</p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { key: 'name', label: 'Name' },
-                { key: 'date', label: 'Datum' },
-                { key: 'time', label: 'Uhrzeit' },
-                { key: 'guestCount', label: labels.participantsCountLabel },
-                { key: 'phone', label: 'Telefon' },
-                { key: 'email', label: 'E-Mail' },
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => onToggleRequiredField(key)}
-                  className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all ${
-                    requiredFields.includes(key)
-                      ? 'border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]'
-                      : 'border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A]'
-                  }`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${requiredFields.includes(key) ? 'bg-[#2563EB]' : 'bg-[#94A3B8]'}`} />
-                  {label}
-                  {key === 'guestCount' && !requiredFields.includes(key) && (
-                    <span className="text-[#94A3B8]">· Standard: 1</span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-[#64748B]">
-              Blau = Pflichtfeld. Buchung wird erst erstellt wenn alle Pflichtfelder vorliegen.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const EDGE_TONE_META: Record<EdgeTone, { label: string; bg: string; text: string }> = {
-  neutral: { label: 'Neutral', bg: '#3f3f46', text: '#a1a1aa' },
-  positive: { label: 'Bestätigt', bg: '#065f46', text: '#34d399' },
-  negative: { label: 'Ablehnung', bg: '#7f1d1d', text: '#fca5a5' },
+  name: 'Name',
+  date: 'Datum',
+  time: 'Uhrzeit',
+  guestCount: 'Personenanzahl',
+  phone: 'Telefon',
+  email: 'E-Mail',
+  specialRequests: 'Sonderwünsche',
+  reviewRating: 'Bewertung',
+  reviewFeedback: 'Feedback',
+  googleReviewUrl: 'Google-Link',
 };
 
 export default function InspectorSlideOver({
@@ -340,7 +127,6 @@ export default function InspectorSlideOver({
   smartPrompt,
   onSmartPromptChange,
   onSmartPromptSubmit,
-  onSnippetInsert,
   nodes,
   edges,
   triggers,
@@ -356,432 +142,779 @@ export default function InspectorSlideOver({
 }: InspectorSlideOverProps) {
   const { vertical } = useAccountVertical();
   const labels = getBookingLabels(vertical);
-  const wizardCopy = getWizardCopy(vertical);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [smartPromptOpen, setSmartPromptOpen] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Handle click outside to close
+  // Close on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(event.target as globalThis.Node)) {
-        // Don't close if clicking on canvas nodes
+      if (!panelRef.current?.contains(event.target as globalThis.Node)) {
         const target = event.target as HTMLElement;
-        if (target.closest('.react-flow__node') || target.closest('.react-flow__edge')) {
-          return;
-        }
+        if (target.closest('.react-flow__node') || target.closest('.react-flow__edge')) return;
+        onClose();
       }
     }
+    if (isOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onClose]);
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+  // All variables collected across the flow
+  const allCollectedKeys = useMemo(() => {
+    const seen = new Set<string>();
+    const keys: string[] = [];
+    for (const node of nodes) {
+      const c = (node.data as any)?.collects;
+      if (c && typeof c === 'string' && c.trim() && c !== '__custom_empty__') {
+        if (!seen.has(c)) { seen.add(c); keys.push(c); }
+      }
     }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
+    return keys;
+  }, [nodes]);
+
+  // Placeholders used in current node's text
+  const placeholdersInText = useMemo(() => {
+    const text = (selectedNode?.data as any)?.text ?? '';
+    const matches = [...text.matchAll(/\{\{([^}]+)\}\}/g)];
+    return Array.from(new Set(matches.map((m: RegExpMatchArray) => m[1].trim())));
+  }, [selectedNode]);
+
+  const nodeCollects = (selectedNode?.data as any)?.collects;
+  const hasCollects = nodeCollects && nodeCollects !== '__custom_empty__';
+
+  // Lint warnings relevant to the selected node
+  const nodeWarnings = lintWarnings.filter(
+    w => !selectedNode || w.nodeId === selectedNode.id || (!w.nodeId && !(w as any).edgeId),
+  );
+
+  const handleCopy = (key: string) => {
+    navigator.clipboard.writeText(`{{${key}}}`).then(() => {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 1500);
+    });
+  };
 
   return (
     <>
+      {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-30 transition-opacity duration-250 ${
+        className={`fixed inset-0 z-30 transition-opacity duration-200 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         } ${disableBackdropBlur ? 'bg-slate-900/10' : 'bg-slate-900/20 backdrop-blur-[2px]'}`}
         onClick={onClose}
       />
 
+      {/* Panel */}
       <div
         ref={panelRef}
         className={`
-          fixed right-0 top-0 z-40 h-full w-[400px] max-w-[90vw]
-          bg-white shadow-[0_24px_64px_rgba(15,23,42,0.18)] border-l border-[#E2E8F0]
-          transform transition-transform duration-[250ms] ease-out
-          flex flex-col
+          fixed right-0 top-0 z-40 flex h-full w-[420px] max-w-[92vw] flex-col
+          bg-white border-l border-[#E2E8F0] shadow-[0_0_48px_rgba(15,23,42,0.12)]
+          transition-transform duration-[240ms] ease-out
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
-        <div className="flex items-center justify-between border-b border-[#E2E8F0] px-6 py-4">
-          <h2 className="text-xl font-semibold text-[#0F172A]">
-            Inspector
-          </h2>
+        {/* ── Header ── */}
+        <div className="flex shrink-0 items-center gap-3 border-b border-[#E2E8F0] px-5 py-4">
+          {/* Node type icon */}
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+            selectedNode
+              ? selectedInputMode === 'free_text'
+                ? 'bg-[#EFF6FF] text-[#2563EB]'
+                : 'bg-[#EFF6FF] text-[#2563EB]'
+              : 'bg-[#F1F5F9] text-[#94A3B8]'
+          }`}>
+            {selectedNode
+              ? selectedInputMode === 'free_text'
+                ? <Keyboard className="h-4 w-4" />
+                : <MessageSquare className="h-4 w-4" />
+              : <MessageSquare className="h-4 w-4" />
+            }
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-[15px] font-semibold text-[#0F172A]">
+              {selectedNode?.data?.label || selectedEdge ? (
+                selectedNode?.data?.label || 'Verbindung'
+              ) : (
+                <span className="text-[#94A3B8]">Kein Schritt gewählt</span>
+              )}
+            </p>
+            <p className="text-[12px] text-[#94A3B8]">
+              {selectedNode
+                ? selectedInputMode === 'free_text' ? 'Freitext-Schritt' : 'Nachricht'
+                : selectedEdge ? 'Verbindung' : 'Inspector'
+              }
+            </p>
+          </div>
+
+          {/* Lint warning count badge */}
+          {lintWarnings.length > 0 && (
+            <div className="flex h-6 items-center gap-1 rounded-full border border-[#FCD34D] bg-[#FFFBEB] px-2">
+              <TriangleAlert className="h-3 w-3 text-[#B45309]" />
+              <span className="text-[11px] font-semibold text-[#B45309]">{lintWarnings.length}</span>
+            </div>
+          )}
+
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#94A3B8] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="border-b border-[#E2E8F0] px-4 py-3">
-          <div className="flex gap-1 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-1">
-            {(['content', 'preview', 'logic', 'variables'] as InspectorTab[]).map((tab) => (
+        {/* ── Tabs ── */}
+        <div className="shrink-0 border-b border-[#E2E8F0] px-5 pt-3 pb-0">
+          <div className="flex gap-0">
+            {(['content', 'flow'] as InspectorTab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => onTabChange(tab)}
-                className={`
-                  flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all
-                  ${inspectorTab === tab
-                    ? 'bg-white text-[#0F172A] shadow-sm'
-                    : 'text-[#64748B] hover:text-[#0F172A]'
-                  }
-                `}
+                className={`relative px-4 pb-3 text-sm font-semibold transition-colors ${
+                  inspectorTab === tab
+                    ? 'text-[#0F172A]'
+                    : 'text-[#94A3B8] hover:text-[#475569]'
+                }`}
               >
-                {tab === 'content' ? 'Inhalt' : tab === 'logic' ? 'Logik' : tab === 'variables' ? 'Variablen' : 'Vorschau'}
+                {tab === 'content' ? 'Inhalt' : 'Flow-Daten'}
+                {inspectorTab === tab && (
+                  <span className="absolute bottom-0 left-4 right-4 h-0.5 rounded-t-full bg-[#2563EB]" />
+                )}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        {/* ── Scrollable content ── */}
+        <div className="flex-1 overflow-y-auto">
+
+          {/* ── INHALT TAB ── */}
           {inspectorTab === 'content' && (
-            <div className="space-y-5">
+            <div className="space-y-0 divide-y divide-[#F1F5F9]">
+
               {selectedNode ? (
                 <>
-                  <div>
-                    <label className="text-sm font-semibold text-[#334155]">Textnachricht</label>
+                  {/* Node name */}
+                  <div className="px-5 py-4">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      Name
+                    </label>
+                    <input
+                      value={selectedNode.data?.label ?? ''}
+                      onChange={(e) => onNodeFieldChange('label', e.target.value)}
+                      placeholder="z. B. Begrüßung, Terminabfrage…"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2.5 text-sm text-[#0F172A] placeholder:text-[#C1C9D4] transition-colors focus:border-[#2563EB] focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#DBEAFE]"
+                    />
+                  </div>
+
+                  {/* Message text */}
+                  <div className="px-5 py-4">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      Nachricht
+                    </label>
                     <textarea
                       value={selectedNode.data?.text ?? ''}
                       onChange={(e) => onNodeFieldChange('text', e.target.value)}
-                      className="app-input mt-2 min-h-[112px] resize-none px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
-                      rows={4}
-                      placeholder="Gib hier deine Nachricht ein..."
+                      rows={5}
+                      placeholder="Schreibe die Nachricht die der Bot sendet…"
+                      className="w-full resize-none rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-3 text-sm text-[#0F172A] placeholder:text-[#C1C9D4] transition-colors focus:border-[#2563EB] focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#DBEAFE]"
                     />
-                  </div>
 
-                  <div>
-                    <label className="text-sm font-semibold text-[#334155]">Bild (URL)</label>
-                    <input
-                      value={selectedNode.data?.imageUrl ?? ''}
-                      onChange={(e) => onNodeFieldChange('imageUrl', e.target.value)}
-                      placeholder="https://..."
-                      className="app-input mt-2 px-4 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
-                    />
-                  </div>
-
-                  <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-                    <p className="mb-3 text-sm font-semibold text-[#0F172A]">Antwortart</p>
-                    <div className="flex rounded-lg border border-[#E2E8F0] bg-white p-1">
-                      <button
-                        onClick={() => onInputModeChange('buttons')}
-                        className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-all ${
-                          selectedInputMode === 'buttons'
-                            ? 'bg-[#2563EB] text-white'
-                            : 'text-[#64748B] hover:text-[#0F172A]'
-                        }`}
-                      >
-                        Buttons
-                      </button>
-                      <button
-                        onClick={() => onInputModeChange('free_text')}
-                        className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-all ${
-                          selectedInputMode === 'free_text'
-                            ? 'bg-[#2563EB] text-white'
-                            : 'text-[#64748B] hover:text-[#0F172A]'
-                        }`}
-                      >
-                        Freitext
-                      </button>
-                    </div>
-                    {selectedInputMode === 'free_text' && (
-                      <p className="mt-2 text-xs text-[#64748B]">
-                        Der {labels.contactLabel} schreibt hier frei. Du bestimmst, wohin es danach weitergeht.
-                      </p>
+                    {/* Placeholder hints (if any used) */}
+                    {placeholdersInText.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {placeholdersInText.map((p) => (
+                          <span
+                            key={p}
+                            title={allCollectedKeys.includes(p) ? 'Wird gesammelt ✓' : 'Wird NICHT gesammelt — fehlt ein Freitext-Schritt?'}
+                            className={`rounded-md border px-2 py-0.5 font-mono text-[11px] font-semibold ${
+                              allCollectedKeys.includes(p)
+                                ? 'border-[#A7F3D0] bg-[#ECFDF5] text-[#047857]'
+                                : 'border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]'
+                            }`}
+                          >
+                            {`{{${p}}}`}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
 
-                  {selectedInputMode === 'free_text' ? (
-                    <div className="rounded-xl border border-[#FCD34D] bg-[#FFFBEB] p-4 space-y-4">
-                      <div>
-                        <label className="text-xs font-semibold text-[#B45309]">Platzhalter im Chat</label>
-                        <input
-                          value={selectedNode.data?.placeholder ?? ''}
-                          onChange={(e) => onFreeTextMetaChange('placeholder', e.target.value)}
-                          placeholder="z. B. Datum eingeben..."
-                          className="app-input mt-1 bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-[#B45309]">Dieses Feld sammelt</label>
-                        <select
-                          value={selectedNode.data?.collects ?? ''}
-                          onChange={(e) => onFreeTextMetaChange('collects', e.target.value)}
-                          className="app-select mt-1 w-full"
-                        >
-                          <option value="">Keine Zuordnung</option>
-                          <option value="name">Name</option>
-                          <option value="date">Datum</option>
-                          <option value="time">Uhrzeit</option>
-                          <option value="guestCount">{labels.participantsLabel}</option>
-                          <option value="phone">Telefon</option>
-                          <option value="email">E-Mail</option>
-                          <option value="specialRequests">Wünsche</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-[#B45309]">Führt zu</label>
-                        <select
-                          value={selectedFreeTextTarget ?? ''}
-                          onChange={(e) => onFreeTextTargetChange(selectedNode.id, e.target.value || null)}
-                          className="app-select mt-1 w-full"
-                        >
-                          <option value="">Node wählen...</option>
-                          {nodes
-                            .filter((node) => node.id !== selectedNode.id)
-                            .map((node) => (
-                              <option key={node.id} value={node.id}>
-                                {node.data?.label ?? node.id}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm font-semibold text-[#0F172A]">Antwort-Buttons</p>
+                  {/* Input mode + config */}
+                  <div className="px-5 py-4 space-y-4">
+                    <div>
+                      <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                        Wie antwortet der {labels.contactLabel}?
+                      </label>
+                      <div className="flex rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-1">
                         <button
-                          onClick={onAddQuickReply}
-                          className="text-xs font-semibold text-[#2563EB] transition-colors hover:text-[#1D4ED8]"
+                          onClick={() => onInputModeChange('buttons')}
+                          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${
+                            selectedInputMode === 'buttons'
+                              ? 'bg-white text-[#0F172A] shadow-sm'
+                              : 'text-[#94A3B8] hover:text-[#475569]'
+                          }`}
                         >
-                          + Button
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          Mit Buttons
+                        </button>
+                        <button
+                          onClick={() => onInputModeChange('free_text')}
+                          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${
+                            selectedInputMode === 'free_text'
+                              ? 'bg-white text-[#0F172A] shadow-sm'
+                              : 'text-[#94A3B8] hover:text-[#475569]'
+                          }`}
+                        >
+                          <Keyboard className="h-3.5 w-3.5" />
+                          Freitext
                         </button>
                       </div>
-                      {selectedNodeReplies.length === 0 ? (
-                        <p className="text-xs text-[#64748B]">
-                          Noch keine Buttons. Füge Buttons hinzu, um Antworten zu verlinken.
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {selectedNodeReplies.map((reply) => (
-                            <div
-                              key={reply.id}
-                              className="space-y-2 rounded-xl border border-[#E2E8F0] bg-white p-3"
+                    </div>
+
+                    {/* Free text config */}
+                    {selectedInputMode === 'free_text' && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                              Sammelt
+                            </label>
+                            <select
+                              value={selectedNode.data?.collects ?? ''}
+                              onChange={(e) => onFreeTextMetaChange('collects', e.target.value)}
+                              className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#0F172A] transition-colors focus:border-[#2563EB] focus:outline-none focus:ring-3 focus:ring-[#DBEAFE]"
                             >
-                              <div className="flex items-center justify-between text-xs text-[#64748B]">
-                                <span>Button</span>
-                                <button
-                                  onClick={() => onRemoveQuickReply(reply.id)}
-                                  className="text-[#DC2626] hover:text-[#B91C1C]"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                              <input
-                                value={reply.label}
-                                onChange={(e) => onUpdateQuickReply(reply.id, { label: e.target.value })}
-                                placeholder="Button-Text"
-                                className="app-input px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
-                              />
-                              {!hidePayloadField && (
+                              <option value="">Nichts</option>
+                              <option value="name">Name</option>
+                              <option value="date">Datum</option>
+                              <option value="time">Uhrzeit</option>
+                              <option value="guestCount">{labels.participantsLabel}</option>
+                              <option value="phone">Telefon</option>
+                              <option value="email">E-Mail</option>
+                              <option value="specialRequests">Wünsche</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                              Weiter zu
+                            </label>
+                            <select
+                              value={selectedFreeTextTarget ?? ''}
+                              onChange={(e) =>
+                                onFreeTextTargetChange(selectedNode.id, e.target.value || null)
+                              }
+                              className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#0F172A] transition-colors focus:border-[#2563EB] focus:outline-none focus:ring-3 focus:ring-[#DBEAFE]"
+                            >
+                              <option value="">Flow endet hier</option>
+                              {nodes
+                                .filter((n) => n.id !== selectedNode.id)
+                                .map((n) => (
+                                  <option key={n.id} value={n.id}>
+                                    {n.data?.label ?? n.id}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                            Platzhalter-Text im Chat
+                          </label>
+                          <input
+                            value={selectedNode.data?.placeholder ?? ''}
+                            onChange={(e) => onFreeTextMetaChange('placeholder', e.target.value)}
+                            placeholder="z. B. Datum eingeben…"
+                            className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2.5 text-sm text-[#0F172A] placeholder:text-[#C1C9D4] transition-colors focus:border-[#2563EB] focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#DBEAFE]"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Buttons config */}
+                    {selectedInputMode === 'buttons' && (
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                            Antwort-Buttons
+                          </label>
+                          <button
+                            onClick={onAddQuickReply}
+                            className="inline-flex items-center gap-1 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] transition-colors hover:bg-[#DBEAFE]"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Hinzufügen
+                          </button>
+                        </div>
+
+                        {selectedNodeReplies.length === 0 ? (
+                          <button
+                            onClick={onAddQuickReply}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#E2E8F0] py-5 text-sm text-[#94A3B8] transition-colors hover:border-[#BFDBFE] hover:text-[#2563EB]"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Ersten Button hinzufügen
+                          </button>
+                        ) : (
+                          <div className="space-y-2">
+                            {selectedNodeReplies.map((reply, idx) => (
+                              <div
+                                key={reply.id}
+                                className="flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-2.5"
+                              >
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#94A3B8] border border-[#E2E8F0]">
+                                  {idx + 1}
+                                </span>
                                 <input
-                                  value={reply.payload}
-                                  onChange={(e) => onUpdateQuickReply(reply.id, { payload: e.target.value })}
-                                  placeholder="Payload / interne Aktion"
-                                  className="app-input px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
+                                  value={reply.label}
+                                  onChange={(e) =>
+                                    onUpdateQuickReply(reply.id, { label: e.target.value })
+                                  }
+                                  placeholder="Button-Text"
+                                  className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-3 py-1.5 text-sm text-[#0F172A] placeholder:text-[#C1C9D4] focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#DBEAFE]"
                                 />
-                              )}
-                              <div>
-                                <label className="text-xs font-semibold text-[#64748B]">Führt zu</label>
+                                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#CBD5E1]" />
                                 <select
                                   value={reply.targetNodeId ?? ''}
-                                  onChange={(e) => onQuickReplyTargetChange(reply.id, e.target.value, reply.label)}
-                                  className="app-select mt-1 w-full"
+                                  onChange={(e) =>
+                                    onQuickReplyTargetChange(reply.id, e.target.value, reply.label)
+                                  }
+                                  className="w-32 rounded-lg border border-[#E2E8F0] bg-white px-2 py-1.5 text-[12px] text-[#0F172A] focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#DBEAFE]"
                                 >
-                                  <option value="">Node wählen...</option>
-                                  <option value="__NEW_FREETEXT__">+ Freitext (neu)</option>
-                                  {nodes.map((node) => (
-                                    <option key={node.id} value={node.id}>
-                                      {node.data?.label ?? node.id}
-                                    </option>
-                                  ))}
+                                  <option value="">Endet hier</option>
+                                  <option value="__NEW_FREETEXT__">+ Neuer Schritt</option>
+                                  {nodes
+                                    .filter((n) => n.id !== selectedNode.id)
+                                    .map((n) => (
+                                      <option key={n.id} value={n.id}>
+                                        {n.data?.label ?? n.id}
+                                      </option>
+                                    ))}
                                 </select>
+                                <button
+                                  onClick={() => onRemoveQuickReply(reply.id)}
+                                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[#CBD5E1] transition-colors hover:bg-[#FEE2E2] hover:text-[#DC2626]"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                        )}
+
+                        {/* collects for buttons node */}
+                        <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-3">
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                            Dieser Schritt sammelt
+                          </label>
+                          <select
+                            value={selectedNode.data?.collects ?? ''}
+                            onChange={(e) => onNodeFieldChange('collects', e.target.value)}
+                            className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A] focus:border-[#2563EB] focus:outline-none"
+                          >
+                            <option value="">Keine Zuordnung</option>
+                            <option value="name">Name</option>
+                            <option value="date">Datum</option>
+                            <option value="time">Uhrzeit</option>
+                            <option value="guestCount">{labels.participantsLabel}</option>
+                            <option value="phone">Telefon</option>
+                            <option value="email">E-Mail</option>
+                            <option value="specialRequests">Wünsche</option>
+                          </select>
                         </div>
-                      )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Erweitert collapsible (image URL + smart prompt) ── */}
+                  <div className="px-5 py-3">
+                    <button
+                      onClick={() => setAdvancedOpen(p => !p)}
+                      className="flex w-full items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8] transition-colors hover:text-[#475569]"
+                    >
+                      <span>Erweitert</span>
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {advancedOpen && (
+                      <div className="mt-3 space-y-4">
+                        {/* Image URL */}
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                            Bild-URL (optional)
+                          </label>
+                          <input
+                            value={selectedNode.data?.imageUrl ?? ''}
+                            onChange={(e) => onNodeFieldChange('imageUrl', e.target.value)}
+                            placeholder="https://..."
+                            className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2.5 text-sm text-[#0F172A] placeholder:text-[#C1C9D4] transition-colors focus:border-[#2563EB] focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#DBEAFE]"
+                          />
+                        </div>
+
+                        {/* Smart Prompt */}
+                        <div>
+                          <div className="mb-1.5 flex items-center gap-1.5">
+                            <Sparkles className="h-3.5 w-3.5 text-[#2563EB]" />
+                            <label className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                              Smart Prompt
+                            </label>
+                          </div>
+                          <textarea
+                            rows={3}
+                            placeholder="z. B. 'Freundliche Begrüßung für ein Restaurant…'"
+                            value={smartPrompt}
+                            onChange={(e) => onSmartPromptChange(e.target.value)}
+                            className="w-full resize-none rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2.5 text-sm text-[#0F172A] placeholder:text-[#C1C9D4] transition-colors focus:border-[#2563EB] focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#DBEAFE]"
+                          />
+                          <button
+                            onClick={onSmartPromptSubmit}
+                            className="mt-2 w-full rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] py-2 text-sm font-semibold text-[#2563EB] transition-colors hover:bg-[#DBEAFE]"
+                          >
+                            Text vorschlagen
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Lint warnings for this node ── */}
+                  {nodeWarnings.length > 0 && (
+                    <div className="px-5 py-3 space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                        Hinweise
+                      </p>
+                      {nodeWarnings.map((w) => (
+                        <div
+                          key={w.id}
+                          className={`rounded-xl border p-3 ${
+                            w.severity === 'info'
+                              ? 'border-[#BFDBFE] bg-[#EFF6FF]'
+                              : 'border-[#FCD34D] bg-[#FFFBEB]'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
+                              w.severity === 'info' ? 'text-[#2563EB]' : 'text-[#B45309]'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-xs font-semibold ${
+                                w.severity === 'info' ? 'text-[#2563EB]' : 'text-[#B45309]'
+                              }`}>
+                                {w.message}
+                              </p>
+                              {w.suggestion && (
+                                <p className="mt-0.5 text-[11px] text-[#64748B]">{w.suggestion}</p>
+                              )}
+                            </div>
+                            {(w.nodeId || (w as any).edgeId) && (
+                              <button
+                                onClick={() => onFocusWarning(w)}
+                                className="shrink-0 text-[11px] font-semibold text-[#64748B] hover:underline"
+                              >
+                                Zeigen
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
-
-                  <button
-                    onClick={onDeleteSelection}
-                    className="w-full rounded-md border border-[#FECACA] bg-[#FEF2F2] px-4 py-2.5 text-sm font-medium text-[#DC2626] transition-colors hover:bg-[#FEE2E2]"
-                  >
-                    Node entfernen
-                  </button>
                 </>
-              ) : (
-                <div className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-8 text-center">
-                  <p className="text-sm text-[#64748B]">
-                    Wähle einen Node im Canvas aus, um die Inhalte zu bearbeiten.
-                  </p>
-                </div>
-              )}
-
-              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-                <p className="mb-3 text-sm font-semibold text-[#0F172A]">Snippets</p>
-                <div className="flex flex-wrap gap-2">
-                  {snippets.map((snippet) => (
-                    <button
-                      key={snippet.label}
-                      onClick={() => onSnippetInsert(snippet.text)}
-                      className="rounded-full border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#475569] transition-colors hover:border-[#BFDBFE] hover:text-[#2563EB]"
-                    >
-                      {snippet.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-                <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#0F172A]">
-                  <Sparkles className="h-4 w-4 text-[#2563EB]" />
-                  Smart Prompt
-                </p>
-                <textarea
-                  className="app-input min-h-[92px] resize-none px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
-                  rows={3}
-                  placeholder={`z. B. 'Erzeuge eine freundliche Begrüßung für ein ${wizardCopy.businessTypeLabel.toLowerCase()}...'`}
-                  value={smartPrompt}
-                  onChange={(e) => onSmartPromptChange(e.target.value)}
-                />
-                <button
-                  onClick={onSmartPromptSubmit}
-                  className="mt-2 w-full rounded-md border border-[#E2E8F0] bg-white px-3 py-2 text-xs font-semibold text-[#475569] transition-colors hover:border-[#BFDBFE] hover:text-[#2563EB]"
-                >
-                  Vorschlag einsetzen
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Logic Tab */}
-          {inspectorTab === 'logic' && (
-            <div className="space-y-5">
-              {selectedEdge ? (
-                <>
+              ) : selectedEdge ? (
+                /* Edge selected (canvas mode) */
+                <div className="px-5 py-4 space-y-4">
                   <div>
-                    <label className="text-sm font-semibold text-[#334155]">Edge Label</label>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      Verbindungs-Label
+                    </label>
                     <input
                       value={(selectedEdge.data as any)?.condition ?? ''}
                       onChange={(e) => onEdgeFieldChange('condition', e.target.value)}
-                      className="app-input mt-2 px-4 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
+                      placeholder="z. B. Ja / Nein / Buchen…"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2.5 text-sm text-[#0F172A] placeholder:text-[#C1C9D4] transition-colors focus:border-[#2563EB] focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#DBEAFE]"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-[#334155]">Bedeutung / Ton</label>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      Bedeutung
+                    </label>
                     <select
-                      value={((selectedEdge.data as any)?.tone as EdgeTone) ?? 'neutral'}
+                      value={((selectedEdge.data as any)?.tone) ?? 'neutral'}
                       onChange={(e) => onEdgeFieldChange('tone', e.target.value)}
-                      className="app-select mt-2 w-full"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#0F172A] focus:border-[#2563EB] focus:outline-none"
                     >
-                      {Object.entries(EDGE_TONE_META).map(([value, meta]) => (
-                        <option key={value} value={value}>
-                          {meta.label}
-                        </option>
-                      ))}
+                      <option value="neutral">Neutral</option>
+                      <option value="positive">Bestätigt</option>
+                      <option value="negative">Ablehnung</option>
                     </select>
                   </div>
-                </>
+                </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-8 text-center">
-                  <p className="text-sm text-[#64748B]">
-                    Wähle eine Verbindung, um Bedingungen und Labels zu pflegen.
+                /* Nothing selected */
+                <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F1F5F9]">
+                    <MessageSquare className="h-5 w-5 text-[#CBD5E1]" />
+                  </div>
+                  <p className="mt-4 text-sm font-medium text-[#94A3B8]">
+                    Klicke auf einen Schritt
+                  </p>
+                  <p className="mt-1 text-xs text-[#CBD5E1]">
+                    um ihn hier zu bearbeiten
                   </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* Variables Tab */}
-          {inspectorTab === 'variables' && (
-            <VariablesTab
-              selectedNode={selectedNode}
-              nodes={nodes}
-              labels={labels}
-              outputType={outputType}
-              requiredFields={requiredFields}
-              onToggleFlowType={onToggleFlowType}
-              onToggleRequiredField={onToggleRequiredField}
-            />
-          )}
+          {/* ── FLOW-DATEN TAB ── */}
+          {inspectorTab === 'flow' && (
+            <div className="space-y-0 divide-y divide-[#F1F5F9]">
 
-          {/* Preview Tab */}
-          {inspectorTab === 'preview' && (
-            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-              <FlowSimulator
-                nodes={nodes}
-                edges={edges}
-                triggers={triggers}
-                onNodeSelect={onNodeSelect}
-              />
-            </div>
-          )}
+              {/* This node collects */}
+              {selectedNode && (
+                <div className="px-5 py-4">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                    Dieser Schritt sammelt
+                  </p>
+                  {hasCollects ? (
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1.5 text-sm font-semibold text-[#2563EB]">
+                        {VARIABLE_LABELS[nodeCollects] ?? nodeCollects}
+                      </span>
+                      <span className="text-xs text-[#94A3B8]">
+                        → gespeichert als{' '}
+                        <code className="rounded-md bg-[#F1F5F9] px-1.5 py-0.5 font-mono text-[11px] text-[#2563EB]">
+                          {`{{${nodeCollects}}}`}
+                        </code>
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#94A3B8]">
+                      Keine Variable — wähle &quot;Sammelt&quot; im Inhalt-Tab.
+                    </p>
+                  )}
+                </div>
+              )}
 
-          <div className="mt-6 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-            <p className="mb-3 text-sm font-semibold text-[#0F172A]">Qualitäts-Check</p>
-            {lintWarnings.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-lg border border-[#A7F3D0] bg-[#ECFDF5] px-3 py-2 text-sm font-semibold text-[#047857]">
-                <CheckCircle2 className="h-4 w-4" /> Keine Warnungen
+              {/* All variables in flow */}
+              <div className="px-5 py-4">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  Variablen im Flow
+                </p>
+                {allCollectedKeys.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {allCollectedKeys.map((key) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2.5"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <code className="font-mono text-[12px] font-semibold text-[#2563EB]">
+                            {`{{${key}}}`}
+                          </code>
+                          <span className="text-xs text-[#94A3B8]">
+                            {VARIABLE_LABELS[key] ?? key}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleCopy(key)}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-[#94A3B8] transition-colors hover:bg-white hover:text-[#2563EB]"
+                        >
+                          {copiedKey === key ? (
+                            <><Check className="h-3 w-3" /> Kopiert</>
+                          ) : (
+                            <><Copy className="h-3 w-3" /> Kopieren</>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[#94A3B8]">
+                    Noch keine Variablen. Füge Freitext-Schritte hinzu und wähle &quot;Sammelt&quot;.
+                  </p>
+                )}
               </div>
-            ) : (
-              <ul className="space-y-2">
-                {lintWarnings.map((warning) => (
-                  <li
-                    key={warning.id}
-                    className={`rounded-lg border p-3 text-sm ${
-                      warning.severity === 'info'
-                        ? 'border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]'
-                        : 'border-[#FCD34D] bg-[#FFFBEB] text-[#B45309]'
+
+              {/* Booking config */}
+              <div className="px-5 py-4 space-y-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  Buchungseinstellungen
+                </p>
+
+                {/* Flow type */}
+                <div className="flex rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-1">
+                  <button
+                    onClick={() => onToggleFlowType('reservation')}
+                    className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${
+                      outputType === 'reservation'
+                        ? 'bg-white text-[#0F172A] shadow-sm'
+                        : 'text-[#94A3B8] hover:text-[#475569]'
                     }`}
                   >
-                    <p className="font-semibold">{warning.message}</p>
-                    {warning.suggestion && (
-                      <p className="mt-1 text-xs opacity-80">{warning.suggestion}</p>
-                    )}
-                    {(warning.nodeId || (warning as any).edgeId) && (
-                      <button
-                        onClick={() => onFocusWarning(warning)}
-                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-                      >
-                        <Focus className="h-3 w-3" />
-                        {(warning as any).edgeId ? 'Zur Verbindung springen' : 'Zum Node springen'}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+                    Buchungs-Flow
+                  </button>
+                  <button
+                    onClick={() => onToggleFlowType('custom')}
+                    className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${
+                      outputType === 'custom'
+                        ? 'bg-white text-[#0F172A] shadow-sm'
+                        : 'text-[#94A3B8] hover:text-[#475569]'
+                    }`}
+                  >
+                    Freier Flow
+                  </button>
+                </div>
 
-          {saveState === 'saved' && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg border border-[#A7F3D0] bg-[#ECFDF5] px-3 py-2 text-sm font-semibold text-[#047857]">
-              <CheckCircle2 className="h-4 w-4" /> Änderungen gespeichert
-            </div>
-          )}
-          {saveState === 'error' && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm font-semibold text-[#DC2626]">
-              <TriangleAlert className="h-4 w-4" /> Speichern fehlgeschlagen
+                <p className="text-xs text-[#94A3B8]">
+                  {outputType === 'reservation'
+                    ? 'Erstellt automatisch eine Buchung wenn alle Pflichtfelder vorliegen.'
+                    : 'Keine automatische Buchung — freie Konversation.'}
+                </p>
+
+                {/* Required fields */}
+                {outputType === 'reservation' && (
+                  <div>
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      Pflichtfelder
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { key: 'name', label: 'Name' },
+                        { key: 'date', label: 'Datum' },
+                        { key: 'time', label: 'Uhrzeit' },
+                        { key: 'guestCount', label: labels.participantsLabel },
+                        { key: 'phone', label: 'Telefon' },
+                        { key: 'email', label: 'E-Mail' },
+                      ].map(({ key, label }) => (
+                        <button
+                          key={key}
+                          onClick={() => onToggleRequiredField(key)}
+                          className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+                            requiredFields.includes(key)
+                              ? 'border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]'
+                              : 'border-[#E2E8F0] bg-[#F8FAFC] text-[#94A3B8] hover:text-[#475569]'
+                          }`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${
+                            requiredFields.includes(key) ? 'bg-[#2563EB]' : 'bg-[#CBD5E1]'
+                          }`} />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[11px] text-[#CBD5E1]">
+                      Blau = Pflichtfeld. Buchung wird erst erstellt wenn alle vorliegen.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Global lint warnings */}
+              {lintWarnings.length > 0 && (
+                <div className="px-5 py-4 space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                    Qualitäts-Check
+                  </p>
+                  {lintWarnings.map((w) => (
+                    <div
+                      key={w.id}
+                      className={`rounded-xl border p-3 ${
+                        w.severity === 'info'
+                          ? 'border-[#BFDBFE] bg-[#EFF6FF]'
+                          : 'border-[#FCD34D] bg-[#FFFBEB]'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
+                          w.severity === 'info' ? 'text-[#2563EB]' : 'text-[#B45309]'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-semibold ${
+                            w.severity === 'info' ? 'text-[#2563EB]' : 'text-[#B45309]'
+                          }`}>
+                            {w.message}
+                          </p>
+                          {w.suggestion && (
+                            <p className="mt-0.5 text-[11px] text-[#64748B]">{w.suggestion}</p>
+                          )}
+                          {(w.nodeId || (w as any).edgeId) && (
+                            <button
+                              onClick={() => onFocusWarning(w)}
+                              className="mt-1 text-[11px] font-semibold text-[#64748B] hover:underline"
+                            >
+                              Zum Schritt springen
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        <div className="border-t border-[#E2E8F0] bg-white px-6 py-4">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold text-[#64748B]">
-              {saveState === 'error'
-                ? 'Speichern fehlgeschlagen'
-                : hasUnsavedChanges
-                ? 'Änderungen nicht gespeichert'
-                : 'Alle Änderungen gespeichert'}
-            </span>
-            <button
-              onClick={onSave}
-              disabled={!hasUnsavedChanges || saveState === 'saving'}
-              className="rounded-full bg-[#2450b2] px-5 py-2.5 text-[15px] font-semibold text-white shadow-[0_2px_16px_rgba(0,0,0,0.18)] transition-all hover:bg-[#1a46c4] disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {saveState === 'saving' ? 'Speichert...' : 'Speichern'}
-            </button>
+        {/* ── Footer ── */}
+        {(selectedNode || selectedEdge) && (
+          <div className="shrink-0 border-t border-[#E2E8F0] bg-white px-5 py-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <button
+                onClick={onDeleteSelection}
+                className="flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-2 text-sm font-semibold text-[#DC2626] transition-colors hover:border-[#FECACA] hover:bg-[#FEF2F2]"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Löschen
+              </button>
+
+              <div className="flex items-center gap-2">
+                {saveState === 'saved' && (
+                  <span className="flex items-center gap-1 text-xs font-semibold text-[#047857]">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Gespeichert
+                  </span>
+                )}
+                {saveState === 'error' && (
+                  <span className="flex items-center gap-1 text-xs font-semibold text-[#DC2626]">
+                    <TriangleAlert className="h-3.5 w-3.5" /> Fehler
+                  </span>
+                )}
+                {saveState !== 'saved' && saveState !== 'error' && hasUnsavedChanges && (
+                  <span className="text-xs text-[#94A3B8]">Ungespeichert</span>
+                )}
+                <button
+                  onClick={onSave}
+                  disabled={!hasUnsavedChanges || saveState === 'saving'}
+                  className="rounded-xl bg-[#2450b2] px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-[#1a46c4] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saveState === 'saving' ? 'Speichert…' : 'Speichern'}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Footer without selection (just save state) */}
+        {!selectedNode && !selectedEdge && (
+          <div className="shrink-0 border-t border-[#E2E8F0] bg-white px-5 py-3.5">
+            <div className="flex items-center justify-end gap-2">
+              {saveState === 'saved' && (
+                <span className="flex items-center gap-1 text-xs font-semibold text-[#047857]">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Gespeichert
+                </span>
+              )}
+              <button
+                onClick={onSave}
+                disabled={!hasUnsavedChanges || saveState === 'saving'}
+                className="rounded-xl bg-[#2450b2] px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-[#1a46c4] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saveState === 'saving' ? 'Speichert…' : 'Speichern'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

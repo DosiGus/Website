@@ -25,6 +25,7 @@ import {
 } from "reactflow";
 import {
   CalendarCheck,
+  ChevronDown,
   CheckCircle2,
   Copy,
   Download,
@@ -72,7 +73,7 @@ type FlowResponse = {
 };
 
 type SaveState = "idle" | "saving" | "saved" | "error";
-type InspectorTab = "content" | "logic" | "variables" | "preview";
+type InspectorTab = "content" | "flow";
 type EdgeTone = "neutral" | "positive" | "negative";
 type BuilderMode = "simple" | "pro";
 type InputMode = "buttons" | "free_text";
@@ -256,7 +257,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
   const [fallbackEnabled, setFallbackEnabled] = useState<boolean | null>(null);
   const [conflictWarnings, setConflictWarnings] = useState<Array<{ keyword: string; conflictingFlowName: string }>>([]);
   const [isAddMenuOpen, setAddMenuOpen] = useState(false);
-  const [showFlowSettings, setShowFlowSettings] = useState(false);
+  const [showPflichtfelderDropdown, setShowPflichtfelderDropdown] = useState(false);
   const [showBuilderGuide, setShowBuilderGuide] = useState(false);
   const { vertical } = useAccountVertical();
   const labels = getBookingLabels(vertical);
@@ -379,6 +380,66 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
   const handleToggleRequiredField = (field: string) => {
     const isRemoving = requiredFields.includes(field);
+
+    const FIELD_NODE_DEFAULTS: Record<string, { label: string; text: string }> = {
+      name:            { label: "Name abfragen",             text: "Wie ist dein Name?" },
+      date:            { label: "Datum abfragen",            text: "Wann möchtest du kommen?" },
+      time:            { label: "Uhrzeit abfragen",          text: "Zu welcher Uhrzeit möchtest du kommen?" },
+      guestCount:      { label: `${labels.participantsCountLabel} abfragen`, text: `Für wie viele Personen soll ich buchen?` },
+      phone:           { label: "Telefonnummer abfragen",    text: "Wie lautet deine Telefonnummer?" },
+      email:           { label: "E-Mail abfragen",           text: "Wie lautet deine E-Mail-Adresse?" },
+      specialRequests: { label: "Sonderwünsche abfragen",    text: "Hast du besondere Wünsche oder Anmerkungen?" },
+    };
+
+    if (isRemoving) {
+      const nodeToDelete = nodes.find((n) => (n.data as any)?.collects === field);
+      if (nodeToDelete) {
+        const fieldLabel = COLLECTS_LABELS[field] ?? field;
+        const confirmed = window.confirm(
+          `Die Node „${nodeToDelete.data?.label || fieldLabel}" sammelt das Pflichtfeld „${fieldLabel}" und wird beim Entfernen gelöscht. Trotzdem entfernen?`
+        );
+        if (!confirmed) return;
+        setNodes((prev) => prev.filter((n) => n.id !== nodeToDelete.id));
+        setEdges((prev) => prev.filter((e) => e.source !== nodeToDelete.id && e.target !== nodeToDelete.id));
+      }
+    } else {
+      const defaults = FIELD_NODE_DEFAULTS[field];
+      if (defaults) {
+        const id = uuid();
+        let posX = 200;
+        let posY = 200;
+        if (reactFlowInstance) {
+          const vp = reactFlowInstance.getViewport();
+          posX = (400 - vp.x) / vp.zoom + (nodes.length % 5) * 30;
+          posY = (250 - vp.y) / vp.zoom + (nodes.length % 5) * 30;
+        } else {
+          posX = 200 + nodes.length * 30;
+          posY = 200 + nodes.length * 30;
+        }
+        const newNode: Node = {
+          id,
+          type: "wesponde",
+          position: { x: posX, y: posY },
+          data: {
+            label: defaults.label,
+            text: defaults.text,
+            variant: "message" as const,
+            quickReplies: [],
+            inputMode: "buttons",
+            placeholder: "",
+            collects: field,
+          },
+        };
+        setNodes((prev) => [...prev, newNode]);
+        setTimeout(() => {
+          reactFlowInstance?.setCenter(posX + 110, posY + 50, {
+            zoom: reactFlowInstance.getViewport().zoom,
+            duration: 350,
+          });
+        }, 50);
+      }
+    }
+
     const next = isRemoving
       ? requiredFields.filter((f) => f !== field)
       : [...requiredFields, field];
@@ -728,8 +789,6 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
                 data: {
                   ...node.data,
                   [field]: value,
-                  ...(field === "label" ? { text: value } : {}),
-                  ...(field === "text" ? { label: value } : {}),
                 },
               }
             : node,
@@ -1583,7 +1642,7 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
         if (targetEdge) {
           setSelectedEdgeId(targetEdge.id);
           setSelectedNodeId(null);
-          setInspectorTab("logic");
+          setInspectorTab("content");
           setInspectorOpen(true);
           // Focus on the source node of the edge
           const sourceNode = nodes.find((node) => node.id === targetEdge.source);
@@ -1736,13 +1795,13 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
               <button
                 onClick={() => {
-                  setInspectorTab("preview");
+                  setInspectorTab("content");
                   setInspectorOpen(true);
                 }}
                 title="Flow Preview"
                 aria-label="Flow Preview"
                 className={`rounded-2xl p-3 transition-colors ${
-                  isInspectorOpen && inspectorTab === "preview"
+                  isInspectorOpen && inspectorTab === "content"
                     ? "bg-[#DBEAFE] text-[#2563EB]"
                     : "text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]"
                 }`}
@@ -1858,55 +1917,105 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
       <main className="relative">
         {nodes.length > 0 && (
           <div className={`${BUILDER_SHELL_CLASS} pb-4`}>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-[22px] border border-[#E2E8F0] bg-white px-6 py-5 text-[15px] shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
-              <div className="flex items-center gap-2.5">
-                {outputType === "reservation"
-                  ? <CalendarCheck className="h-4.5 w-4.5 text-[#2563EB]" />
-                  : <Zap className="h-4.5 w-4.5 text-[#7C3AED]" />}
-                <span className="text-[#64748B]">Erstellt:</span>
-                <span className="text-[15px] font-semibold text-[#0F172A]">
-                  {outputType === "reservation" ? "Buchung" : "Freie Konversation"}
-                </span>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-[22px] border border-[#E2E8F0] bg-white px-6 py-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+
+              {/* Flow-Typ: inline segmented control */}
+              <div className="flex items-center gap-1 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-1">
                 <button
-                  onClick={() => setShowFlowSettings(!showFlowSettings)}
-                  title="Flow-Einstellungen"
-                  aria-label="Flow-Einstellungen"
-                  className={`rounded-xl p-2 transition-colors ${
-                    showFlowSettings
-                      ? "bg-[#EFF6FF] text-[#2563EB]"
-                      : "text-[#94A3B8] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
+                  onClick={() => handleToggleFlowType("reservation")}
+                  className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-[14px] font-semibold transition-all ${
+                    outputType === "reservation"
+                      ? "bg-white text-[#2563EB] shadow-sm"
+                      : "text-[#64748B] hover:text-[#0F172A]"
                   }`}
                 >
-                  <Settings2 className="h-4.5 w-4.5" />
+                  <CalendarCheck className="h-4 w-4" />
+                  Buchung
+                </button>
+                <button
+                  onClick={() => handleToggleFlowType("custom")}
+                  className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-[14px] font-semibold transition-all ${
+                    outputType === "custom"
+                      ? "bg-white text-[#7C3AED] shadow-sm"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  <Zap className="h-4 w-4" />
+                  Freier Flow
                 </button>
               </div>
 
-              <div className="hidden h-6 w-px bg-[#E2E8F0] sm:block" />
+              {/* Pflichtfelder dropdown — nur bei Buchungs-Flow */}
+              {outputType === "reservation" && (
+                <>
+                  <div className="h-5 w-px bg-[#E2E8F0]" />
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowPflichtfelderDropdown((v) => !v)}
+                      className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-[14px] font-semibold transition-all ${
+                        showPflichtfelderDropdown
+                          ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]"
+                          : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#BFDBFE] hover:text-[#2563EB]"
+                      }`}
+                    >
+                      Pflichtfelder
+                      {requiredFields.length > 0 && (
+                        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#2563EB] px-1 text-[11px] font-bold text-white">
+                          {requiredFields.length}
+                        </span>
+                      )}
+                      <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showPflichtfelderDropdown ? "rotate-180" : ""}`} />
+                    </button>
 
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="text-[#64748B]">Sammelt:</span>
-                {collectedKeys.length > 0
-                  ? collectedKeys.map((key) => (
-                      <span
-                        key={key}
-                        className={`rounded-full border px-3 py-1 text-[13px] font-medium ${
-                          requiredFields.includes(key)
-                            ? "border-[#A7F3D0] bg-[#ECFDF5] text-[#047857]"
-                            : "border-[#E2E8F0] bg-[#F8FAFC] text-[#64748B]"
-                        }`}
-                      >
-                        {COLLECTS_LABELS[key] ?? key}
-                      </span>
-                    ))
-                  : <span className="italic text-[#94A3B8]">nichts konfiguriert</span>}
-              </div>
+                    {showPflichtfelderDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowPflichtfelderDropdown(false)} />
+                        <div className="absolute left-0 top-full z-50 mt-2 w-72 rounded-2xl border border-[#E2E8F0] bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.12)]">
+                          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+                            Pflichtfelder aktivieren
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { key: "name", label: "Name" },
+                              { key: "date", label: "Datum" },
+                              { key: "time", label: "Uhrzeit" },
+                              { key: "guestCount", label: labels.participantsCountLabel },
+                              { key: "phone", label: "Telefon" },
+                              { key: "email", label: "E-Mail" },
+                            ].map(({ key, label }) => (
+                              <button
+                                key={key}
+                                onClick={() => handleToggleRequiredField(key)}
+                                className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[13px] font-medium transition-all ${
+                                  requiredFields.includes(key)
+                                    ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]"
+                                    : "border-[#E2E8F0] bg-[#F8FAFC] text-[#64748B] hover:border-[#BFDBFE] hover:text-[#2563EB]"
+                                }`}
+                              >
+                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${requiredFields.includes(key) ? "bg-[#2563EB]" : "bg-[#CBD5E1]"}`} />
+                                {label}
+                                {key === "guestCount" && !requiredFields.includes(key) && (
+                                  <span className="text-[11px] text-[#94A3B8]">Standard: 1</span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="mt-3 text-[11px] text-[#94A3B8]">
+                            Buchung wird erst erstellt wenn alle aktiven Felder gesammelt wurden.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
 
               {uncoveredRequired.length > 0 && (
                 <>
-                  <div className="hidden h-6 w-px bg-[#E2E8F0] sm:block" />
-                  <div className="flex items-center gap-2.5 text-[#B45309]">
-                    <TriangleAlert className="h-4.5 w-4.5" />
-                    <span className="font-medium">
+                  <div className="h-5 w-px bg-[#E2E8F0]" />
+                  <div className="flex items-center gap-2 text-[#B45309]">
+                    <TriangleAlert className="h-4 w-4 shrink-0" />
+                    <span className="text-[14px] font-medium">
                       Fehlt: {uncoveredRequired.map((f) => COLLECTS_LABELS[f] ?? f).join(", ")}
                     </span>
                   </div>
@@ -1915,43 +2024,41 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
 
               {lintWarnings.length > 0 && (
                 <>
-                  <div className="hidden h-6 w-px bg-[#E2E8F0] sm:block" />
+                  <div className="h-5 w-px bg-[#E2E8F0]" />
                   <button
                     onClick={() => setCockpitIssuesExpanded((v) => !v)}
-                    className="flex items-center gap-2.5 text-[#B45309] transition-colors hover:text-[#92400E]"
+                    className="flex items-center gap-2 text-[#B45309] transition-colors hover:text-[#92400E]"
                   >
-                    <TriangleAlert className="h-4.5 w-4.5" />
-                    <span className="font-medium">
+                    <TriangleAlert className="h-4 w-4 shrink-0" />
+                    <span className="text-[14px] font-medium">
                       {lintWarnings.length} Problem{lintWarnings.length !== 1 ? "e" : ""}
                     </span>
-                    <span className="text-xs text-[#B45309]/60">
-                      {cockpitIssuesExpanded ? "▲" : "▼"}
-                    </span>
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${cockpitIssuesExpanded ? "rotate-180" : ""}`} />
                   </button>
                 </>
               )}
 
               {isReadyToActivate && status === "Entwurf" && (
                 <>
-                  <div className="hidden h-6 w-px bg-[#E2E8F0] sm:block" />
-                  <div className="flex items-center gap-2.5 text-[#047857]">
-                    <CheckCircle2 className="h-4.5 w-4.5" />
-                    <span className="font-medium">Bereit zur Aktivierung</span>
+                  <div className="h-5 w-px bg-[#E2E8F0]" />
+                  <div className="flex items-center gap-2 text-[#047857]">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span className="text-[14px] font-medium">Bereit zur Aktivierung</span>
                   </div>
                 </>
               )}
 
               {fallbackEnabled !== null && (
                 <>
-                  <div className="hidden h-6 w-px bg-[#E2E8F0] sm:block" />
+                  <div className="h-5 w-px bg-[#E2E8F0]" />
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => router.push("/app/settings")}
                       className="flex items-center gap-2 text-[#64748B] transition-colors hover:text-[#0F172A]"
                       title="Fallback-Einstellungen öffnen"
                     >
-                      <span className={`h-2 w-2 rounded-full shrink-0 ${fallbackEnabled ? "bg-[#10B981]" : "bg-[#94A3B8]"}`} />
-                      <span>Fallback {fallbackEnabled ? "aktiv" : "deaktiviert"}</span>
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${fallbackEnabled ? "bg-[#10B981]" : "bg-[#94A3B8]"}`} />
+                      <span className="text-[14px]">Fallback {fallbackEnabled ? "aktiv" : "deaktiviert"}</span>
                     </button>
                     <div className="relative">
                       <button
@@ -1983,80 +2090,6 @@ export default function FlowBuilderClient({ flowId }: { flowId: string }) {
               )}
 
             </div>
-
-            {showFlowSettings && (
-              <div className="mt-4 rounded-[22px] border border-[#E2E8F0] bg-[#F8FAFC] p-5">
-                <div className="flex flex-wrap items-start gap-8">
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Flow-Typ</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleToggleFlowType("reservation")}
-                        className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-[13px] font-semibold transition-all ${
-                          outputType === "reservation"
-                            ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]"
-                            : "border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A]"
-                        }`}
-                      >
-                        <CalendarCheck className="h-4 w-4" />
-                        Buchungs-Flow
-                      </button>
-                      <button
-                        onClick={() => handleToggleFlowType("custom")}
-                        className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-[13px] font-semibold transition-all ${
-                          outputType === "custom"
-                            ? "border-[#DDD6FE] bg-[#F5F3FF] text-[#7C3AED]"
-                            : "border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A]"
-                        }`}
-                      >
-                        <Zap className="h-4 w-4" />
-                        Freier Flow
-                      </button>
-                    </div>
-                    <p className="text-[13px] text-[#64748B]">
-                      {outputType === "reservation"
-                        ? "Erstellt automatisch Buchungen wenn alle Pflichtfelder vorliegen."
-                        : "Keine automatische Buchung — freie Konversation."}
-                    </p>
-                  </div>
-
-                  {outputType === "reservation" && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Pflichtfelder</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { key: "name", label: "Name" },
-                          { key: "date", label: "Datum" },
-                          { key: "time", label: "Uhrzeit" },
-                          { key: "guestCount", label: labels.participantsCountLabel },
-                          { key: "phone", label: "Telefon" },
-                          { key: "email", label: "E-Mail" },
-                        ].map(({ key, label }) => (
-                          <button
-                            key={key}
-                            onClick={() => handleToggleRequiredField(key)}
-                            className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[13px] font-medium transition-all ${
-                              requiredFields.includes(key)
-                                ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]"
-                                : "border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A]"
-                            }`}
-                          >
-                            <span className={`h-1.5 w-1.5 rounded-full ${requiredFields.includes(key) ? "bg-[#2563EB]" : "bg-[#94A3B8]"}`} />
-                            {label}
-                            {key === "guestCount" && !requiredFields.includes(key) && (
-                              <span className="text-[#94A3B8]">· Standard: 1</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-xs text-[#64748B]">
-                        Blau = Pflichtfeld. Buchung wird erst erstellt wenn alle Pflichtfelder vorliegen.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             {conflictWarnings.length > 0 && status === "Aktiv" && (
               <div className="mt-2 rounded-xl border border-[#FCD34D] bg-[#FFFBEB] p-3">

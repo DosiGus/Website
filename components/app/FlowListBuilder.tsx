@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Node, Edge } from "reactflow";
 import {
   ArrowDown,
@@ -25,6 +25,25 @@ import FlowSimulator from "./FlowSimulator";
 import type { FlowQuickReply, FlowTrigger } from "../../lib/flowTypes";
 import useAccountVertical from "../../lib/useAccountVertical";
 import { getBookingLabels, type BookingLabels } from "../../lib/verticals";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type FlowListBuilderProps = {
   nodes: Node[];
@@ -54,6 +73,57 @@ type FlowListBuilderProps = {
   onDeleteNode: (nodeId: string) => void;
 };
 
+// ---------------------------------------------------------------------------
+// Drag-and-drop infrastructure
+// ---------------------------------------------------------------------------
+
+/** Passes useSortable listeners/attributes down without prop drilling */
+const DragHandleCtx = createContext<{
+  listeners: ReturnType<typeof useSortable>["listeners"];
+  attributes: ReturnType<typeof useSortable>["attributes"] | undefined;
+}>({ listeners: undefined, attributes: undefined });
+
+/** Wraps a single node row in sortable behaviour. Restricts movement to vertical axis. */
+function SortableNodeWrapper({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+  return (
+    <DragHandleCtx.Provider value={{ listeners, attributes }}>
+      <div
+        ref={setNodeRef}
+        style={{
+          transform: CSS.Transform.toString(
+            transform ? { ...transform, x: 0 } : transform,
+          ),
+          transition,
+          zIndex: isDragging ? 10 : undefined,
+        }}
+        className={isDragging ? "opacity-40" : undefined}
+      >
+        {children}
+      </div>
+    </DragHandleCtx.Provider>
+  );
+}
+
+/** Invisible-until-hover grip handle; must be rendered inside a SortableNodeWrapper */
+function NodeDragHandle() {
+  const { listeners, attributes } = useContext(DragHandleCtx);
+  return (
+    <button
+      type="button"
+      {...listeners}
+      {...attributes}
+      onClick={e => e.stopPropagation()}
+      className="cursor-grab rounded-lg p-2 text-[#CBD5E1] transition-colors hover:bg-[#F1F5F9] hover:text-[#64748B] active:cursor-grabbing"
+      title="Reihenfolge per Drag ändern"
+    >
+      <GripVertical className="h-4.5 w-4.5" />
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Build a linear flow order starting from trigger nodes
 function buildFlowOrder(nodes: Node[], edges: Edge[], startNodeIds: Set<string>): Node[] {
   if (nodes.length === 0) return [];
@@ -304,6 +374,12 @@ export default function FlowListBuilder({
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
   const [previewNodeId, setPreviewNodeId] = useState<string | null>(null);
   const [simulatorCurrentNodeId, setSimulatorCurrentNodeId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const nodeCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   // Tracks the node that was active when preview was opened — no scroll for initial node
   const previewStartNodeRef = useRef<string | null>(null);
@@ -311,8 +387,21 @@ export default function FlowListBuilder({
   const outerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
 
-  // Order nodes by flow path
-  const orderedNodes = useMemo(() => buildFlowOrder(nodes, edges, startNodeIds), [nodes, edges, startNodeIds]);
+  // Order nodes by flow path.
+  // If displayOrder has been set on all nodes (after a manual drag), use that instead
+  // of the BFS traversal so the visual order is always stable regardless of edge topology.
+  const orderedNodes = useMemo(() => {
+    const hasDisplayOrder = nodes.length > 0 &&
+      nodes.every(n => typeof (n.data as any)?.displayOrder === "number");
+    if (hasDisplayOrder) {
+      return [...nodes].sort(
+        (a, b) =>
+          ((a.data as any).displayOrder as number) -
+          ((b.data as any).displayOrder as number),
+      );
+    }
+    return buildFlowOrder(nodes, edges, startNodeIds);
+  }, [nodes, edges, startNodeIds]);
   const triggerKeywords = useMemo(() => {
     const keywords: string[] = [];
     triggers.forEach((trigger) => {
@@ -378,6 +467,83 @@ export default function FlowListBuilder({
     }
     return null;
   }, []);
+
+  /**
+   * Rebuilds the edge array after a drag-and-drop reorder.
+   *
+   * Strategy:
+   *  - QuickReply edges reference node IDs, so they are always valid — keep them.
+   *  - Backbone edges (free_text → next node) depend on order — rebuild them from scratch
+   *    based on the new sequence, connecting each free_text node to its new successor.
+   *  - The last node in the sequence never receives a new outgoing backbone edge, so it
+   *    naturally becomes (or stays) the terminal step.
+   */
+  const rebuildEdgesAfterReorder = useCallback((newOrder: Node[]): Edge[] => {
+    const quickReplyEdges = edges.filter(e => Boolean((e.data as any)?.quickReplyId));
+    const newBackboneEdges: Edge[] = [];
+
+    for (let i = 0; i < newOrder.length - 1; i++) {
+      const src = newOrder[i];
+      const tgt = newOrder[i + 1];
+
+      // Only free_text nodes emit backbone (free-flow) edges.
+      // Buttons nodes connect exclusively via their quickReply edges.
+      if (deriveInputMode(src, edges) !== "free_text") continue;
+
+      // Reuse existing edge metadata (id, label, etc.) when the source already had one.
+      const existing = edges.find(
+        e => e.source === src.id && !((e.data as any)?.quickReplyId),
+      );
+
+      newBackboneEdges.push({
+        id: existing?.id ?? `ft-${src.id}-${tgt.id}`,
+        source: src.id,
+        target: tgt.id,
+        type: existing?.type,
+        data: {
+          tone: "neutral",
+          condition: "Freitext",
+          ...(existing?.data ?? {}),
+        },
+        label: existing?.label ?? "Freitext",
+      } as Edge);
+    }
+
+    return [...quickReplyEdges, ...newBackboneEdges];
+  }, [edges]);
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    if (!over || active.id === over.id) return;
+
+    const oldIdx = orderedNodes.findIndex(n => n.id === active.id);
+    const newIdx = orderedNodes.findIndex(n => n.id === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
+
+    const newOrder = arrayMove(orderedNodes, oldIdx, newIdx);
+
+    // 1. Persist visual order via displayOrder on each node.
+    //    This drives orderedNodes regardless of edge topology so the UI never snaps back.
+    const orderMap = new Map(newOrder.map((n, i) => [n.id, i]));
+    const updatedNodes = nodes.map(n => ({
+      ...n,
+      data: {
+        ...n.data,
+        displayOrder: orderMap.get(n.id) ?? (n.data as any)?.displayOrder ?? 999,
+      },
+    }));
+    onNodesChange(updatedNodes);
+
+    // 2. Rewire free_text backbone edges so the "Danach weiter zu" dropdowns stay
+    //    consistent with the new visual order. Buttons/choice nodes are not affected
+    //    because they have no backbone edges (only quickReply edges).
+    onEdgesChange(rebuildEdgesAfterReorder(newOrder));
+  }, [orderedNodes, nodes, onNodesChange, onEdgesChange, rebuildEdgesAfterReorder]);
 
   const getFreeTextTarget = useCallback((nodeId: string) => {
     const edge = edges.find(e => e.source === nodeId && !(e.data as any)?.quickReplyId);
@@ -471,17 +637,15 @@ export default function FlowListBuilder({
   const updateNodeText = useCallback((nodeId: string, text: string) => {
     const updatedNodes = nodes.map(node => {
       if (node.id !== nodeId) return node;
-      const currentLabel = String(node.data?.label ?? "");
-      const currentText = String(node.data?.text ?? "");
-      const shouldUpdateLabel = currentLabel.trim().length === 0 || currentLabel === currentText;
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          text,
-          ...(shouldUpdateLabel ? { label: text.slice(0, 40) || "Neue Nachricht" } : {}),
-        },
-      };
+      return { ...node, data: { ...node.data, text } };
+    });
+    onNodesChange(updatedNodes);
+  }, [nodes, onNodesChange]);
+
+  const updateNodeLabel = useCallback((nodeId: string, label: string) => {
+    const updatedNodes = nodes.map(node => {
+      if (node.id !== nodeId) return node;
+      return { ...node, data: { ...node.data, label } };
     });
     onNodesChange(updatedNodes);
   }, [nodes, onNodesChange]);
@@ -860,6 +1024,16 @@ export default function FlowListBuilder({
           </div>
         </div>
 
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={orderedNodes.map(n => n.id)}
+            strategy={verticalListSortingStrategy}
+          >
         {orderedNodes.map((node, index) => {
           const isStart = startNodeIds.has(node.id);
           const isSelected = selectedNodeId === node.id;
@@ -873,7 +1047,8 @@ export default function FlowListBuilder({
           const isSimulatorActive = simulatorCurrentNodeId === node.id && Boolean(previewNodeId);
 
           return (
-            <div key={node.id} className="relative" data-node-id={node.id}>
+            <SortableNodeWrapper key={node.id} id={node.id}>
+            <div className="relative" data-node-id={node.id}>
               {/* Step Card */}
               <div
                 ref={(el) => {
@@ -916,7 +1091,7 @@ export default function FlowListBuilder({
                   <div className={`
                     flex h-12 w-12 items-center justify-center rounded-2xl shrink-0
                     ${inputMode === 'free_text'
-                      ? 'bg-[#FEF3C7] text-[#B45309]'
+                      ? 'bg-[#EFF6FF] text-[#2563EB]'
                       : 'bg-[#EFF6FF] text-[#2563EB]'
                     }
                   `}>
@@ -938,7 +1113,7 @@ export default function FlowListBuilder({
                         </span>
                       )}
                       {inputMode === 'free_text' && (
-                        <span className="shrink-0 rounded-full border border-[#FCD34D] bg-[#FFFBEB] px-2.5 py-0.5 text-xs font-semibold text-[#B45309]">
+                        <span className="shrink-0 rounded-full border border-[#E2E8F0] bg-[#F1F5F9] px-2.5 py-0.5 text-xs font-semibold text-[#475569]">
                           {(() => {
                             const c = (node.data as any)?.collects;
                             if (!c || c === "__custom_empty__") return 'Freitext';
@@ -964,6 +1139,7 @@ export default function FlowListBuilder({
 
                   {/* Action buttons */}
                   <div className="flex shrink-0 items-center gap-1.5">
+                    <NodeDragHandle />
                     {/* Inspect button */}
                     <button
                       onClick={(e) => { e.stopPropagation(); onSelectNode(node.id); onOpenInspector(node.id); }}
@@ -1010,6 +1186,17 @@ export default function FlowListBuilder({
                   <div className="animate-fade-in-up space-y-5 border-t border-[#E2E8F0] p-5">
                     <div>
                       <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                        Name <span className="text-[#DC2626]">*</span>
+                      </label>
+                      <input
+                        value={node.data?.label || ""}
+                        onChange={(e) => updateNodeLabel(node.id, e.target.value)}
+                        placeholder="z.B. Begrüßung, Terminabfrage, Bestätigung..."
+                        className="w-full rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] transition-colors focus:border-[#2563EB] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#DBEAFE]"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                         Nachricht
                       </label>
                       <textarea
@@ -1052,14 +1239,14 @@ export default function FlowListBuilder({
                     </div>
 
                     {inputMode === "free_text" && (
-                      <div className="rounded-xl border border-[#FCD34D] bg-[#FFFBEB] p-4 space-y-3">
-                        <p className="text-sm text-[#B45309]">
+                      <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 space-y-3">
+                        <p className="text-sm text-[#475569]">
                           Der {labels.contactLabel} tippt seine Antwort frei ein.
                         </p>
 
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
-                            <label className="mb-1 block text-xs font-medium text-[#B45309]">
+                            <label className="mb-1 block text-xs font-medium text-[#64748B]">
                               Dieses Feld sammelt
                             </label>
                             {(() => {
@@ -1074,7 +1261,7 @@ export default function FlowListBuilder({
                                     autoFocus={collectsVal === "__custom_empty__"}
                                     onChange={(e) => updateFreeTextMeta(node.id, "collects", e.target.value || "__custom_empty__")}
                                     placeholder="z. B. lieblingsfarbe"
-                                    className="flex-1 rounded-md border border-[#FCD34D] bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#D97706] focus:outline-none"
+                                    className="flex-1 rounded-md border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#2563EB] focus:outline-none"
                                   />
                                   <button
                                     onClick={() => updateFreeTextMeta(node.id, "collects", "")}
@@ -1111,7 +1298,7 @@ export default function FlowListBuilder({
                             })()}
                           </div>
                           <div>
-                            <label className="mb-1 block text-xs font-medium text-[#B45309]">
+                            <label className="mb-1 block text-xs font-medium text-[#64748B]">
                               Danach weiter zu
                             </label>
                             <select
@@ -1130,7 +1317,7 @@ export default function FlowListBuilder({
                         </div>
 
                         {freeTextTarget ? (
-                          <div className="flex items-center gap-2 text-sm text-[#B45309]">
+                          <div className="flex items-center gap-2 text-sm text-[#64748B]">
                             <ArrowRight className="h-4 w-4" />
                             <span>Weiter zu: <strong>{getNodeLabel(freeTextTarget)}</strong></span>
                           </div>
@@ -1215,6 +1402,29 @@ export default function FlowListBuilder({
                             ))}
                           </div>
                         )}
+
+                        <div className="mt-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3">
+                          <label className="mb-1 block text-xs font-semibold text-[#64748B]">
+                            Dieses Feld sammelt
+                          </label>
+                          <p className="mb-2 text-[11px] text-[#94A3B8]">
+                            Welche Buchungsinformation liefert die gewählte Button-Antwort?
+                          </p>
+                          <select
+                            value={(node.data as any)?.collects ?? ""}
+                            onChange={(e) => updateFreeTextMeta(node.id, "collects", e.target.value)}
+                            className="app-select w-full"
+                          >
+                            <option value="">Keine Zuordnung</option>
+                            <option value="name">Name</option>
+                            <option value="date">Datum</option>
+                            <option value="time">Uhrzeit</option>
+                            <option value="guestCount">{labels.participantsCountLabel}</option>
+                            <option value="phone">Telefonnummer</option>
+                            <option value="email">E-Mail-Adresse</option>
+                            <option value="specialRequests">Besondere Wünsche</option>
+                          </select>
+                        </div>
                       </div>
                     )}
 
@@ -1237,8 +1447,40 @@ export default function FlowListBuilder({
                 </div>
               )}
             </div>
+            </SortableNodeWrapper>
           );
         })}
+          </SortableContext>
+
+          {/* Floating ghost card shown while dragging */}
+          <DragOverlay dropAnimation={{ duration: 150, easing: "ease" }}>
+            {activeId && (() => {
+              const node = nodes.find(n => n.id === activeId);
+              if (!node) return null;
+              const im = deriveInputMode(node, edges);
+              return (
+                <div className="ml-20 rounded-[22px] border border-[#93C5FD] bg-white shadow-[0_12px_40px_rgba(37,99,235,0.20)]">
+                  <div className="flex items-center gap-4 p-5">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#EFF6FF] text-[#2563EB]">
+                      {im === "free_text"
+                        ? <Keyboard className="h-5 w-5" />
+                        : <MessageSquare className="h-5 w-5" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="truncate text-[18px] font-semibold text-[#0F172A]">
+                        {node.data?.label || "Ohne Titel"}
+                      </h3>
+                      <p className="mt-1 truncate text-[15px] text-[#475569]">
+                        {node.data?.text || "Keine Nachricht"}
+                      </p>
+                    </div>
+                    <GripVertical className="h-5 w-5 text-[#2563EB]" />
+                  </div>
+                </div>
+              );
+            })()}
+          </DragOverlay>
+        </DndContext>
 
         <div className="relative ml-20">
           <div className="absolute -left-[64px] top-5 flex h-12 w-12 items-center justify-center rounded-full border-2 border-dashed border-[#CBD5E1] bg-white">
