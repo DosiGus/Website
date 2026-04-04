@@ -7,7 +7,6 @@ const text =
 
 const words = text.split(' ')
 const PREHIGHLIGHTED = 3
-const DELAY_PER_WORD = 180 // ms between words on the same line
 
 export default function ProduktSection() {
   const textRef = useRef<HTMLDivElement>(null)
@@ -19,46 +18,27 @@ export default function ProduktSection() {
     const spans = Array.from(container.querySelectorAll<HTMLElement>('[data-word]'))
     if (!spans.length) return
 
-    // After layout: measure which words are on the same visual line,
-    // and assign a stagger delay based on position within that line.
-    const assignDelays = () => {
-      let currentLineTop = -Infinity
-      let posInLine = 0
-
-      spans.forEach((span, i) => {
-        const top = Math.round(span.getBoundingClientRect().top)
-        if (Math.abs(top - currentLineTop) > 4) {
-          // new line
-          currentLineTop = top
-          posInLine = 0
-        }
-        span.dataset.delay = String(posInLine * DELAY_PER_WORD)
-        posInLine++
-      })
-    }
-
-    requestAnimationFrame(assignDelays)
-
+    const remaining = spans.length - PREHIGHLIGHTED
     let rafId: number | null = null
 
     const update = () => {
-      const threshold = window.innerHeight * 0.82
-      const tops = spans.map((s) => s.getBoundingClientRect().top)
+      const rect = container.getBoundingClientRect()
+      const viewH = window.innerHeight
 
-      tops.forEach((top, i) => {
-        if (i < PREHIGHLIGHTED) return // stays highlighted always
+      // progress 0 → Container-Oberkante bei 70% des Viewports (Text voll sichtbar)
+      // progress 1 → Container-Oberkante bei 20% des Viewports (weit oben gescrollt)
+      const startY = viewH * 0.7
+      const endY = viewH * 0.2
+      const raw = (startY - rect.top) / (startY - endY)
+      const progress = Math.max(0, Math.min(1, raw))
 
-        const span = spans[i]
-        if (top < threshold) {
-          // highlight: apply stagger delay
-          span.style.transitionDelay = `${span.dataset.delay ?? 0}ms`
-          span.style.color = '#11131a'
-        } else {
-          // un-highlight: instant (no delay)
-          span.style.transitionDelay = '0ms'
-          span.style.color = '#a8bcd4'
-        }
-      })
+      // Wörter streng sequenziell nach Index hervorheben
+      const highlightUpTo = progress * remaining
+
+      for (let i = PREHIGHLIGHTED; i < spans.length; i++) {
+        const adjustedI = i - PREHIGHLIGHTED
+        spans[i].style.color = adjustedI < highlightUpTo ? '#11131a' : '#a8bcd4'
+      }
 
       rafId = null
     }
@@ -96,7 +76,7 @@ export default function ProduktSection() {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-[0.48fr_1fr] lg:items-start lg:gap-24">
 
-          {/* Left — grid cell (nicht sticky), innerer div ist sticky */}
+          {/* Left — sticky heading */}
           <div>
             <div className="lg:sticky lg:top-28">
               <div className="flex items-center gap-4">
@@ -114,7 +94,7 @@ export default function ProduktSection() {
             </div>
           </div>
 
-          {/* Right — fließtext mit word-by-word scroll-highlight */}
+          {/* Right — word-by-word scroll-highlight */}
           <div ref={textRef}>
             <p
               className="text-2xl leading-[1.7] tracking-tight sm:text-3xl"
@@ -126,7 +106,7 @@ export default function ProduktSection() {
                   data-word
                   style={{
                     color: wi < PREHIGHLIGHTED ? '#11131a' : '#a8bcd4',
-                    transition: 'color 500ms ease-out',
+                    transition: 'color 400ms ease-out',
                     display: 'inline',
                   }}
                 >
