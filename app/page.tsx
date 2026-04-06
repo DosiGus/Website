@@ -11,7 +11,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import PhoneMockup from "../components/PhoneMockup";
-import FlowBuilderDemo from "../components/FlowBuilderDemo";
 import SolutionStats from "../components/SolutionStats";
 import IntegrationsStickyScroll from "../components/IntegrationsStickyScroll";
 import FaqAccordion from "../components/FaqAccordion";
@@ -248,7 +247,6 @@ export default function HomePageV2() {
       <KanaeleSection />
 
       <section id="flow-builder" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
-        {/* Halftone dot background — fades top to bottom */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
@@ -266,43 +264,6 @@ export default function HomePageV2() {
               <span className="h-px w-16 bg-[#7d9be2]" />
               <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#3159bb]">
                 Flow Builder
-              </p>
-            </div>
-            <h2
-              className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-[#11131a] sm:text-5xl"
-              style={{ fontFamily: "var(--font-home-display)" }}
-            >
-              Visuell bauen und Gesprächsabläufe in Minuten erstellen.
-            </h2>
-            <p className="mt-4 max-w-2xl text-sm text-[#46506a] sm:text-base">
-              Starten Sie mit einer Vorlage und passen Sie Inhalte und Logik jederzeit flexibel an.
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-black/10 bg-white p-2 sm:p-4">
-            <FlowBuilderDemo theme="light" />
-          </div>
-        </div>
-      </section>
-
-      <section id="flow-builder-v2" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: 'radial-gradient(circle, rgba(36,80,178,0.32) 1.6px, transparent 1.6px)',
-            backgroundSize: '18px 18px',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%), linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 6%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.6) 94%, rgba(0,0,0,0) 100%)',
-            WebkitMaskComposite: 'destination-in',
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%), linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 6%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.6) 94%, rgba(0,0,0,0) 100%)',
-            maskComposite: 'intersect',
-          }}
-        />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-8 max-w-3xl sm:mb-10">
-            <div className="flex items-center gap-4">
-              <span className="h-px w-16 bg-[#7d9be2]" />
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#3159bb]">
-                Flow Builder V-2
               </p>
             </div>
             <h2

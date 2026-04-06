@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Zap, MessageCircle, CalendarDays, CheckCircle2, BarChart3, Link2, Settings, Plus, Star, Download, Save, Eye, UtensilsCrossed, Scissors, Dumbbell, Check } from 'lucide-react';
+import { Zap, MessageCircle, CalendarDays, CheckCircle2, BarChart3, Link2, Settings, Plus, Star, Download, Save, Eye, UtensilsCrossed, Scissors, Dumbbell, Check, Camera, Globe } from 'lucide-react';
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
@@ -38,7 +38,7 @@ function MiniSidebar({ activeItem }: { activeItem: string }) {
     { id: 'settings', label: 'Einstellungen', icon: Settings },
   ];
   return (
-    <div className="flex h-full w-[180px] shrink-0 flex-col border-r border-[#E2E8F0] bg-white">
+    <div className="hidden h-full w-[180px] shrink-0 flex-col border-r border-[#E2E8F0] bg-white sm:flex">
       <div className="px-4 py-3">
         <p className="text-[13px] font-bold text-[#2450b2]">Wesponde</p>
       </div>
@@ -76,20 +76,20 @@ function DashboardContent() {
   return (
     <div className="flex h-full">
       <MiniSidebar activeItem="dashboard" />
-      <div className="flex-1 p-5">
-        <p className="text-[15px] font-semibold text-[#0F172A]">Dashboard</p>
-        <p className="mt-0.5 text-[11px] text-[#94A3B8]">Willkommen zurück</p>
-        <div className="mt-4 grid grid-cols-3 gap-3">
+      <div className="flex-1 p-3 sm:p-5">
+        <p className="text-[14px] font-semibold text-[#0F172A] sm:text-[15px]">Dashboard</p>
+        <p className="mt-0.5 text-[10px] text-[#94A3B8] sm:text-[11px]">Willkommen zurück</p>
+        <div className="mt-3 grid grid-cols-3 gap-2 sm:mt-4 sm:gap-3">
           {stats.map((s) => (
-            <div key={s.label} className="rounded-xl border border-[#E2E8F0] bg-white p-3.5 shadow-sm">
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ background: s.bg }}>
-                  <BarChart3 className="h-3.5 w-3.5" style={{ color: s.color }} />
+            <div key={s.label} className="rounded-xl border border-[#E2E8F0] bg-white p-2.5 shadow-sm sm:p-3.5">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg sm:h-7 sm:w-7" style={{ background: s.bg }}>
+                  <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" style={{ color: s.color }} />
                 </div>
-                <span className="text-[11px] font-medium text-[#94A3B8]">{s.label}</span>
+                <span className="text-[9px] font-medium text-[#94A3B8] sm:text-[11px]">{s.label}</span>
               </div>
-              <p className="mt-2 text-[22px] font-bold tabular-nums text-[#0F172A]">{s.value}</p>
-              <p className="mt-0.5 text-[10px] font-medium text-[#10B981]">↑ {s.trend} diese Woche</p>
+              <p className="mt-1.5 text-[18px] font-bold tabular-nums text-[#0F172A] sm:mt-2 sm:text-[22px]">{s.value}</p>
+              <p className="mt-0.5 text-[9px] font-medium text-[#10B981] sm:text-[10px]">↑ {s.trend} diese Woche</p>
             </div>
           ))}
         </div>
@@ -108,15 +108,16 @@ function FlowListContent() {
   return (
     <div className="flex h-full">
       <MiniSidebar activeItem="flows" />
-      <div className="flex-1 p-5">
+      <div className="flex-1 p-3 sm:p-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[15px] font-semibold text-[#0F172A]">Flows</p>
-            <p className="mt-0.5 text-[11px] text-[#94A3B8]">Automationen verwalten</p>
+            <p className="text-[14px] font-semibold text-[#0F172A] sm:text-[15px]">Flows</p>
+            <p className="mt-0.5 text-[10px] text-[#94A3B8] sm:text-[11px]">Automationen verwalten</p>
           </div>
-          <button className="flex items-center gap-1.5 rounded-full bg-[#2450b2] px-3.5 py-2 text-[11px] font-semibold text-white shadow-[0_2px_12px_rgba(36,80,178,0.25)]">
+          <button className="flex items-center gap-1.5 rounded-full bg-[#2450b2] px-2.5 py-1.5 text-[10px] font-semibold text-white shadow-[0_2px_12px_rgba(36,80,178,0.25)] sm:px-3.5 sm:py-2 sm:text-[11px]">
             <Plus className="h-3 w-3" />
-            Flow erstellen
+            <span className="hidden sm:inline">Flow erstellen</span>
+            <span className="sm:hidden">Erstellen</span>
           </button>
         </div>
         <div className="mt-5 overflow-hidden rounded-xl border border-[#E2E8F0]">
@@ -158,13 +159,13 @@ function TemplateContent({ selectedIdx }: { selectedIdx: number }) {
     { name: 'Fitness & Sport', desc: 'Kurse & Mitgliederanfragen', icon: Dumbbell },
   ];
   return (
-    <div className="flex h-full flex-col items-center justify-center p-6">
+    <div className="flex h-full flex-col items-center justify-center p-4 sm:p-6">
       {/* Step indicator */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         {[1, 2, 3, 4, 5, 6].map((s) => (
           <div
             key={s}
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+            className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold sm:h-6 sm:w-6 sm:text-[10px] ${
               s === 1
                 ? 'bg-[#2563EB] text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)]'
                 : 'border border-[#E2E8F0] bg-[#F8FAFC] text-[#94A3B8]'
@@ -174,23 +175,23 @@ function TemplateContent({ selectedIdx }: { selectedIdx: number }) {
           </div>
         ))}
       </div>
-      <p className="mt-4 text-[15px] font-semibold text-[#0F172A]">Vorlage wählen</p>
-      <p className="mt-1 text-[11px] text-[#94A3B8]">Wählen Sie eine Branche als Startvorlage</p>
-      <div className="mt-5 grid w-full max-w-md grid-cols-3 gap-3">
+      <p className="mt-3 text-[14px] font-semibold text-[#0F172A] sm:mt-4 sm:text-[15px]">Vorlage wählen</p>
+      <p className="mt-1 text-[10px] text-[#94A3B8] sm:text-[11px]">Wählen Sie eine Branche als Startvorlage</p>
+      <div className="mt-4 grid w-full max-w-md grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
         {templates.map((t, i) => (
           <div
             key={t.name}
-            className={`cursor-default rounded-2xl border-2 p-3.5 text-center transition-all duration-400 ${
+            className={`cursor-default rounded-xl border-2 p-2.5 text-center transition-all duration-400 sm:rounded-2xl sm:p-3.5 ${
               i === selectedIdx
                 ? 'border-[#93C5FD] bg-[#EFF6FF] shadow-[0_4px_16px_rgba(37,99,235,0.10)]'
                 : 'border-[#E2E8F0] bg-white'
             }`}
           >
-            <div className={`mx-auto flex h-8 w-8 items-center justify-center rounded-xl ${i === selectedIdx ? 'bg-[#DBEAFE]' : 'bg-[#F1F5F9]'} transition-colors duration-400`}>
-              <t.icon className={`h-4 w-4 ${i === selectedIdx ? 'text-[#2563EB]' : 'text-[#64748B]'} transition-colors duration-400`} strokeWidth={1.5} />
+            <div className={`mx-auto flex h-7 w-7 items-center justify-center rounded-lg sm:h-8 sm:w-8 sm:rounded-xl ${i === selectedIdx ? 'bg-[#DBEAFE]' : 'bg-[#F1F5F9]'} transition-colors duration-400`}>
+              <t.icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${i === selectedIdx ? 'text-[#2563EB]' : 'text-[#64748B]'} transition-colors duration-400`} strokeWidth={1.5} />
             </div>
-            <p className="mt-1.5 text-[11px] font-semibold text-[#0F172A]">{t.name}</p>
-            <p className="mt-0.5 text-[9px] leading-snug text-[#94A3B8]">{t.desc}</p>
+            <p className="mt-1 text-[10px] font-semibold text-[#0F172A] sm:mt-1.5 sm:text-[11px]">{t.name}</p>
+            <p className="mt-0.5 hidden text-[9px] leading-snug text-[#94A3B8] sm:block">{t.desc}</p>
           </div>
         ))}
       </div>
@@ -232,17 +233,17 @@ function EditorContent({ state }: { state: EditorState }) {
       <MiniSidebar activeItem="flows" />
       <div className="flex-1 overflow-hidden">
         {/* Cockpit bar — matching real Flow Builder */}
-        <div className="px-3 pt-3">
-          <div className="flex items-center justify-between rounded-2xl border border-[#E2E8F0] bg-white px-4 py-2.5 shadow-sm">
-            <p className="text-[13px] font-semibold text-[#0F172A]">Reservierungs-Flow</p>
+        <div className="px-2 pt-2 sm:px-3 sm:pt-3">
+          <div className="flex items-center justify-between rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 shadow-sm sm:rounded-2xl sm:px-4 sm:py-2.5">
+            <p className="text-[12px] font-semibold text-[#0F172A] sm:text-[13px]">Reservierungs-Flow</p>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl border border-[#E2E8F0] p-1.5 text-[#64748B]">
+              <div className="hidden rounded-xl border border-[#E2E8F0] p-1.5 text-[#64748B] sm:block">
                 <Download className="h-3 w-3" />
               </div>
-              <div className="rounded-xl border border-[#E2E8F0] p-1.5 text-[#64748B]">
+              <div className="hidden rounded-xl border border-[#E2E8F0] p-1.5 text-[#64748B] sm:block">
                 <Save className="h-3 w-3" />
               </div>
-              <div className="rounded-xl border border-[#E2E8F0] p-1.5 text-[#64748B]">
+              <div className="hidden rounded-xl border border-[#E2E8F0] p-1.5 text-[#64748B] sm:block">
                 <Eye className="h-3 w-3" />
               </div>
               {/* Toggle switch */}
@@ -266,12 +267,31 @@ function EditorContent({ state }: { state: EditorState }) {
           </div>
         </div>
 
+        {/* Verbunden mit */}
+        <div className="flex flex-wrap items-center gap-1.5 px-3 pt-1.5 sm:gap-2 sm:px-4 sm:pt-2">
+          <span className="text-[9px] font-medium text-[#94A3B8] sm:text-[10px]">Verbunden mit</span>
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#c5cdf0] bg-[#f0f1ff] px-2 py-0.5 text-[10px] font-medium text-[#4f68a6]">
+              <Camera className="h-2.5 w-2.5" />
+              Instagram
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#b8dfc8] bg-[#eef9f1] px-2 py-0.5 text-[10px] font-medium text-[#2e7d57]">
+              <MessageCircle className="h-2.5 w-2.5" />
+              WhatsApp
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#e0d08a] bg-[#fdf8e6] px-2 py-0.5 text-[10px] font-medium text-[#7a6010]">
+              <Globe className="h-2.5 w-2.5" />
+              Google
+            </span>
+          </div>
+        </div>
+
         {/* Node list */}
-        <div className="relative px-5 py-3 sm:px-8">
+        <div className="relative px-3 py-2 sm:px-5 sm:py-3 md:px-8">
           {/* Connection line */}
           <div
             className="absolute bottom-8 top-8 w-px"
-            style={{ left: 'calc(2rem + 14px)', background: 'linear-gradient(to bottom, #93C5FD, #E2E8F0)' }}
+            style={{ left: 'calc(1.5rem + 10px)', background: 'linear-gradient(to bottom, #93C5FD, #E2E8F0)' }}
           />
 
           <div className="space-y-2.5">
@@ -282,10 +302,10 @@ function EditorContent({ state }: { state: EditorState }) {
               const isStart = i === 0;
 
               return (
-                <div key={node.id} className="relative flex items-start gap-3">
+                <div key={node.id} className="relative flex items-start gap-2 sm:gap-3">
                   {/* Step circle */}
                   <div
-                    className={`relative z-10 flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold transition-all duration-500 ${
+                    className={`relative z-10 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold transition-all duration-500 sm:h-[28px] sm:w-[28px] sm:text-[10px] ${
                       isStart
                         ? 'border-[#10B981] bg-[#ECFDF5] text-[#059669]'
                         : isExpanded || isHovered
@@ -306,17 +326,17 @@ function EditorContent({ state }: { state: EditorState }) {
                           : 'border-[#E2E8F0] shadow-sm'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 px-3.5 py-2.5">
+                    <div className="flex items-center gap-2 px-2.5 py-2 sm:gap-2.5 sm:px-3.5 sm:py-2.5">
                       <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors duration-500 ${
+                        className={`flex h-6 w-6 items-center justify-center rounded-lg transition-colors duration-500 sm:h-8 sm:w-8 sm:rounded-xl ${
                           isExpanded || isHovered ? 'bg-[#DBEAFE]' : 'bg-[#F1F5F9]'
                         }`}
                       >
-                        <Icon className={`h-3.5 w-3.5 transition-colors duration-500 ${isExpanded || isHovered ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
+                        <Icon className={`h-3 w-3 transition-colors duration-500 sm:h-3.5 sm:w-3.5 ${isExpanded || isHovered ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[12px] font-semibold text-[#0F172A]">{node.label}</p>
-                        {!isExpanded && <p className="truncate text-[10px] text-[#94A3B8]">{node.preview}</p>}
+                        <p className="text-[11px] font-semibold text-[#0F172A] sm:text-[12px]">{node.label}</p>
+                        {!isExpanded && <p className="truncate text-[9px] text-[#94A3B8] sm:text-[10px]">{node.preview}</p>}
                       </div>
                       <svg
                         className={`h-3.5 w-3.5 shrink-0 text-[#CBD5E1] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
@@ -392,12 +412,16 @@ export default function FlowBuilderDemoV2({ theme = 'light' }: { theme?: 'dark' 
     isActive: false,
   });
 
+  const [step, setStep] = useState(0);
+  const TOTAL_STEPS = 7;
+
   const [cursorPos, setCursorPos] = useState({ x: '50%', y: '50%' });
 
   const reset = useCallback(() => {
     setPhase('dashboard');
     setClicking(false);
     setTemplateIdx(-1);
+    setStep(0);
     setEditorState({ expandedId: null, hoveredId: null, typedLen: 0, visibleReplies: 0, isActive: false });
     setCursorPos({ x: '50%', y: '50%' });
   }, []);
@@ -419,23 +443,23 @@ export default function FlowBuilderDemoV2({ theme = 'light' }: { theme?: 'dark' 
     /* ── Phase 1: Dashboard ─── */
     // Cursor glides to "Flows" nav item in sidebar (2nd item, ~86px from top)
     at(1200, () => setCursorPos({ x: '9%', y: '21%' }));
-    at(1800, () => click(() => setPhase('flows')));
+    at(1800, () => click(() => { setPhase('flows'); setStep(1); }));
 
     /* ── Phase 2: Flow list ─── */
     // Cursor moves toward the "Flow erstellen" button (top-right)
     at(2400, () => setCursorPos({ x: '72%', y: '9%' }));
     // Fine-tune: land precisely on the button center
     at(3000, () => setCursorPos({ x: '87%', y: '9%' }));
-    at(3600, () => click(() => setPhase('template')));
+    at(3600, () => click(() => { setPhase('template'); setStep(2); }));
 
     /* ── Phase 3: Template selection ─── */
     // Move to first template card "Gastronomie" (left column center)
     at(4200, () => setCursorPos({ x: '35%', y: '60%' }));
     // Select the template
-    at(4800, () => click(() => setTemplateIdx(0)));
+    at(4800, () => click(() => { setTemplateIdx(0); setStep(3); }));
     // Move down to "Weiter" button
     at(5600, () => setCursorPos({ x: '50%', y: '82%' }));
-    at(6000, () => click(() => setPhase('editor')));
+    at(6000, () => click(() => { setPhase('editor'); setStep(4); }));
 
     /* ── Phase 4: Flow editor ─── */
     // Cursor rests briefly
@@ -449,7 +473,7 @@ export default function FlowBuilderDemoV2({ theme = 'light' }: { theme?: 'dark' 
 
     // Click to expand node 2
     at(8000, () =>
-      click(() => setEditorState((s) => ({ ...s, expandedId: 'welcome' }))),
+      click(() => { setEditorState((s) => ({ ...s, expandedId: 'welcome' })); setStep(5); }),
     );
 
     // Move cursor into the text input area
@@ -470,7 +494,7 @@ export default function FlowBuilderDemoV2({ theme = 'light' }: { theme?: 'dark' 
 
     // Click toggle: Entwurf → Aktiv
     at(14000, () =>
-      click(() => setEditorState((s) => ({ ...s, isActive: true }))),
+      click(() => { setEditorState((s) => ({ ...s, isActive: true })); setStep(6); }),
     );
 
     // Hold the final state, then restart
@@ -520,12 +544,12 @@ export default function FlowBuilderDemoV2({ theme = 'light' }: { theme?: 'dark' 
             </div>
             <div className="ml-3 flex flex-1 items-center gap-2 rounded-full border border-black/8 bg-white/80 px-3 py-1 text-[11px] text-[#5f6982] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
               <span className="h-2 w-2 rounded-full bg-[#c7cfdf]" />
-              <span className="transition-all duration-300">app.wesponde.com/{URL_MAP[phase]}</span>
+              <span className="truncate transition-all duration-300">app.wesponde.com/{URL_MAP[phase]}</span>
             </div>
           </div>
 
           {/* Content area */}
-          <div className="relative overflow-hidden bg-[#F8FAFC]" style={{ height: 420 }}>
+          <div className="relative h-[380px] overflow-hidden bg-[#F8FAFC] sm:h-[460px] lg:h-[500px]">
             {/* Phase screens */}
             <div
               className="absolute inset-0 transition-all duration-500"
@@ -552,6 +576,25 @@ export default function FlowBuilderDemoV2({ theme = 'light' }: { theme?: 'dark' 
               <EditorContent state={editorState} />
             </div>
 
+            {/* Progress footer */}
+            <div className="absolute bottom-0 left-0 right-0 z-40 border-t border-black/8 bg-white/80 backdrop-saturate-150 px-3 py-2 sm:px-5 sm:py-2.5">
+              <div className="flex items-center justify-between gap-2 sm:gap-3">
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+                    <span
+                      key={i}
+                      className={`h-1 rounded-full transition-all duration-500 sm:h-1.5 ${
+                        i <= step ? 'w-4 bg-[#6a7fbb] sm:w-6' : 'w-3 bg-[#d5dcee] sm:w-4'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-[10px] font-medium text-[#67718a] sm:text-[11px]">
+                  {step + 1} von {TOTAL_STEPS} Schritten
+                </p>
+              </div>
+            </div>
+
             {/* Animated cursor */}
             <div
               className="pointer-events-none absolute z-50"
@@ -571,11 +614,11 @@ export default function FlowBuilderDemoV2({ theme = 'light' }: { theme?: 'dark' 
       <div className="mx-auto h-3 w-[76%] rounded-b-[18px] bg-[linear-gradient(180deg,#b9bec8_0%,#aab1bc_100%)]" />
       <div className="mx-auto h-1.5 w-[88%] rounded-b-full bg-[#a6adb7]/70 shadow-[0_18px_40px_rgba(63,73,94,0.18)]" />
 
-      <div className="mt-8 flex flex-wrap justify-center gap-2.5">
+      <div className="mt-5 flex flex-wrap justify-center gap-2 sm:mt-8 sm:gap-2.5">
         {['Visueller Editor', 'Vorlagen', 'Quick Replies', 'No-Code'].map((item) => (
           <span
             key={item}
-            className="inline-flex items-center gap-2 rounded-xl border border-[#98addf] bg-white/72 px-4 py-2 text-sm font-medium text-[#4b5268]"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#98addf] bg-white/72 px-3 py-1.5 text-xs font-medium text-[#4b5268] sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
           >
             <Check className="h-3.5 w-3.5 flex-shrink-0 text-[#5e73b1]" />
             {item}
